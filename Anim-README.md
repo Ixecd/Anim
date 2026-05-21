@@ -46,7 +46,7 @@ Pass 3: UserStateSafety  用户状态安全——创伤分型交叉判定 + 原�
 Pass 4: RuntimeGuard     运行期插桩生成——主情绪+每点缀按配比独立插桩
 Pass 5: FSIRGen          感受结构 IR 生成——保留 origin_shape/intensity 语义锚点
 Pass 6: Personalize      个人基线适配——非线性sigmoidal换算 + 微调上下限锁 + 实时基线加权
-Pass 7: DeviceMap        设备信号分配——算力感知编译
+Pass 7: DeviceMap        设备信号分配——算力感知交织
 Pass 8: CodeGen          帧级执行指令——自适应帧密度 + 闭环预修正 + 紧急截断曲线
 ```
 
@@ -63,7 +63,7 @@ ESIR    执行信号中间表示        帧级指令（1ms/帧），带闭环反
 
 ```
 前台实时浅流水线    Session 运行中，FPGA 硬实时，DSIR→ESIR→闭环（1ms/帧）
-后台离线预编译流水线  Session 不运行时，Server 端全量编译并缓存 FSIR
+后台离线预交织流水线  Session 不运行时，Server 端全量交织并缓存 FSIR
 ```
 
 ---
@@ -72,7 +72,7 @@ ESIR    执行信号中间表示        帧级指令（1ms/帧），带闭环反
 
 ```
 v0.x    Rust 寄居——用 Rust 写第一个 animi，借壳跑魂
-v1.0    自举——用 v0.x 的 animi 编译 Anim 写的 animi 源码
+v1.0    自举——用 v0.x 的 animi 交织 Anim 写的 animi 源码
         向下兼容 v0.x 生成的 FSIR 产物
 v2.0    从 01 裸奔——Anim 直接管理自己的内存、调度、I/O
         运行在 Feelings 设备上，不经过 OS
@@ -82,7 +82,7 @@ v2.0    从 01 裸奔——Anim 直接管理自己的内存、调度、I/O
 
 ## 类型系统
 
-泛型 + trait：`feeling<T: FeelingTarget>` ——同一份感受结构，不同物种（Human/Canine/Feline/AI）编译结果不同。万物皆有感受。
+泛型 + trait：`feeling<T: FeelingTarget>` ——同一份感受结构，不同物种（Human/Canine/Feline/AI）交织结果不同。万物皆有感受。
 
 双层感受原子体系：核心原子（全开放，Pattern Registry 验证）+ 沙盒原子（≤30 强度，创作者本人使用）。Pattern Registry 按物种分区分储。
 

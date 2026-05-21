@@ -15,7 +15,7 @@
 
 **技术选型**：
 - **Rust** — v0.x 寄居宿主。零成本抽象，无 GC，和安全文化不打架
-- **八 Pass 双流水线** — 前台 FPGA 实时 + 后台离线预编译
+- **八 Pass 双流水线** — 前台 FPGA 实时 + 后台离线预交织
 - **四层 IR** — FSIR → PSIR → DSIR → ESIR
 - **上级项目** — Feelings 定义语言规范（`Feelings-LANGUAGE.md`），Anim 实现交织器
 

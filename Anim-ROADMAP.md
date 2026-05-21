@@ -30,7 +30,7 @@
 
 ---
 
-## v0.2 — Milestone 1: 编译器骨架
+## v0.2 — Milestone 1: 交织器骨架
 
 ### 目标
 
@@ -57,7 +57,7 @@ Rust 项目初始化 → 八 Pass 骨架全部跑通 → 错误诊断系统上�
 ```
 ✓ cargo build 通过
 ✓ 一份完整的 .anim 示例文件 → FSIR JSON 输出
-✓ 错误示例（强度越界、点缀越界、未成年人违规）→ 编译期报错
+✓ 错误示例（强度越界、点缀越界、未成年人违规）→ 交织期报错
 ✓ cargo test --lib 覆盖所有公开 API
 ✓ cargo clippy -- -D warnings 零报错
 ```
@@ -76,7 +76,7 @@ FSIR → PSIR（PBM 偏移）→ DSIR（设备分配）→ ESIR（帧级指令�
 
 - `src/pbm.rs` — 个人基线矩阵（四维差异化冷启动 + 收敛）
 - `src/personalize.rs` — Pass 6 核心：FSIR × PBM → PSIR
-- `src/device_map.rs` — Pass 7：PSIR → DSIR（算力感知编译）
+- `src/device_map.rs` — Pass 7：PSIR → DSIR（算力感知交织）
 - `src/codegen.rs` — Pass 8：DSIR → ESIR 帧级指令骨架
 - 声明式注解展开（`@auto_reduce_on` 等 → ESIR 插桩）
 
@@ -91,17 +91,17 @@ FSIR → PSIR（PBM 偏移）→ DSIR（设备分配）→ ESIR（帧级指令�
 
 ---
 
-## v0.4 — Milestone 3: 双流水线 + 离线预编译
+## v0.4 — Milestone 3: 双流水线 + 离线预交织
 
 ### 目标
 
 ```
-后台离线预编译 FSIR 缓存 + 前台只跑 Personalize→CodeGen
+后台离线预交织 FSIR 缓存 + 前台只跑 Personalize→CodeGen
 ```
 
 ### 核心交付
 
-- 后台离线编译管线（server 端，空闲时触发）
+- 后台离线交织管线（server 端，空闲时触发）
 - FSIR 缓存格式 + 设备本地存储
 - Session 启动快速加载（跳过 Parse/TypeCheck/StaticSafety）
 - 双流水线调度器（前后台互不抢占）
@@ -109,9 +109,9 @@ FSIR → PSIR（PBM 偏移）→ DSIR（设备分配）→ ESIR（帧级指令�
 ### 验收
 
 ```
-✓ 离线预编译 FSIR → 设备缓存
+✓ 离线预交织 FSIR → 设备缓存
 ✓ Session 启动延迟 < 100ms（加载缓存 FSIR）
-✓ 后台编译不抢占前台时隙
+✓ 后台交织不抢占前台时隙
 ```
 
 ---

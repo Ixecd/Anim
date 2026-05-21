@@ -78,7 +78,7 @@ animi  = Anim Interlinker（交织器）——不是编译器，是编织者
 │  Pass 7: DeviceMap      设备信号分配       │
 │  Pass 8: CodeGen        帧级指令生成       │
 │                                          │
-│  双流水线：前台 FPGA 实时 + 后台离线预编译   │
+│  双流水线：前台 FPGA 实时 + 后台离线预交织   │
 │  四层 IR：FSIR → PSIR → DSIR → ESIR       │
 └──────────────────────────────────────────┘
     │
@@ -176,7 +176,7 @@ MISTAKES.md 本身就是这条规则的产品
 版本:    v0.1.0
 提交:    0 commits（仓库尚未初始化）
 分支:    无
-Sprint:  语言规范定稿 → 编译器骨架
+Sprint:  语言规范定稿 → 交织器骨架
 
 完成度:
   语言规范   ████████████████████ 100%（上级 Feelings-LANGUAGE.md）
