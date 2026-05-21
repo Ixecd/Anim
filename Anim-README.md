@@ -40,14 +40,14 @@ animi 做的事：多股独立流——感受语义、个人基线、设备约�
 
 ```
 Pass 0: LexParse        词法语法解析
-Pass 1: TypeCheck        感受类型校验
-Pass 2: StaticSafety     静态安全规则（不可跳过）
-Pass 3: UserStateSafety  用户状态安全（创伤分型交叉判定）
-Pass 4: RuntimeGuard     运行期插桩生成（按感受类型差异化阈值）
-Pass 5: FSIRGen          感受结构 IR 生成
-Pass 6: Personalize      个人基线适配（四维差异化冷启动）
-Pass 7: DeviceMap        设备信号分配（算力感知编译）
-Pass 8: CodeGen          帧级执行指令生成
+Pass 1: TypeCheck        感受类型校验 + 设备前置告警 + 组合情绪对冲检测
+Pass 2: StaticSafety     静态安全规则——cap等比缩放，非硬截断
+Pass 3: UserStateSafety  用户状态安全——创伤分型交叉判定 + 原子黑名单（禁主不禁点）
+Pass 4: RuntimeGuard     运行期插桩生成——主情绪+每点缀按配比独立插桩
+Pass 5: FSIRGen          感受结构 IR 生成——保留 origin_shape/intensity 语义锚点
+Pass 6: Personalize      个人基线适配——非线性sigmoidal换算 + 微调上下限锁 + 实时基线加权
+Pass 7: DeviceMap        设备信号分配——算力感知编译
+Pass 8: CodeGen          帧级执行指令——自适应帧密度 + 闭环预修正 + 紧急截断曲线
 ```
 
 ### 四层 IR
