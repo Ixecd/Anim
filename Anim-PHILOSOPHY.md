@@ -68,6 +68,27 @@ ESIRₜ → 注入 → 生理响应 → 偏差 → ESIRₜ₊₁ = ESIRₜ + 修
 
 Anim v0.x 用 Rust 实现。Rust 的零成本抽象是内存级别的。Anim 的零成本抽象是感受级别的。
 
+## 五、泛型——万物皆有感受
+
+Anim 不是人类的专用语言。感受不只人有——万物皆有。Anim 的泛型让同一份 `.anim` 源码可以被参数化为不同物种的编译目标。
+
+```
+trait FeelingTarget {
+    fn neural_pathways(feeling: &FeelingType) -> Vec<Pathway>;
+    fn safety_bounds() -> SafetyMatrix;
+    fn cold_start_pbm() -> PbmCoefficients;
+    fn signal_resolution() -> Hz;
+}
+
+Human / Canine / Feline / AI 各自实现自己的 FeelingTarget。
+同一份 .anim 源码，编译参数化——物种变了，交织结果不同。
+源码不用改。
+```
+
+Pattern Registry 按物种分区分储。人类和犬类的 `accomplishment_certainty` 是不同的神经原子。
+
+这和 Feelings 顶层哲学咬合：感受的民主化不会在「人类」这个边界停下来。
+
 ```
 .anim 源码里写的 @auto_reduce_on(heart_rate > 120)
 在交织期被展开为 ESIR 层的安全插桩代码。
