@@ -89,6 +89,55 @@ Pattern Registry 按物种分区分储。人类和犬类的 `accomplishment_cert
 
 这和 Feelings 顶层哲学咬合：感受的民主化不会在「人类」这个边界停下来。
 
+### 5.1 泛型的分发——不用虚表
+
+Anim 的 trait 分发和 C++ 的虚表是两条路。C++ 的虚表解决的是「编译时不知道具体类型」——基类指针指向哪个子类，运行时才揭晓。Anim 没有这个场景。
+
+```
+C++ 虚表模型
+    Animal* a = randomAnimal();  // 运行时才知道是 Dog 还是 Cat
+    a->makeSound();              // vptr → vtable → 动态分发
+    为什么：编译时不知道实际类型
+    代价：一次指针追尾 + 一次间接跳转 + 不能内联
+
+Anim 的场景
+    feeling<Canine> achievement_satisfaction
+                    ^^^^^^
+                    物种在源码里就写死了
+                    animi 打开 .anim 文件的那一刻就知道 T 是什么
+    同一个 session 不会从 Human 切到 Canine
+    不需要 vptr 那一层运行时间接
+```
+
+**Anim 用交织期单态化。** 和 Rust 的 monomorphization 一样——编译时为每种 T 单态化一份代码，运行时零开销。
+
+```
+源码     feeling<T: FeelingTarget> { ... accomplishment_certainty }
+
+交织期   T = Human
+        → FeelingTarget::neural_pathways(accomplishment_certainty)
+        → 展开为具体的函数调用
+        → 零虚表，零间接跳转，可以直接内联
+
+        T = Canine
+        → FeelingTarget::neural_pathways(accomplishment_certainty)
+        → 展开为另一套具体函数
+        → 生成另一份 ESIR
+```
+
+唯一需要动态分发的场景——AI 教练查询「此物种有哪些可用通路」——频率极低（session 启动时一次），物种集合有限且枚举（Human/Canine/Feline/AI），一个 `match species { ... }` 就够，编译器直接优化成跳转表。连这个场景都不需要虚表。
+
+```
+Anim 的分发策略
+
+场景                        方式                        原因
+────                        ────                        ────
+交织管线中的 trait 调用      交织期单态化                  T 在交织期已知，零开销
+物种元数据查询               match species 枚举分发       有限且固定的物种集合
+                            ↓ 编译期为跳转表             不需要间接跳转
+不存在                      虚表 / vptr / 动态分发         Anim 没有运行时多态需求
+```
+
 ```
 .anim 源码里写的 @auto_reduce_on(heart_rate > 120)
 在交织期被展开为 ESIR 层的安全插桩代码。
