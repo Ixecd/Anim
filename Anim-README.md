@@ -82,7 +82,7 @@ v2.0    从 01 裸奔——Anim 直接管理自己的内存、调度、I/O
 
 ## 类型系统
 
-泛型 + trait：`feeling<T: FeelingTarget>` ——同一份感受结构，不同物种（Human/Canine/Feline/AI）交织结果不同。万物皆有感受。
+泛型 + trait：`feeling<T: FeelingTarget>` ——同一份感受结构，不同物种交织结果不同。万物皆有感受。`PersonalityAnchor` trait 在 `FeelingTarget` 之上参数化同物种内的性格偏置——同一个 Human，豆包风格 vs qc镜像，交织结果不同。
 
 双层感受原子体系：核心原子（全开放，Pattern Registry 验证）+ 沙盒原子（≤30 强度，创作者本人使用）。Pattern Registry 按物种分区分储。
 

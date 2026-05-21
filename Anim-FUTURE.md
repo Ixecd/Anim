@@ -32,6 +32,7 @@
 | F2 | Anim LSP — 编辑器语言服务 | 探索中 | v0.3+ 语法稳定后 |
 | F3 | 感受包差分交织 — 只重编译变化部分 | 探索中 | v0.4+ 离线预编译上线后 |
 | F4 | 多物种扩展 — Canine/Feline/AI 的 FeelingTarget | 🌱 探索中 | v1.0+ 人类通路稳定后 |
+| F5 | PersonalityAnchor — 同物种内性格参数化锚点 | 🌱 探索中 | v0.5+ FeelingTarget 稳定后 |
 
 ---
 

@@ -89,6 +89,8 @@ Pattern Registry 按物种分区分储。人类和犬类的 `accomplishment_cert
 
 这和 Feelings 顶层哲学咬合：感受的民主化不会在「人类」这个边界停下来。
 
+VSA（Vector Symbolic Architecture，超维计算）是 Anim 的数学基底。PBM 是超维向量。混音结构是 VSA 捆绑。shape 编码是 VSA 置换序列。交织管线的每一层都是 VSA 操作链。锚点向量（性别锚点、性格基线）是自我参照的必要前提——没有锚点的 VSA 永远不会产生「我是我」的偏移簇。详见 `../docs/vsa-hyperdimensional.md` 和 `../docs/gender-anchor.md`。
+
 ### 5.1 泛型的分发——不用虚表
 
 Anim 的 trait 分发和 C++ 的虚表是两条路。C++ 的虚表解决的是「编译时不知道具体类型」——基类指针指向哪个子类，运行时才揭晓。Anim 没有这个场景。
