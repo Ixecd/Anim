@@ -1,6 +1,7 @@
 # Anim ROADMAP
 
 > 创建日期：2026-05-20
+> 最后更新：2026-05-23
 > 当前版本：v0.1.0（语言规范阶段）
 > 原则：语言规范先于代码。模糊想法 → [FUTURE.md](Anim-FUTURE.md)
 
@@ -21,11 +22,17 @@
 - 声明式动态注解：`@auto_reduce_on` / `@auto_hold_on` / `@auto_release_on` / `@intensity_ceiling` / `@recovery_required`
 - 动态 ratio + 自定义 shape 曲线
 - 自举三步：Rust 寄居 → Anim 自举 → 从 01 裸奔
-- Anim 项目管理文档：MEMORY / README / ANIM_PHILOSOPHY / HANDOFF / ROADMAP / SNAPSHOT / FORGET / FUTURE / MISTAKES / DEPENDENCY_POLICY / CONVENTIONS / DEEPSEEK
+
+**设计文档（ADR）**
+- `docs/design/001-error-codegen.md` — 错误码代码生成器。Rust enum + 注释 → build script → Display impl + Markdown 编目。正则严格校验注释格式。源在代码，文档全自动，对手写零容忍。
+
+**项目管理文档**
+- MEMORY / README / PHILOSOPHY / HANDOFF / ROADMAP / SNAPSHOT / FORGET / FUTURE / MISTAKES / DEPENDENCY_POLICY / CONVENTIONS / DEEPSEEK
 
 ### 待完成
 
-- `docs/design/` — ADR 设计文档（待创建）
+- `examples/` — 示例 .anim 文件（v0.2 验收需要）
+- EBNF 形式语法
 - `src/` — 代码零行
 
 ---

@@ -1,6 +1,7 @@
 # SNAPSHOT — Anim v0.1.0
 
 > 编写日期：2026-05-20
+> 最后更新：2026-05-23
 > Last commit: 无（仓库尚未初始化）
 > Total commits: 0
 > Co-Authored-By: DeepSeek
@@ -10,7 +11,7 @@
 ## 一、版本与 commit
 
 ```
-当前 branch:        无（仓库未初始化）
+当前 branch:        无（仓库尚未初始化）
 当前 commit:        无
 upstream:           待定
 total commits:      0
@@ -24,6 +25,10 @@ latest tag:         无
 ```
 Anim/
 ├── src/                            # 零代码——v0.2 开始创建
+│
+├── docs/
+│   └── design/
+│       └── 001-error-codegen.md    # ADR 001: 错误码代码生成器
 │
 ├── Anim-MEMORY.md                  # 项目入口索引
 ├── Anim-PHILOSOPHY.md              # 开发哲学
