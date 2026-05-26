@@ -25,6 +25,14 @@
 
 **设计文档（ADR）**
 - `docs/design/001-error-codegen.md` — 错误码代码生成器。Rust enum + 注释 → build script → Display impl + Markdown 编目。正则严格校验注释格式。源在代码，文档全自动，对手写零容忍。
+- `docs/design/002-ir-architecture.md` — 四层 IR 架构决策。为什么是四层不是三层或五层。每层织入一股独立流。PSIR 和 FSIR 分离 = PBM 永不离设备的隐私硬约束。
+- `docs/design/003-pass-pipeline.md` — 八 Pass 交织管线决策。每个 Pass 只做一件事——织入一股新信息流或施加一层新安全约束。Pass 边界不冲刷 CPU 流水线。
+- `docs/design/004-dual-pipeline.md` — 双流水线架构决策。前台只跑 DSIR→ESIR（1ms 硬实时），后台离线预交织 Pass 0-5。物理隔离互不抢占。分支预测跑在 FPGA 上。
+- `docs/design/005-anim-macros.md` — Anim 宏系统决策。语法树级展开 + 三层感受安全保证（类型检查 + 强度生命周期 + 创伤作用域）。不是 C `#define` 的文本替换。
+
+**架构文档**
+- `Anim-SAFETY.md` — 为什么安全必须死在交织期。三层防线各自挡在哪一层。紧急截断曲线不是硬截断。盲人重见光明的教训。
+- `Anim-LOCALITY.md` — 时间局部性与空间局部性。1ms 硬死线的物理约束。ESIR 帧环形缓冲区原地更新。Pattern Registry 按共现频率分桶。双流水线分支预测隔离。
 
 **项目管理文档**
 - MEMORY / README / PHILOSOPHY / HANDOFF / ROADMAP / SNAPSHOT / FORGET / FUTURE / MISTAKES / DEPENDENCY_POLICY / CONVENTIONS / DEEPSEEK
