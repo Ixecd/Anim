@@ -65,9 +65,10 @@
             - 全部 open，符合 v0.1 早期阶段预期
 
 2026-05-26  v0.1.1 设计文档补全
-            - 新增 ADR 002-005（IR架构 / Pass管线 / 双流水线 / 宏系统）
-            - 新增 Anim-SAFETY.md、Anim-LOCALITY.md
+            - 新增 ADR 002-006（IR架构 / Pass管线 / 双流水线 / 宏系统 / oi错误处理）
+            - 新增 Anim-SAFETY.md、Anim-LOCALITY.md、Anim-CROSSOVER.md
             - P1 项更新：双流水线调度→设计已定稿代码零行；算力感知→设计已定稿；
               宏系统新增 P1；注解展开→设计已定稿代码零行
+            - oi 作为错误处理约定已定稿——不是 Err 不是 Error，是 oi
             - P0 不变：代码仍零行，v0.2 milestone 1 开始
 ```

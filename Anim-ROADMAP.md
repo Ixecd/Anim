@@ -29,6 +29,7 @@
 - `docs/design/003-pass-pipeline.md` — 八 Pass 交织管线决策。每个 Pass 只做一件事——织入一股新信息流或施加一层新安全约束。Pass 边界不冲刷 CPU 流水线。
 - `docs/design/004-dual-pipeline.md` — 双流水线架构决策。前台只跑 DSIR→ESIR（1ms 硬实时），后台离线预交织 Pass 0-5。物理隔离互不抢占。分支预测跑在 FPGA 上。
 - `docs/design/005-anim-macros.md` — Anim 宏系统决策。语法树级展开 + 三层感受安全保证（类型检查 + 强度生命周期 + 创伤作用域）。不是 C `#define` 的文本替换。
+- `docs/design/006-error-handling-oi.md` — Anim 错误处理决策。不是 Err 不是 Error。是 oi。轻。短。不堆栈。不 panic。交叉被挡 = 这帧不生成。下一帧继续。
 
 **架构文档**
 - `Anim-SAFETY.md` — 为什么安全必须死在交织期。三层防线各自挡在哪一层。紧急截断曲线不是硬截断。盲人重见光明的教训。
