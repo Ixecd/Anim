@@ -33,7 +33,7 @@
 **架构文档**
 - `Anim-SAFETY.md` — 为什么安全必须死在交织期。三层防线各自挡在哪一层。紧急截断曲线不是硬截断。盲人重见光明的教训。
 - `Anim-LOCALITY.md` — 时间局部性与空间局部性。1ms 硬死线的物理约束。ESIR 帧环形缓冲区原地更新。Pattern Registry 按共现频率分桶。双流水线分支预测隔离。
-- `Anim-CROSS.md` — 交叉、织入、回退与绳结。Anim 的一等数据交互模型。不是借用/引用/地址/解引用。是 cross(warp, weft)。cross checker 替代 borrow checker。
+- `Anim-CROSSOVER.md` — 交叉、织入、回退与绳结。Anim 的一等数据交互模型。不是借用/引用/地址/解引用。是 cross_over(warp, weft)。cross checker 替代 borrow checker。
 
 **项目管理文档**
 - MEMORY / README / PHILOSOPHY / HANDOFF / ROADMAP / SNAPSHOT / FORGET / FUTURE / MISTAKES / DEPENDENCY_POLICY / CONVENTIONS / DEEPSEEK
