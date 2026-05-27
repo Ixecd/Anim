@@ -117,22 +117,29 @@ let point = warp.cross_over(&weft, oi)?;
     组合情绪对冲 → oi。不是源码错了——是编织器说"这一针不安全"。
 ```
 
-### oi 的生命周期
+### oi 的双重生命周期
+
+oi 在编译期和运行期是完全不同的两个东西。编译期带消息。运行期是一个 bit。
 
 ```
-Pass 2 StaticSafety → 强度超过 cap → oi!("intensity {n} exceeds cap {c}")
-    → 不生成后续 IR。oi 被返回给 animi 调用方。
+编译期 oi（Pass 0-5，后台离线预交织）：
+    oi!("intensity {n} exceeds cap {c}")
+    → String。堆分配。人类可读。
+    → 给创作者看——"这行强度超了"。
+    → 后台不在 1ms 时钟域。format! 堆分配无所谓。
 
-Pass 3 UserStateSafety → 创伤 v3 不可交叉归属原子 → oi!("trauma_v3 cannot cross with belonging")
-    → 同上。
+运行期 oi（Pass 7-8 + FPGA 帧级）：
+    oi 不是 String。是硬件控制总线上的一个 Trap bit。
+    强度寄存器 > cap 寄存器 → oi = true。
 
-Pass 4 RuntimeGuard → 预埋插桩。运行期交叉被挡。
-    → oi 不返回给 animi——oi 是 ESIR 帧里的一个标记位。
-    → 安全停止帧读到这个标记位 → 切回保底包。
+    这个 bit 不是软件分支——不是 `if oi { ... }`。
+    是 Hardware Trap（硬件陷阱/异常掩码）。
+    一旦置为 true → 直接在门级覆盖当前帧 DAC 核心电流输出。
+    不经过分支预测器。不经过指令流水线。
+    响应延迟 = 时钟周期级。0ns 语义。
 
-Pass 8 CodeGen → 帧级偏差修正 → 心率超出硬上限
-    → oi 在 FPGA 上是一个寄存器比较结果。
-    → oi = true → 立即切换到紧急截断曲线帧。
+    没有 format!。没有 String。没有 allocator。
+    没有任何堆分配。bit。只一个 bit。
 ```
 
 ### 和 Rust / Go 的对比

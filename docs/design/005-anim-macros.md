@@ -1,6 +1,6 @@
 # ADR 005: Anim 宏系统——交织期展开的安全保证
 
-> 状态：已定稿
+> 状态：已定稿（修订：2026-05-27——新增 Span 溯源）
 > 日期：2026-05-26
 > 对应规范：Anim-LOCALITY.md、ADR 003 Pass 管线
 
@@ -152,8 +152,27 @@ Pass 0 生成的 AST 上有一个 MacroExpander 遍历所有 MacroCall 节点—
     → 递归展开（宏体内可以调其他宏）
     → 最大递归深度 32（和 Rust 一致）
 
-展开完成后 → 没有任何 MacroCall 节点残留。
-Pass 1 看到的是纯 AST——不知道、也不需要知道哪些节点来自宏。
+展开完成后 → MacroCall 节点被替换为展开后的 AST 子树。
+但每个展开产生的 AST 节点必须强制携带 Span 元数据——
+
+    Span {
+        source_file:     原始 .anim 源文件路径
+        macro_name:      产生此节点的 macro_rules! 名称
+        expansion_depth: 展开深度（0 = 手写，1 = 一层宏，2 = 嵌套...）
+        call_site_index: 调用点在宏体内的位置序号
+    }
+
+    即使递归展开 32 层——Pass 2 报错时能完整打印宏展开轨迹：
+        "[强度 E002] intensity exceeds cap
+         → safe_pair! at line 42
+         → deep_exploration! at line 15 (expansion depth 3)
+         → 原始调用: gentle_belonging! at line 7"
+
+不是"知道出事了，但抓不到是谁下的毒"。
+是"每一根来自宏的丝——都知道自己从哪个纺锤来的"。
+
+Pass 1 的交叉检查不需要 Span——安全规则只看展开后的 AST。
+Span 是给安全审计和创作者用的。对的事后追查 = 对的交叉信任。
 ```
 
 ---
