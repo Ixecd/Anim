@@ -13,7 +13,7 @@
 
 - `Feelings-LANGUAGE.md` — Anim 语言完整规范（上级项目根目录）
 - 类型系统：双层感受原子体系（核心 + 沙盒）
-- 八 Pass 交织管线：LexParse → TypeCheck → StaticSafety → UserStateSafety → RuntimeGuard → FSIRGen → Personalize → DeviceMap → CodeGen
+- 九 Pass 交织管线（Pass 0-8）：LexParse → TypeCheck → StaticSafety → UserStateSafety → RuntimeGuard → FSIRGen → Personalize → DeviceMap → CodeGen
 - 四层 IR：FSIR / PSIR / DSIR / ESIR
 - 双流水线架构：前台实时 + 后台离线
 - 三层安全防线：静态规则 + 用户状态 + 运行期插桩
@@ -26,7 +26,7 @@
 **设计文档（ADR）**
 - `docs/design/001-error-codegen.md` — 错误码代码生成器。Rust enum + 注释 → build script → Display impl + Markdown 编目。正则严格校验注释格式。源在代码，文档全自动，对手写零容忍。
 - `docs/design/002-ir-architecture.md` — 四层 IR 架构决策。为什么是四层不是三层或五层。每层织入一股独立流。PSIR 和 FSIR 分离 = PBM 永不离设备的隐私硬约束。
-- `docs/design/003-pass-pipeline.md` — 八 Pass 交织管线决策。每个 Pass 只做一件事——织入一股新信息流或施加一层新安全约束。Pass 边界不冲刷 CPU 流水线。
+- `docs/design/003-pass-pipeline.md` — 九 Pass 交织管线（Pass 0-8）决策。每个 Pass 只做一件事——织入一股新信息流或施加一层新安全约束。Pass 边界不冲刷 CPU 流水线。
 - `docs/design/004-dual-pipeline.md` — 双流水线架构决策。前台只跑 DSIR→ESIR（1ms 硬实时），后台离线预交织 Pass 0-5。物理隔离互不抢占。分支预测跑在 FPGA 上。
 - `docs/design/005-anim-macros.md` — Anim 宏系统决策。语法树级展开 + 三层感受安全保证（类型检查 + 强度生命周期 + 创伤作用域）。不是 C `#define` 的文本替换。
 - `docs/design/006-error-handling-oi.md` — Anim 错误处理决策。不是 Err 不是 Error。是 oi。轻。短。不堆栈。不 panic。交叉被挡 = 这帧不生成。下一帧继续。
