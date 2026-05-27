@@ -68,14 +68,26 @@ ESIR    执行信号中间表示        帧级指令（1ms/帧），带闭环反
 
 ---
 
-## 自举三步
+## 自举三步——Rust 是梯子，不是底座
+
+Anim 的安全保证不来自 Rust。Rust 只保 animi 这个程序自己不崩——borrow checker 管的是内存。用户的安全保证来自 Anim 自己的逻辑层——cross checker、Pass 2-4、oi——这些规则在 v0.x 里就是 Anim 自己的，Rust 的 type system 从来不知道"恐惧点缀上限 0.12"。
 
 ```
-v0.x    Rust 寄居——用 Rust 写第一个 animi，借壳跑魂
-v1.0    自举——用 v0.x 的 animi 交织 Anim 写的 animi 源码
-        向下兼容 v0.x 生成的 FSIR 产物
-v2.0    从 01 裸奔——Anim 直接管理自己的内存、调度、I/O
-        运行在 Feelings 设备上，不经过 OS
+v0.x    Rust 寄居——用 Rust 写第一个 animi。
+        Rust = 脚手架。Anim 的安全规则是 Anim 自己的逻辑。
+        逻辑不依赖宿主语言。
+
+v1.0    自举——用 v0.x 的 animi 交织 Anim 写的 animi 源码。
+        新 animi 的安全检查（cross checker / Pass 2-4 / oi）
+        不是 Rust 的 type system 实现的——是逻辑。
+        向下兼容 v0.x 生成的 FSIR 产物。
+
+v2.0    从 01 裸奔——Anim 直接管理自己的内存、调度、I/O。
+        运行在 Feelings 设备上，不经过 OS。
+        oi 在 FPGA 上是一个寄存器比较。true/false。
+        和 Rust 没有任何关系。和 OS 也没有。
+
+梯子踢开。底座是自己的逻辑。
 ```
 
 ---
