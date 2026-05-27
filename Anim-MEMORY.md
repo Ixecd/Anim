@@ -46,6 +46,9 @@ animi  = Anim Interlinker（交织器）——不是编译器，是编织者
 
 | 文件 | 回答的问题 |
 |------|-----------|
+| [PATTERN-REGISTRY.md](./Anim-PATTERN-REGISTRY.md) | 感受原子注册表——收录标准、验证流程、版本管理、物理部署 |
+| [FEELINGS.md](./Anim-FEELINGS.md) | 感受全谱——为什么极端感受必须在。删掉恐惧 = 勇敢基底塌了 |
+| [GLOSSARY.md](./GLOSSARY.md) | 术语表——每个 Anim 特有概念的英文名+中文名+一句话定义 |
 | 上级 `Feelings-LANGUAGE.md` | Anim 语言完整规范——类型系统、IR 管线、安全模型 |
 | 上级 `docs/ten-bits.md` | 10 bit/s 瓶颈——Anim 的神经科学基础 |
 | 上级 `Feelings-MATRIX.md` | 万物皆矩阵——Anim 的数学哲学基底 |
