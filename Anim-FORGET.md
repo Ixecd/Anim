@@ -1,6 +1,6 @@
 # FORGET.md — 待修复项（P0 + P1）
 
-> 扫描日期：2026-05-26
+> 扫描日期：2026-05-27
 > 范围：语言规范（`Feelings-LANGUAGE.md`）+ 设计文档 + 代码（零行）
 > 原则：只列 P0（生产命门）和 P1（功能受限），P2 Ops / P3 Polish 不提
 
@@ -51,6 +51,30 @@
 
 12. **FPGA 固件接口协议零设计** — ESIR 帧格式 → 硬件数据包的通信协议未定义。
 
+### 设计文档审计缺陷（2026-05-27 MiniMax + Gemini 审计）
+
+13. **oi 生命周期边界不清** — ADR 006 说编译期带 String、运行期是 bit，但 Pass 4（RuntimeGuard）在离线时跑，其 oi 是 String 还是 bit？边界未画清。FIXME: ADR 006 §oi 的双重生命周期。
+
+14. **PBM 冷启动与收敛关系未说明** — PHILOSOPHY 说冷启动系数硬编码，ADR 003 说非线性 sigmoidal 查表。硬编码的值和可调的曲线之间是什么关系？收敛到哪去？
+
+15. **自适应帧密度 vs 安全校验帧频率冲突** — ADR 003 Pass 8 说 safe frame 每 N 帧一个（N 固定），但自适应帧密度让 plateau 段 10ms/帧。如果 plateau 段只有 100ms → 只产 10 帧 → N=20 的 safe frame 约束会崩。N 是多少？冲突时谁优先？
+
+16. **分支预测器 FPGA 实现细节缺失** — ADR 004 说预测器跑在 FPGA 上+"查寄存器+简单线性外推"，但 FPGA 的门级逻辑是静态的。外推逻辑怎么烧进去？训练数据存在哪？
+
+17. **后台预交织触发条件未量化** — ADR 004 说"设备在充电。用户未佩戴"，两个条件是 AND 还是 OR？预交织源码从哪来？闲置久了的 PBM 漂移缓存新鲜度怎么保证？
+
+18. **Span 元数据存储成本未估算** — ADR 005 每个宏展开节点带 Span（source_file + macro_name 两个 String）。不用 interning → 200 节点 = 几十 KB 冗余。用了 interning → 成本是多少？
+
+19. **#[allow_hedge] 语法位置未定** — 写在宏调用方还是 mix 声明处？两个语义的优先级？
+
+20. **Pass 命名不一致** — Pass 5 叫 FSIRGen，Pass 6-8 不叫 PSIRGen/DSIRGen/ESIRGen。应统一。
+
+21. **ADR 002 五层方案反驳不够有力** — TSIR 和 ESIR 在语义上等价但没有说清楚。
+
+22. **ADR 003 Pass 5 为什么不放在 Pass 1 之后** — FSIR 生成理论上在 TypeCheck 之后就可以做。放在安全层（Pass 2-4）之后的理由需要写清楚。
+
+23. **验证标准无工程化路径** — "身体信了，深睡时长涨了"是哲学描述。需要量化：涨多少？测多久？基线是什么？
+
 ---
 
 ## 编辑记录
@@ -71,4 +95,11 @@
               宏系统新增 P1；注解展开→设计已定稿代码零行
             - oi 作为错误处理约定已定稿——不是 Err 不是 Error，是 oi
             - P0 不变：代码仍零行，v0.2 milestone 1 开始
+
+2026-05-27  v0.1.2 Gemini + MiniMax 审计
+            - Gemini 四刺已修：oi硬件Trap / 控制回路+BRAM / Emergency Bypass+衰减状态机 / Span溯源
+            - MiniMax 已修：Pass数量八→九 / SAFETY章节跳号 / Pattern Registry + 术语表
+            - MiniMax 待修：11项新增 P1（见 §设计文档审计缺陷 #13-23）
+            - 新增 Anim-FEELINGS.md / Anim-PATTERN-REGISTRY.md / GLOSSARY.md
+            - P0 不变：代码仍零行
 ```
