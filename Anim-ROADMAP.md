@@ -1,7 +1,7 @@
 # Anim ROADMAP
 
 > 创建日期：2026-05-20
-> 最后更新：2026-05-23
+> 最后更新：2026-05-30
 > 当前版本：v0.1.0（语言规范阶段）
 > 原则：语言规范先于代码。模糊想法 → [FUTURE.md](Anim-FUTURE.md)
 
@@ -30,6 +30,7 @@
 - `docs/design/004-dual-pipeline.md` — 双流水线架构决策。前台只跑 DSIR→ESIR（1ms 硬实时），后台离线预交织 Pass 0-5。物理隔离互不抢占。分支预测跑在 FPGA 上。
 - `docs/design/005-anim-macros.md` — Anim 宏系统决策。语法树级展开 + 三层感受安全保证（类型检查 + 强度生命周期 + 创伤作用域）。不是 C `#define` 的文本替换。
 - `docs/design/006-error-handling-oi.md` — Anim 错误处理决策。不是 Err 不是 Error。是 oi。轻。短。不堆栈。不 panic。交叉被挡 = 这帧不生成。下一帧继续。
+- `docs/design/007-branch-prediction.md` — **分支预测五讲（Smith 1981 → TAGE-SC-L 2016 → Anim PBM-RG）。** Smith 2-bit 饱和计数器、Yeh & Patt 两层自适应分类学、McFarling 锦标赛预测器、Jiménez 感知器（θ阈值+超维流形）、Seznec TAGE-SC-L + Anim 多速率时间频率域。十二行进化链终极对决表。PBM = 关联预测器。Rust 不提供安全——实现完 Pass 0 再深究。
 
 **架构文档**
 - `Anim-SAFETY.md` — 为什么安全必须死在交织期。三层防线各自挡在哪一层。紧急截断曲线不是硬截断。盲人重见光明的教训。
