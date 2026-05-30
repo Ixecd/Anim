@@ -82,6 +82,34 @@ Rust 项目初始化 → 八 Pass 骨架全部跑通 → 错误诊断系统上�
 
 ---
 
+## v0.2.5 — Milestone 1.5: 可视化编辑器（基于 ZENO 节点图框架）
+
+### 目标
+
+```
+文本编译器稳定后 —— 感受创作者不需要手写 .anim 源码。
+基于 ZENO 节点图框架 (github.com/zenustech/zeno) 注册 Anim 节点类型，
+拖拽连线 → 导出 .anim 源码 → 喂给 animi。
+```
+
+### 核心交付
+
+- 注册 Anim 节点类型：`FeelingNode`（感受原子选择器）、`MixNode`（混音结构）、`ShapeNode`（shape 曲线编辑）
+- 右侧属性面板：强度区间、点缀配比、设备依赖
+- 连线 = 数据流：主旋律 → 点缀列表 → shape → 导出
+- 导出 = `.anim` 源码 → `animi` 编译 → FSIR JSON
+- 低强度 preview session 试戴
+
+### 验收
+
+```
+✓ 拖一个"平静"节点 + "归属"节点 → 连线 → 调强度 → 导出 .anim
+✓ 导出的 .anim 被 animi 正确编译为 FSIR
+✓ ZENO 的节点注册/连线/序列化全复用——不重复造编辑器框架
+```
+
+---
+
 ## v0.3 — Milestone 2: 个人适配 + 设备映射
 
 ### 目标

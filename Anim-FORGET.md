@@ -137,6 +137,12 @@ M_f3 = lerp(0.15, 1.0, σ_ema)
 ## 编辑记录
 
 ```
+2026-05-30  v0.1.4 实现路径更新
+            - 新增 v0.2.5 里程碑：可视化编辑器——基于 ZENO 节点图框架
+            - 注册 Anim 节点类型(FeelingNode/MixNode/ShapeNode)
+            - 拖拽连线 → 导出 .anim → 喂给 animi
+            - ROADMAP 已同步
+
 2026-05-30  v0.1.3 技术审计
             - 新增设计决策 D1：PBM因子三硬门控 vs 传统梯度动量——维持硬门控
             - ADR 007 分支预测五讲定稿（Smith→TAGE→Anim PBM-RG）
