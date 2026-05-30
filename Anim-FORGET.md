@@ -137,6 +137,15 @@ M_f3 = lerp(0.15, 1.0, σ_ema)
 ## 编辑记录
 
 ```
+2026-05-30  v0.1.3 技术审计
+            - 新增设计决策 D1：PBM因子三硬门控 vs 传统梯度动量——维持硬门控
+            - ADR 007 分支预测五讲定稿（Smith→TAGE→Anim PBM-RG）
+            - 明确：Anim不需要指令集（ESIR是信号编码不是ISA）
+            - 明确：FSIR用JSON（哈希确定性+Git diff可读+人机边界）
+            - 明确：Anim不管驱动（Feelings-OS busd管，Anim只输出ESIR字节流）
+            - 明确：Anim不需要自己实现智能指针（Box/Arc走std）
+            - P0 不变：代码仍零行
+
 2026-05-20  v0.1 初始扫描
             - 语言规范 100%
             - 代码 0%
