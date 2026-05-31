@@ -137,6 +137,13 @@ M_f3 = lerp(0.15, 1.0, σ_ema)
 ## 编辑记录
 
 ```
+2026-05-30  v0.1.6 FPGA计算存储一体
+            - Anim不需要in-memory computing——FPGA已天然计算存储一体
+            - BRAM+DSP Block紧邻——数据从未离开计算单元
+            - von Neumann搬数据瓶颈对Anim不成立——PBM前向传播单周期
+            - ESIR帧环形缓冲区原地更新——数据不搬
+            - 正确路径：FPGA空间并行 > in-memory > CPU cache hierarchy
+
 2026-05-30  v0.1.5 第二纪元模拟层
             - ZENO 生物模拟 + 物理求解器 = 层 0-20 肉身设计模拟层
             - 阶段五-A：AI 在 ZENO 模拟器上学习心跳/皮电/呼吸响应
