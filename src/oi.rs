@@ -4,6 +4,9 @@
 // oi 是"交叉被挡。"轻。短。不 panic。不跳闸。
 // 这帧不生成。下一帧继续。和 Anim 的安全哲学一致——
 // "宁可误杀一帧。绝不污染一条经线。"
+//
+// v1.2+ 扩展：FPGA 实时 Session 需带 frame_id / user_id / 生理数据上下文。
+// 方案：oi! 加可选 context 参数，或 thread-local context 注入。
 
 /// oi! — 交叉被挡。不 panic。返回 Err(AnimiError::Variant { fields })。
 ///
