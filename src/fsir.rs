@@ -87,10 +87,7 @@ impl FsirDoc {
     /// 调用方必须先跑完 Pass 0-4 的安全校验。
     /// FSIRGen 本身不做校验——只做转换。
     pub fn from_ast(source: &FeelingSource, source_hash: &str) -> Self {
-        let now = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| format!("{}", d.as_secs()))
-            .unwrap_or_else(|_| "unknown".into());
+        let now = chrono::Utc::now().to_rfc3339();
 
         FsirDoc {
             meta: FsirMeta {

@@ -1,0 +1,9 @@
+fix: P0 round — chrono RFC 3339 + rule.rs three rules + FORGET P0/P1/P2 restructure
+
+- Cargo.toml: add chrono for RFC 3339 timestamps
+- fsir.rs: compiled_at = chrono::Utc::now().to_rfc3339()
+- rule.rs: no longer stub — global intensity cap 100, abrupt_stop≤20, sandbox checks
+- rule.rs: scale_intensity() — proportional scaling when user_cap < source max
+- main.rs: wire rule::check with is_core registry closure
+- FORGET.md: full P0/P1/P2 restructure — 9 P0 + 14 P1 + 4 P2 + completed list
+- 51 tests all green
