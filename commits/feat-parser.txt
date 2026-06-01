@@ -1,0 +1,7 @@
+feat: add parser (Pass 0b) — recursive descent, Token stream → AST
+
+- .anim 完整语法解析：feeling→mix→shape→intensity
+- 尾逗号、空点缀列表、嵌套混音——全部处理
+- 语法错误 → oi!(ParseError) + 行列号定位
+- 9 个测试覆盖正例/尾逗号/空列表/各种错误
+- oi! 宏修复：去掉 .into()，调用方显式 .to_string()
