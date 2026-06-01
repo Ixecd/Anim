@@ -1,4 +1,4 @@
-// src/lib.rs — animi 编译器库入口
+// src/lib.rs — animi 交织器库入口
 
 pub mod ast;
 pub mod error;

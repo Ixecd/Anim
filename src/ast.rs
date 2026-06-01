@@ -2,7 +2,7 @@
 //
 // 对应规范：Feelings-LANGUAGE.md §三、Anim 源码结构
 // .anim 源码经过词法分析和语法分析后，生成这里的 AST 节点。
-// AST 是编译器所有后续 Pass 的输入。
+// AST 是交织器所有后续 Pass 的输入。
 
 use serde::Serialize;
 

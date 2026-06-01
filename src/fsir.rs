@@ -8,7 +8,7 @@ use crate::ast::*;
 use crate::error::AnimiError;
 use serde::Serialize;
 
-/// FSIR 文档——编译产物的顶层结构。
+/// FSIR 文档——交织产物的顶层结构。
 ///
 /// 这是 `.anim` 源码经过 Pass 0-4 之后的第一份 IR。
 /// 所有后续 Pass（Personalize/DeviceMap/CodeGen）的输入。
@@ -142,7 +142,7 @@ mod tests {
     use crate::parser::Parser;
     use crate::typeck::TypeChecker;
 
-    fn compile(src: &str) -> Result<FsirDoc, AnimiError> {
+    fn interlink(src: &str) -> Result<FsirDoc, AnimiError> {
         let mut lexer = Lexer::new(src);
         let tokens = lexer.tokenize()?;
         let mut parser = Parser::new(tokens);
@@ -164,7 +164,7 @@ feeling calm {
     intensity: [15, 45]
 }
 "#;
-        let doc = compile(src).unwrap();
+        let doc = interlink(src).unwrap();
         let json = doc.to_json().unwrap();
 
         assert!(json.contains("calm"));
@@ -189,7 +189,7 @@ feeling calm {
     intensity: [0, 100]
 }
 "#;
-        let doc = compile(src).unwrap();
+        let doc = interlink(src).unwrap();
         let json = doc.to_json().unwrap();
 
         // 反序列化回来——验证 JSON 结构完整
@@ -215,7 +215,7 @@ feeling calm {
     intensity: [10, 20]
 }
 "#;
-        let doc = compile(src).unwrap();
+        let doc = interlink(src).unwrap();
         let json = doc.to_json().unwrap();
         let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
 

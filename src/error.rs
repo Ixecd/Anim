@@ -1,8 +1,8 @@
 // src/error.rs — Anim 错误系统（ADR 006）
 //
-// AnimiError = 编译器的错误枚举。手写 Display——不 derive。
+// AnimiError = 交织器的错误枚举。手写 Display——不 derive。
 // 每个变体 = 一种交叉被挡的原因。
-// 不是 panic。不是 abort。不是"编译失败"。
+// 不是 panic。不是 abort。不是"交织失败"。
 // 是"这帧的交叉被挡了。下一帧继续。"
 
 use std::fmt;
@@ -10,7 +10,7 @@ use std::fmt;
 /// animi 交织器的错误类型。
 #[derive(Debug)]
 pub enum AnimiError {
-    /// 词法错误——源码里有编译器不认识的字符。
+    /// 词法错误——源码里有交织器不认识的字符。
     LexError {
         line: usize,
         col: usize,
