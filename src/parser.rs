@@ -179,7 +179,7 @@ impl Parser {
             };
 
             // 基础范围 + NaN/Inf 兜底——typeck 之后做精细 max_ratio
-            if ratio.is_nan() || ratio.is_infinite() || ratio < 0.0 || ratio > 1.0 {
+            if ratio.is_nan() || ratio.is_infinite() || !(0.0..=1.0).contains(&ratio) {
                 oi!(
                     ParseError,
                     line = self.peek().line,

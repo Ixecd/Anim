@@ -1,0 +1,9 @@
+feat: add fsir + main.rs CLI + Pass 2/3/4 stubs — complete compiler pipeline
+
+- fsir.rs: FsirDoc + from_ast() + to_json() — AST→FSIR JSON 完整转换
+- main.rs: CLI 入口——lex→parse→typeck→rule→safety→guard→FSIR JSON
+- rule.rs: Pass 2 静态安全规则桩
+- safety.rs: Pass 3 用户安全桩
+- guard.rs: Pass 4 运行期插桩预埋桩
+- clippy fix: !(0.0..=1.0).contains(&ratio)
+- 47 tests all green
