@@ -41,22 +41,20 @@ impl Default for Registry {
 }
 
 impl Registry {
-    /// 从外部 JSON 文件加载。失败 → 回退到内建列表。
-    pub fn from_file(path: &str) -> Self {
-        if let Ok(json) = std::fs::read_to_string(path) {
-            if let Ok(defs) = serde_json::from_str::<Vec<AtomDef>>(&json) {
-                let atoms: Vec<AtomEntry> = defs
-                    .into_iter()
-                    .map(|d| AtomEntry {
-                        name: d.name,
-                        class: d.class,
-                        max_ratio: d.max_ratio,
-                    })
-                    .collect();
-                return Registry { atoms };
-            }
-        }
-        Self::from_builtin()
+    /// 从外部 JSON 文件加载。失败 → 返回错误信息。
+    pub fn from_file(path: &str) -> Result<Self, String> {
+        let json = std::fs::read_to_string(path).map_err(|e| format!("读取失败: {}", e))?;
+        let defs: Vec<AtomDef> =
+            serde_json::from_str(&json).map_err(|e| format!("JSON 解析失败: {}", e))?;
+        let atoms: Vec<AtomEntry> = defs
+            .into_iter()
+            .map(|d| AtomEntry {
+                name: d.name,
+                class: d.class,
+                max_ratio: d.max_ratio,
+            })
+            .collect();
+        Ok(Registry { atoms })
     }
 
     /// 内建 fallback——8 个核心原子。
@@ -107,6 +105,7 @@ static SHAPES: &[&str] = &[
     "steady",
     "slow_decay",
     "wave",
+    "abrupt_stop",
 ];
 
 pub fn shape_names() -> impl Iterator<Item = &'static str> {

@@ -20,6 +20,13 @@ pub fn check(_source: &FeelingSource) -> Result<(), AnimiError> {
     Ok(())
 }
 
+/// 检查 + 强度缩放——返回缩放后的 Interval。
+/// v1.1 `user_cap` 从环境变量 `ANIMI_USER_CAP` 取，默认 100。
+pub fn check_with_scale(source: &FeelingSource, user_cap: u32) -> Result<Intensity, AnimiError> {
+    check(source)?;
+    Ok(scale_intensity(&source.intensity, user_cap))
+}
+
 /// 强度等比缩放——当 user_cap < source max 时，等比缩放整个区间。
 ///
 /// v1.1 未接入：Pass 3 是桩，没有用户档案，拿不到 user_cap。
@@ -84,6 +91,27 @@ feeling calm {
     fn scale_intensity_proportional() {
         let original = Intensity { min: 15, max: 60 };
         let scaled = scale_intensity(&original, 45);
+        assert_eq!(scaled.min, 11);
+        assert_eq!(scaled.max, 45);
+    }
+
+    #[test]
+    fn check_with_scale_applies_cap() {
+        let src = r#"
+feeling calm {
+    mix {
+        main: calm_meditative
+        accents: []
+    }
+    shape: steady
+    intensity: [15, 60]
+}
+"#;
+        let mut lexer = Lexer::new(src);
+        let tokens = lexer.tokenize().unwrap();
+        let mut parser = Parser::new(tokens);
+        let ast = parser.parse().unwrap();
+        let scaled = check_with_scale(&ast, 45).unwrap();
         assert_eq!(scaled.min, 11);
         assert_eq!(scaled.max, 45);
     }

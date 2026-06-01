@@ -9,4 +9,4 @@
 | `TypeCheckError` | 类型检查错误——感受原子不存在、强度越界等。 |
 | `StaticSafetyError` | 静态安全错误——Pass 2（rule.rs）。对任何人的硬规则。 |
 | `UserStateSafetyError` | 用户安全错误——Pass 3（safety.rs）。对这个人的拒绝。 |
-| `InternalError` | 编译器内部错误——不是用户源码的问题。 |
+| `InternalError` | 交织器内部错误——不是用户源码的问题。 |

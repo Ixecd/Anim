@@ -10,8 +10,12 @@ fn main() {
     let lines: Vec<&str> = src.lines().collect();
 
     let valid = [
-        "LexError", "ParseError", "TypeCheckError",
-        "StaticSafetyError", "UserStateSafetyError", "InternalError",
+        "LexError",
+        "ParseError",
+        "TypeCheckError",
+        "StaticSafetyError",
+        "UserStateSafetyError",
+        "InternalError",
     ];
 
     let mut errors: Vec<(String, String)> = Vec::new();
