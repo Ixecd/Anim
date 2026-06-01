@@ -1,0 +1,6 @@
+feat: add AST type definitions
+
+- FeelingSource (顶层) + Mix (混音) + Accent (点缀)
+- FeelingAtom (感受原子) + Shape (形状) + Intensity (强度区间)
+- 全部派生 Debug/Clone/Serialize
+- Intensity::validate() 校验 max >= min
