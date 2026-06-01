@@ -63,9 +63,9 @@ test: cover unregistered feeling atom error
 | lexer | src/lexer.rs | Pass 0a 词法分析 |
 | parser | src/parser.rs | Pass 0b 语法分析 |
 | typeck | src/typeck.rs | Pass 1 类型检查 |
-| static-safety | src/static_safety.rs | Pass 2 静态安全 |
-| user-safety | src/user_safety.rs | Pass 3 用户状态安全 |
-| runtime-guard | src/runtime_guard.rs | Pass 4 运行期插桩 |
+| rule | src/rule.rs | Pass 2 通用安全规则 |
+| safety | src/safety.rs | Pass 3 用户安全 |
+| guard | src/guard.rs | Pass 4 运行期插桩 |
 | fsir | src/fsir.rs | Pass 5 FSIR 生成 |
 | pbm | src/pbm.rs | Pass 6 PBM 左乘 |
 | device-map | src/device_map.rs | Pass 7 设备映射 |

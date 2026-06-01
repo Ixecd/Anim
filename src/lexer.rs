@@ -171,6 +171,12 @@ impl Lexer {
         if self.peek() == '.' {
             self.advance(); // 吞掉 '.'
             let frac_part = self.read_while(|ch| ch.is_ascii_digit());
+
+            // 孤立小数点——既没有整数部分也没有小数部分 → 非法字符
+            if int_part.is_empty() && frac_part.is_empty() {
+                oi!(LexError, line=line, col=col, msg="isolated '.' is not a valid number".to_string())
+            }
+
             let literal = format!("{}.{}", int_part, frac_part);
             return Ok(Token {
                 kind: TokenKind::Float,
@@ -408,6 +414,15 @@ feeling calm_meditative { -- inline comment
         let e = result.unwrap_err();
         let msg = e.to_string();
         assert!(msg.contains("@"));
+    }
+
+    #[test]
+    fn tokenize_isolated_dot_is_error() {
+        let src = ".";
+        let mut lexer = Lexer::new(src);
+        let result = lexer.tokenize();
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("isolated"));
     }
 
     #[test]

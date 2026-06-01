@@ -32,14 +32,45 @@ impl Parser {
 
         self.expect(TokenKind::LBrace, "{")?;
 
-        // mix { ... }
-        let mix = self.parse_mix()?;
+        // mix / shape / intensity 顺序无关——逐个按关键字解析
+        let mut mix: Option<Mix> = None;
+        let mut shape: Option<Shape> = None;
+        let mut intensity: Option<Intensity> = None;
 
-        // shape: <name>
-        let shape = self.parse_shape()?;
-
-        // intensity: [<min>, <max>]
-        let intensity = self.parse_intensity()?;
+        while self.peek().kind != TokenKind::RBrace && self.peek().kind != TokenKind::Eof {
+            match self.peek().kind {
+                TokenKind::Mix => {
+                    if mix.is_some() {
+                        oi!(ParseError, line=self.peek().line, col=self.peek().col,
+                            expected="unique field".to_string(),
+                            found="duplicate mix".to_string())
+                    }
+                    mix = Some(self.parse_mix()?);
+                }
+                TokenKind::Shape => {
+                    if shape.is_some() {
+                        oi!(ParseError, line=self.peek().line, col=self.peek().col,
+                            expected="unique field".to_string(),
+                            found="duplicate shape".to_string())
+                    }
+                    shape = Some(self.parse_shape()?);
+                }
+                TokenKind::Intensity => {
+                    if intensity.is_some() {
+                        oi!(ParseError, line=self.peek().line, col=self.peek().col,
+                            expected="unique field".to_string(),
+                            found="duplicate intensity".to_string())
+                    }
+                    intensity = Some(self.parse_intensity()?);
+                }
+                _ => {
+                    let t = self.peek();
+                    oi!(ParseError, line=t.line, col=t.col,
+                        expected="mix / shape / intensity".to_string(),
+                        found=format!("{:?}", t.kind))
+                }
+            }
+        }
 
         self.expect(TokenKind::RBrace, "}")?;
 
@@ -49,6 +80,26 @@ impl Parser {
             oi!(ParseError, line=peek.line, col=peek.col,
                 expected="EOF".to_string(), found=format!("unexpected token {:?}", peek.kind))
         }
+
+        // 三个字段必须都存在
+        let mix = mix.ok_or_else(|| AnimiError::ParseError {
+            line: 0,
+            col: 0,
+            expected: "mix block".to_string(),
+            found: "missing".to_string(),
+        })?;
+        let shape = shape.ok_or_else(|| AnimiError::ParseError {
+            line: 0,
+            col: 0,
+            expected: "shape field".to_string(),
+            found: "missing".to_string(),
+        })?;
+        let intensity = intensity.ok_or_else(|| AnimiError::ParseError {
+            line: 0,
+            col: 0,
+            expected: "intensity field".to_string(),
+            found: "missing".to_string(),
+        })?;
 
         Ok(FeelingSource {
             name,
@@ -95,14 +146,12 @@ impl Parser {
             let atom_name = self.expect_identifier("点缀感受原子名")?;
             let ratio_literal = self.expect_number("点缀配比")?;
 
-            let ratio: f64 = ratio_literal
-                .parse()
-                .map_err(|_| AnimiError::ParseError {
-                    line: self.peek().line,
-                    col: self.peek().col,
-                    expected: "有效的配比数字".to_string(),
-                    found: ratio_literal.clone(),
-                })?;
+            let ratio: f64 = match ratio_literal.parse() {
+                Ok(r) => r,
+                Err(_) => oi!(ParseError, line=self.peek().line, col=self.peek().col,
+                    expected="有效的配比数字".to_string(),
+                    found=ratio_literal.clone()),
+            };
 
             accents.push(Accent {
                 atom: FeelingAtom { name: atom_name },
@@ -144,6 +193,11 @@ impl Parser {
     fn parse_intensity(&mut self) -> Result<Intensity, AnimiError> {
         self.expect_keyword(TokenKind::Intensity, "intensity")?;
         self.expect(TokenKind::Colon, ":")?;
+
+        // 记录 [ 的位置——校验失败时用这里报错，不是后面的 }
+        let bracket_line = self.peek().line;
+        let bracket_col = self.peek().col;
+
         self.expect(TokenKind::LBracket, "[")?;
 
         let min = self.parse_int("强度最小值")?;
@@ -156,8 +210,8 @@ impl Parser {
         intensity
             .validate()
             .map_err(|msg| AnimiError::ParseError {
-                line: self.peek().line,
-                col: self.peek().col,
+                line: bracket_line,
+                col: bracket_col,
                 expected: "合法的强度区间（max >= min）".to_string(),
                 found: msg,
             })?;
@@ -249,12 +303,13 @@ impl Parser {
                 found=format!("{:?}", token.kind))
         }
         self.pos += 1;
-        token.literal.parse().map_err(|_| AnimiError::ParseError {
-            line: token.line,
-            col: token.col,
-            expected: expected_name.to_string(),
-            found: token.literal,
-        })
+        let val: u32 = match token.literal.parse() {
+            Ok(v) => v,
+            Err(_) => oi!(ParseError, line=token.line, col=token.col,
+                expected=expected_name.to_string(),
+                found=token.literal.clone()),
+        };
+        Ok(val)
     }
 }
 
@@ -406,6 +461,43 @@ feeling calm {
 "#;
         let result = parse_source(src);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn parse_fields_reordered() {
+        // shape 和 intensity 的顺序和 mix 不一样——应该也能解析
+        let src = r#"
+feeling calm {
+    intensity: [10, 50]
+    shape: sharp_peak
+    mix {
+        main: calm_meditative
+        accents: []
+    }
+}
+"#;
+        let result = parse_source(src).unwrap();
+        assert_eq!(result.shape.name, "sharp_peak");
+        assert_eq!(result.intensity.min, 10);
+        assert_eq!(result.mix.main.name, "calm_meditative");
+    }
+
+    #[test]
+    fn parse_duplicate_field_rejected() {
+        let src = r#"
+feeling calm {
+    mix {
+        main: calm_meditative
+        accents: []
+    }
+    shape: steady
+    shape: another_shape
+    intensity: [10, 20]
+}
+"#;
+        let result = parse_source(src);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("duplicate"));
     }
 
     #[test]

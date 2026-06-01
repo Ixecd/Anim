@@ -1,0 +1,12 @@
+fix: five review fixes + oi/error split + file renames + Makefile
+
+- error.rs 和 oi.rs 拆分——oi! 宏独立文件
+- 文档示例修正——.to_string() 显式调用
+- map_err 改 match——oi! 从当前函数返回而非闭包
+- 孤立小数点 . 被词法器拒绝——不再逃逸为伪浮点数
+- 强度校验报错坐标修正——使用 [ 的行列号
+- 声明式语法顺序无关——while+match 按关键字解析
+- 重复字段检测——duplicate mix/shape/intensity 拒绝
+- static_safety→rule, user_safety→safety, runtime_guard→guard
+- Makefile 新增——make dev=fmt+lint+test+build
+- 27 测试全绿

@@ -1,17 +1,13 @@
 // src/error.rs — Anim 错误系统（ADR 006）
 //
 // AnimiError = 编译器的错误枚举。手写 Display——不 derive。
-// oi! 宏 = 轻量拒绝。"挡一帧。不 panic。下一帧继续尝试交叉。"
-// 和传统编译器的区别：不是 Err。不是 Error。是 oi——交叉被挡。
-// 被挡的这帧不生成任何 IR。不会对身体产生信号。静默跳过。
+// 每个变体 = 一种交叉被挡的原因。
+// 不是 panic。不是 abort。不是"编译失败"。
+// 是"这帧的交叉被挡了。下一帧继续。"
 
 use std::fmt;
 
 /// Anim 编译器的错误类型。
-///
-/// 每个变体 = 一种交叉被挡的原因。
-/// 不是 panic。不是 abort。不是"编译失败"。
-/// 是"这帧的交叉被挡了。下一帧继续。"
 #[derive(Debug)]
 pub enum AnimiError {
     /// 词法错误——源码里有编译器不认识的字符。
@@ -36,7 +32,6 @@ pub enum AnimiError {
     },
 
     /// 编译器内部错误——不是用户源码的问题。
-    /// 编译器自身的 bug。收集信息。不 panic。
     InternalError {
         msg: String,
     },
@@ -72,33 +67,6 @@ impl fmt::Display for AnimiError {
 
 impl std::error::Error for AnimiError {}
 
-/// oi! — Anim 的轻量拒绝宏。
-///
-/// 不 panic。不 abort。不堆栈。
-/// 返回 `Err(AnimiError::Variant { fields })`。
-///
-/// # 示例
-///
-/// ```ignore
-/// oi!(LexError, line=12_usize, col=5_usize, msg="unexpected character: @");
-/// // → return Err(AnimiError::LexError { line: 12, col: 5, msg: "unexpected character: @".into() })
-/// ```
-///
-/// # 命名的由来
-///
-/// oi 不是 Err。不是 Error。不是"错了"。
-/// oi 是"交叉被挡。"轻。短。不 panic。不跳闸。
-/// 这帧不生成。下一帧继续。和 Anim 的安全哲学一致——
-/// "宁可误杀一帧。绝不污染一条经线。"
-#[macro_export]
-macro_rules! oi {
-    ($variant:ident, $($field:ident = $value:expr),* $(,)?) => {
-        return Err($crate::error::AnimiError::$variant {
-            $($field: $value),*
-        })
-    };
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -128,35 +96,5 @@ mod tests {
         assert!(s.contains("3:12"));
         assert!(s.contains("}"));
         assert!(s.contains("EOF"));
-    }
-
-    #[test]
-    fn oi_macro_returns_error() {
-        fn lex() -> Result<(), AnimiError> {
-            oi!(LexError, line=42_usize, col=7_usize, msg="test oi".to_string());
-        }
-        let result = lex();
-        assert!(result.is_err());
-        let e = result.unwrap_err();
-        match e {
-            AnimiError::LexError { line, col, msg } => {
-                assert_eq!(line, 42);
-                assert_eq!(col, 7);
-                assert_eq!(msg, "test oi");
-            }
-            _ => panic!("expected LexError"),
-        }
-    }
-
-    #[test]
-    fn oi_macro_typecheck_error() {
-        fn check() -> Result<(), AnimiError> {
-            oi!(TypeCheckError, atom_name="explosion".to_string(), reason="未注册的感受原子".to_string());
-        }
-        let result = check();
-        assert!(result.is_err());
-        let e = result.unwrap_err();
-        assert!(e.to_string().contains("explosion"));
-        assert!(e.to_string().contains("未注册"));
     }
 }
