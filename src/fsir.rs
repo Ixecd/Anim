@@ -30,17 +30,25 @@ pub struct FsirDoc {
     pub intensity: FsirIntensity,
 }
 
-/// FSIR 编译元数据。
+/// FSIR 交织元数据。
 #[derive(Debug, Clone, Serialize)]
 pub struct FsirMeta {
-    /// 编译器版本。
+    /// 交织器版本。
     pub animi_version: String,
 
-    /// 编译时间（RFC 3339）。
+    /// 交织时间（RFC 3339）。
     pub compiled_at: String,
 
     /// 源码的 SHA-256 哈希。v1.1 未接入 SPL——为 None。
     pub source_hash: Option<String>,
+
+    /// Pattern Registry 的 SHA-256 哈希。v1.1 未接入——为 None。
+    /// v1.2+ 缓存复用前先比对——不匹配则丢弃缓存重新交织。
+    pub pattern_registry_hash: Option<String>,
+
+    /// 安全规则版本号。v1.1 未接入——为 None。
+    /// v1.2+ 全局安全规则更新后，旧缓存自动失效。
+    pub safety_rules_version: Option<u32>,
 }
 
 /// FSIR 混音结构。
@@ -93,6 +101,8 @@ impl FsirDoc {
                 animi_version: "0.1.0".into(),
                 compiled_at: now,
                 source_hash,
+                pattern_registry_hash: None,
+                safety_rules_version: None,
             },
             name: source.name.clone(),
             mix: FsirMix {
@@ -211,6 +221,8 @@ feeling calm {
 
         assert_eq!(parsed["meta"]["animi_version"], "0.1.0");
         assert!(parsed["meta"]["source_hash"].is_null());
+        assert!(parsed["meta"]["pattern_registry_hash"].is_null());
+        assert!(parsed["meta"]["safety_rules_version"].is_null());
         assert!(parsed["meta"]["compiled_at"].is_string());
     }
 }
