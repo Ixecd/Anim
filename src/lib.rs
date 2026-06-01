@@ -8,3 +8,4 @@ pub mod oi;
 pub mod parser;
 pub mod rule;
 pub mod safety;
+pub mod typeck;

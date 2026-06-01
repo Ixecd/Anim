@@ -1,0 +1,8 @@
+feat: add typeck (Pass 1) — type checking with built-in registry
+
+- TypeChecker 验证感受原子名和 shape 名是否在 Registry 中
+- v1.1 硬编码 8 个原子 + 5 个 shape
+- 未注册原子 → oi!(TypeCheckError) + 相似度提示
+- 强度区间校验（max >= min）
+- 5 个测试覆盖正例/原子/点缀/shape/强度错误
+- FORGET v0.1.12：强度刻度设计决策——100是默认不是上限，u32底层
