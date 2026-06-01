@@ -30,7 +30,12 @@ mod tests {
     #[test]
     fn oi_macro_returns_error() {
         fn lex() -> Result<(), AnimiError> {
-            oi!(LexError, line=42_usize, col=7_usize, msg="test oi".to_string());
+            oi!(
+                LexError,
+                line = 42_usize,
+                col = 7_usize,
+                msg = "test oi".to_string()
+            );
         }
         let result = lex();
         assert!(result.is_err());
@@ -48,7 +53,11 @@ mod tests {
     #[test]
     fn oi_macro_typecheck_error() {
         fn check() -> Result<(), AnimiError> {
-            oi!(TypeCheckError, atom_name="explosion".to_string(), reason="未注册的感受原子".to_string());
+            oi!(
+                TypeCheckError,
+                atom_name = "explosion".to_string(),
+                reason = "未注册的感受原子".to_string()
+            );
         }
         let result = check();
         assert!(result.is_err());

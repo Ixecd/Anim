@@ -26,15 +26,10 @@ pub enum AnimiError {
     },
 
     /// 类型检查错误——感受原子不存在、强度越界等。
-    TypeCheckError {
-        atom_name: String,
-        reason: String,
-    },
+    TypeCheckError { atom_name: String, reason: String },
 
     /// 编译器内部错误——不是用户源码的问题。
-    InternalError {
-        msg: String,
-    },
+    InternalError { msg: String },
 }
 
 impl fmt::Display for AnimiError {

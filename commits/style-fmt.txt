@@ -1,0 +1,3 @@
+style: cargo fmt — 4空格缩进对齐
+
+- lexer/parser/error/oi/rule/safety/guard 全部 rustfmt 格式化

@@ -41,33 +41,49 @@ impl Parser {
             match self.peek().kind {
                 TokenKind::Mix => {
                     if mix.is_some() {
-                        oi!(ParseError, line=self.peek().line, col=self.peek().col,
-                            expected="unique field".to_string(),
-                            found="duplicate mix".to_string())
+                        oi!(
+                            ParseError,
+                            line = self.peek().line,
+                            col = self.peek().col,
+                            expected = "unique field".to_string(),
+                            found = "duplicate mix".to_string()
+                        )
                     }
                     mix = Some(self.parse_mix()?);
                 }
                 TokenKind::Shape => {
                     if shape.is_some() {
-                        oi!(ParseError, line=self.peek().line, col=self.peek().col,
-                            expected="unique field".to_string(),
-                            found="duplicate shape".to_string())
+                        oi!(
+                            ParseError,
+                            line = self.peek().line,
+                            col = self.peek().col,
+                            expected = "unique field".to_string(),
+                            found = "duplicate shape".to_string()
+                        )
                     }
                     shape = Some(self.parse_shape()?);
                 }
                 TokenKind::Intensity => {
                     if intensity.is_some() {
-                        oi!(ParseError, line=self.peek().line, col=self.peek().col,
-                            expected="unique field".to_string(),
-                            found="duplicate intensity".to_string())
+                        oi!(
+                            ParseError,
+                            line = self.peek().line,
+                            col = self.peek().col,
+                            expected = "unique field".to_string(),
+                            found = "duplicate intensity".to_string()
+                        )
                     }
                     intensity = Some(self.parse_intensity()?);
                 }
                 _ => {
                     let t = self.peek();
-                    oi!(ParseError, line=t.line, col=t.col,
-                        expected="mix / shape / intensity".to_string(),
-                        found=format!("{:?}", t.kind))
+                    oi!(
+                        ParseError,
+                        line = t.line,
+                        col = t.col,
+                        expected = "mix / shape / intensity".to_string(),
+                        found = format!("{:?}", t.kind)
+                    )
                 }
             }
         }
@@ -77,8 +93,13 @@ impl Parser {
         // 后面只能有 Eof
         let peek = self.peek();
         if peek.kind != TokenKind::Eof {
-            oi!(ParseError, line=peek.line, col=peek.col,
-                expected="EOF".to_string(), found=format!("unexpected token {:?}", peek.kind))
+            oi!(
+                ParseError,
+                line = peek.line,
+                col = peek.col,
+                expected = "EOF".to_string(),
+                found = format!("unexpected token {:?}", peek.kind)
+            )
         }
 
         // 三个字段必须都存在
@@ -148,9 +169,13 @@ impl Parser {
 
             let ratio: f64 = match ratio_literal.parse() {
                 Ok(r) => r,
-                Err(_) => oi!(ParseError, line=self.peek().line, col=self.peek().col,
-                    expected="有效的配比数字".to_string(),
-                    found=ratio_literal.clone()),
+                Err(_) => oi!(
+                    ParseError,
+                    line = self.peek().line,
+                    col = self.peek().col,
+                    expected = "有效的配比数字".to_string(),
+                    found = ratio_literal.clone()
+                ),
             };
 
             accents.push(Accent {
@@ -162,7 +187,7 @@ impl Parser {
             match peek.kind {
                 TokenKind::Comma => {
                     self.advance(); // 吞掉 ,
-                    // 处理尾逗号：逗号后紧跟 ] → 列表结束
+                                    // 处理尾逗号：逗号后紧跟 ] → 列表结束
                     if self.peek().kind == TokenKind::RBracket {
                         self.advance(); // 吞掉 ]
                         return Ok(accents);
@@ -173,9 +198,13 @@ impl Parser {
                     return Ok(accents);
                 }
                 _ => {
-                    oi!(ParseError, line=peek.line, col=peek.col,
-                        expected="逗号或 ]".to_string(),
-                        found=format!("{:?}", peek.kind))
+                    oi!(
+                        ParseError,
+                        line = peek.line,
+                        col = peek.col,
+                        expected = "逗号或 ]".to_string(),
+                        found = format!("{:?}", peek.kind)
+                    )
                 }
             }
         }
@@ -207,14 +236,12 @@ impl Parser {
         self.expect(TokenKind::RBracket, "]")?;
 
         let intensity = Intensity { min, max };
-        intensity
-            .validate()
-            .map_err(|msg| AnimiError::ParseError {
-                line: bracket_line,
-                col: bracket_col,
-                expected: "合法的强度区间（max >= min）".to_string(),
-                found: msg,
-            })?;
+        intensity.validate().map_err(|msg| AnimiError::ParseError {
+            line: bracket_line,
+            col: bracket_col,
+            expected: "合法的强度区间（max >= min）".to_string(),
+            found: msg,
+        })?;
 
         Ok(intensity)
     }
@@ -223,15 +250,12 @@ impl Parser {
 
     /// 当前 Token，不前进。返回 clone——避免引用临时值。
     fn peek(&self) -> Token {
-        self.tokens
-            .get(self.pos)
-            .cloned()
-            .unwrap_or(Token {
-                kind: TokenKind::Eof,
-                line: 0,
-                col: 0,
-                literal: String::new(),
-            })
+        self.tokens.get(self.pos).cloned().unwrap_or(Token {
+            kind: TokenKind::Eof,
+            line: 0,
+            col: 0,
+            literal: String::new(),
+        })
     }
 
     /// 前进一个 Token。返回被吞掉的旧 Token。
@@ -246,9 +270,13 @@ impl Parser {
             self.pos += 1;
             Ok(())
         } else {
-            oi!(ParseError, line=token.line, col=token.col,
-                expected=expected_name.to_string(),
-                found=format!("{:?}", token.kind))
+            oi!(
+                ParseError,
+                line = token.line,
+                col = token.col,
+                expected = expected_name.to_string(),
+                found = format!("{:?}", token.kind)
+            )
         }
     }
 
@@ -259,9 +287,13 @@ impl Parser {
             self.pos += 1;
             Ok(())
         } else {
-            oi!(ParseError, line=token.line, col=token.col,
-                expected=format!("keyword `{}`", keyword).to_string(),
-                found=format!("{:?}", token.kind))
+            oi!(
+                ParseError,
+                line = token.line,
+                col = token.col,
+                expected = format!("keyword `{}`", keyword).to_string(),
+                found = format!("{:?}", token.kind)
+            )
         }
     }
 
@@ -272,9 +304,13 @@ impl Parser {
             self.pos += 1;
             Ok(token.literal)
         } else {
-            oi!(ParseError, line=token.line, col=token.col,
-                expected=expected_name.to_string(),
-                found=format!("{:?}", token.kind))
+            oi!(
+                ParseError,
+                line = token.line,
+                col = token.col,
+                expected = expected_name.to_string(),
+                found = format!("{:?}", token.kind)
+            )
         }
     }
 
@@ -287,9 +323,13 @@ impl Parser {
                 Ok(token.literal)
             }
             _ => {
-                oi!(ParseError, line=token.line, col=token.col,
-                    expected=expected_name.to_string(),
-                    found=format!("{:?}", token.kind))
+                oi!(
+                    ParseError,
+                    line = token.line,
+                    col = token.col,
+                    expected = expected_name.to_string(),
+                    found = format!("{:?}", token.kind)
+                )
             }
         }
     }
@@ -298,16 +338,24 @@ impl Parser {
     fn parse_int(&mut self, expected_name: &str) -> Result<u32, AnimiError> {
         let token = self.peek().clone();
         if token.kind != TokenKind::Int {
-            oi!(ParseError, line=token.line, col=token.col,
-                expected=expected_name.to_string(),
-                found=format!("{:?}", token.kind))
+            oi!(
+                ParseError,
+                line = token.line,
+                col = token.col,
+                expected = expected_name.to_string(),
+                found = format!("{:?}", token.kind)
+            )
         }
         self.pos += 1;
         let val: u32 = match token.literal.parse() {
             Ok(v) => v,
-            Err(_) => oi!(ParseError, line=token.line, col=token.col,
-                expected=expected_name.to_string(),
-                found=token.literal.clone()),
+            Err(_) => oi!(
+                ParseError,
+                line = token.line,
+                col = token.col,
+                expected = expected_name.to_string(),
+                found = token.literal.clone()
+            ),
         };
         Ok(val)
     }

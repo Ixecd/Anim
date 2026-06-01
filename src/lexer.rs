@@ -26,12 +26,12 @@ pub struct Token {
 #[derive(Debug, Clone, PartialEq)]
 pub enum TokenKind {
     // 关键字
-    Feeling,  // feeling
-    Mix,      // mix
-    Main,     // main
-    Accents,  // accents
-    Shape,    // shape
-    Intensity,// intensity
+    Feeling,   // feeling
+    Mix,       // mix
+    Main,      // main
+    Accents,   // accents
+    Shape,     // shape
+    Intensity, // intensity
 
     // 字面量
     Identifier, // 感受原子名、shape 名等
@@ -47,7 +47,7 @@ pub enum TokenKind {
     Comma,    // ,
 
     // 特殊
-    Eof,      // 文件结束
+    Eof, // 文件结束
 }
 
 /// 词法分析器。
@@ -118,7 +118,12 @@ impl Lexer {
             _ => {
                 let line = self.line;
                 let col = self.col;
-                oi!(LexError, line=line, col=col, msg=format!("unexpected character: '{}'", ch))
+                oi!(
+                    LexError,
+                    line = line,
+                    col = col,
+                    msg = format!("unexpected character: '{}'", ch)
+                )
             }
         }
     }
@@ -174,7 +179,12 @@ impl Lexer {
 
             // 孤立小数点——既没有整数部分也没有小数部分 → 非法字符
             if int_part.is_empty() && frac_part.is_empty() {
-                oi!(LexError, line=line, col=col, msg="isolated '.' is not a valid number".to_string())
+                oi!(
+                    LexError,
+                    line = line,
+                    col = col,
+                    msg = "isolated '.' is not a valid number".to_string()
+                )
             }
 
             let literal = format!("{}.{}", int_part, frac_part);
@@ -368,9 +378,9 @@ feeling calm_meditative {
                 TokenKind::Intensity,
                 TokenKind::Colon,
                 TokenKind::LBracket,
-                TokenKind::Int,        // 15
+                TokenKind::Int, // 15
                 TokenKind::Comma,
-                TokenKind::Int,        // 45
+                TokenKind::Int, // 45
                 TokenKind::RBracket,
                 TokenKind::RBrace,
                 TokenKind::Eof,
