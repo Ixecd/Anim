@@ -4,6 +4,7 @@
 // 支持从外部 JSON 文件加载——未提供则用内建 fallback。
 
 use serde::Deserialize;
+use sha2::{Digest, Sha256};
 
 /// 原子类型——核心（官方审核）vs 沙箱（用户上传，未验证）。
 #[derive(Debug, Clone, Copy, PartialEq, Deserialize)]
@@ -87,6 +88,17 @@ impl Registry {
     pub fn is_core(&self, name: &str) -> bool {
         self.lookup(name)
             .is_some_and(|e| e.class == AtomClass::Core)
+    }
+
+    /// Registry 的 SHA-256 哈希——用于 FSIR 缓存失效。
+    pub fn hash(&self) -> String {
+        let mut hasher = Sha256::new();
+        for atom in &self.atoms {
+            hasher.update(atom.name.as_bytes());
+            hasher.update(format!("{:?}", atom.class).as_bytes());
+            hasher.update(atom.max_ratio.to_be_bytes());
+        }
+        hex::encode(hasher.finalize())
     }
 
     pub fn max_ratio(&self, name: &str) -> Option<f64> {

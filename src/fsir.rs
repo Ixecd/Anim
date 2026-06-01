@@ -93,7 +93,12 @@ impl FsirDoc {
     ///
     /// 调用方必须先跑完 Pass 0-4 的安全校验。
     /// FSIRGen 本身不做校验——只做转换。
-    pub fn from_ast(source: &FeelingSource, source_hash: Option<String>) -> Self {
+    pub fn from_ast(
+        source: &FeelingSource,
+        source_hash: Option<String>,
+        registry_hash: Option<String>,
+        intensity: &FsirIntensity,
+    ) -> Self {
         let now = chrono::Utc::now().to_rfc3339();
 
         FsirDoc {
@@ -101,7 +106,7 @@ impl FsirDoc {
                 animi_version: "0.1.0".into(),
                 compiled_at: now,
                 source_hash,
-                pattern_registry_hash: None,
+                pattern_registry_hash: registry_hash,
                 safety_rules_version: None,
             },
             name: source.name.clone(),
@@ -120,10 +125,7 @@ impl FsirDoc {
             shape: FsirShape {
                 name: source.shape.name.clone(),
             },
-            intensity: FsirIntensity {
-                min: source.intensity.min,
-                max: source.intensity.max,
-            },
+            intensity: intensity.clone(),
         }
     }
 
@@ -150,7 +152,11 @@ mod tests {
         let reg = crate::registry::Registry::default();
         let checker = TypeChecker::new(&reg);
         checker.check(&ast)?;
-        Ok(FsirDoc::from_ast(&ast, None))
+        let scaled = FsirIntensity {
+            min: ast.intensity.min,
+            max: ast.intensity.max,
+        };
+        Ok(FsirDoc::from_ast(&ast, None, None, &scaled))
     }
 
     #[test]
@@ -222,7 +228,7 @@ feeling calm {
 
         assert_eq!(parsed["meta"]["animi_version"], "0.1.0");
         assert!(parsed["meta"]["source_hash"].is_null());
-        assert!(parsed["meta"]["pattern_registry_hash"].is_null());
+        assert!(parsed["meta"]["pattern_registry_hash"].is_null()); // None → null in JSON
         assert!(parsed["meta"]["safety_rules_version"].is_null());
         assert!(parsed["meta"]["compiled_at"].is_string());
     }

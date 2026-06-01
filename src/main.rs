@@ -52,11 +52,27 @@ fn main() {
         return;
     }
 
+    // 解析可选参数：--cap <N> 和 <registry.json>
+    let mut user_cap: u32 = 100;
+    let mut reg_path: Option<&String> = None;
+    let mut i = 2;
+    while i < args.len() {
+        if args[i] == "--cap" && i + 1 < args.len() {
+            user_cap = args[i + 1].parse().unwrap_or(100);
+            i += 2;
+        } else if reg_path.is_none() {
+            reg_path = Some(&args[i]);
+            i += 1;
+        } else {
+            i += 1;
+        }
+    }
+
     // Registry——外部 JSON 或内建 fallback
-    let registry = if let Some(reg_path) = args.get(2) {
-        match animi::registry::Registry::from_file(reg_path) {
+    let registry = if let Some(path) = reg_path {
+        match animi::registry::Registry::from_file(path) {
             Ok(r) => {
-                eprintln!("✅ 加载外部 Registry: {}", reg_path);
+                eprintln!("✅ 加载外部 Registry: {}", path);
                 r
             }
             Err(e) => {
@@ -87,12 +103,8 @@ fn main() {
 
     die(animi::rule::check(&ast, &registry));
 
-    // Pass 3——用户安全检查 + 强度缩放（v1.1 桩，user_cap 从环境变量取）
-    let user_cap: u32 = std::env::var("ANIMI_USER_CAP")
-        .ok()
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(100);
-    let _scaled = animi::safety::check_with_scale(&ast, user_cap).unwrap_or_else(|e| {
+    // Pass 3——用户安全检查 + 强度缩放（user_cap 从 --cap 参数或取默认值 100）
+    let scaled = animi::safety::check_with_scale(&ast, user_cap).unwrap_or_else(|e| {
         eprintln!("{}", e);
         process::exit(1);
     });
@@ -101,7 +113,15 @@ fn main() {
 
     // 源码哈希——SPL 锚定用
     let src_hash = hex::encode(Sha256::digest(src.as_bytes()));
-    let doc = animi::fsir::FsirDoc::from_ast(&ast, Some(src_hash));
+    let doc = animi::fsir::FsirDoc::from_ast(
+        &ast,
+        Some(src_hash),
+        Some(registry.hash()),
+        &animi::fsir::FsirIntensity {
+            min: scaled.min,
+            max: scaled.max,
+        },
+    );
 
     let json = die(doc.to_json());
 

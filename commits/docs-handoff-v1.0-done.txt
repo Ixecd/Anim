@@ -1,0 +1,9 @@
+docs: HANDOFF重写 + v1.0打磨完成——Registry外部化/error codegen/强度缩放/源码双哈希/--cap参数/snapshot归档
+
+- HANDOFF.md 完整重写——对齐KubePivot格式，项目定位/能力/结构/设计决策/下一窗口
+- main.rs: --cap参数替代环境变量，Registry.from_file→Result，scale_intensity接入管线
+- registry.rs: hash()方法——SHA-256 → FsirMeta.pattern_registry_hash
+- fsir.rs: from_ast接受4参数(source_hash, registry_hash, intensity)
+- safety.rs: check_with_scale——返回缩放后Intensity
+- FORGET/ROADMAP/snapshots同步更新
+- 52 tests all green

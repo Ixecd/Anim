@@ -1,4 +1,5 @@
 归档说明：此目录存放历史快照，文件命名格式为 SNAPSHOT-{日期}-{里程碑}.md
 
 当前归档：
-- SNAPSHOT-2026-06-01-最小闭环.md  # `.anim 源码 → FSIR JSON` 全线贯通，63 commits，51 tests，12 模块
+- SNAPSHOT-2026-06-01-最小闭环.md  # `.anim 源码 → FSIR JSON` 全线贯通
+- SNAPSHOT-2026-06-01-v1.0打磨完成.md  # Registry 外部化 + error codegen + 强度缩放 + 源码/Registry 双哈希

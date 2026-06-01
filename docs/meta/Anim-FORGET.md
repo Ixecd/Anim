@@ -105,6 +105,14 @@
 - ✅ 强度零值拒绝 + 10000 上限
 - ✅ shape 建议算法（前缀+子串匹配）
 - ✅ 术语纠正——animi 是交织器，不是编译器
+- ✅ Registry 外部化——JSON 文件加载 + 硬编码 fallback
+- ✅ 四示例覆盖四大类（calm/focus/rest/post_achievement）
+- ✅ 错误码自动生成（build.rs → docs/error-codes.md）
+- ✅ 源码 SHA-256 哈希——SPL 锚定就绪
+- ✅ scale_intensity 接入 main——user_cap 通过 ANIMI_USER_CAP 环境变量
+- ✅ abrupt_stop 加入 shapes——rule.rs 拦截生效
+- ✅ Registry from_file 返回 Result——不再静默回退
+- ✅ 52 单元测试全绿
 
 ---
 
