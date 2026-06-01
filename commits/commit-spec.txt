@@ -1,0 +1,1 @@
+docs(commits): add commit format spec and scope reference, aligned with KubePivot convention
