@@ -7,7 +7,7 @@
 
 use std::fmt;
 
-/// Anim 编译器的错误类型。
+/// animi 交织器的错误类型。
 #[derive(Debug)]
 pub enum AnimiError {
     /// 词法错误——源码里有编译器不认识的字符。

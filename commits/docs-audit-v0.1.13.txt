@@ -1,0 +1,5 @@
+docs: v0.1.13深度架构审计——12个设计盲区 + 术语纠正(编译→交织)
+
+- animi是交织器不是编译器——main.rs/error.rs术语修正
+- #1-#12十二个盲区全部入FORGET：Session安全/沙箱叠加/创伤配比/FSIR缓存/热插拔/oi平滑/数据污染/冷启动/阻尼矩阵/宏绕过/oi可观测性/outline
+- 47 tests all green

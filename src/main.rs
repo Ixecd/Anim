@@ -1,4 +1,4 @@
-// src/main.rs — animi 编译器 CLI 入口
+// src/main.rs — animi 交织器 CLI 入口
 //
 // 用法：animi <file.anim>
 // 输出：fsir.json
