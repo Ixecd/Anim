@@ -26,13 +26,28 @@
 - **强烈建议全 ASCII**（避免 hook 编码问题）
 - 简洁、动词开头（如 "add..." / "fix..." / "remove..."）
 
-## 推荐模板
+## 推荐模板（Anim 项目实际格式）
 
-feat(lexer): add tokenizer for .anim source
-fix(parser): resolve mix block indent edge case
-docs(fsir): update FSIR binary layout spec
-test(typeck): cover unregistered feeling atom error
-refactor(pass4): split RuntimeGuard into pre-check and inject
+feat: add tokenizer for .anim source
+
+- Pass 0a 词法分析入口
+- 支持关键字、感受原子名、强度区间、shape 名称
+- 非法字符 → oi! 编译期拒绝
+
+fix: resolve mix block indent edge case
+
+- 嵌套 mix 块的缩进误差从 2 空格放宽到不限制
+- 缩进计算改用相对偏移而非绝对列号
+
+docs: update FSIR binary layout spec
+
+- ADR 008 定稿——FlatBuffers 裁剪版
+- Go 侧输出 → Rust 侧 mmap 零拷贝验证方案
+
+test: cover unregistered feeling atom error
+
+- typeck 拒绝未注册感受原子
+- 错误信息包含候选项（编辑距离 < 3 的原子名）
 
 ## body 规则
 - 每行 ≤ 1000 字符
