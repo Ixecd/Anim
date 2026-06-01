@@ -39,9 +39,8 @@ pub struct FsirMeta {
     /// 编译时间（RFC 3339）。
     pub compiled_at: String,
 
-    /// 源码的 SHA-256 哈希（后续版本接入 SPL 锚定）。
-    /// v1.1 暂为空字符串。
-    pub source_hash: String,
+    /// 源码的 SHA-256 哈希。v1.1 未接入 SPL——为 None。
+    pub source_hash: Option<String>,
 }
 
 /// FSIR 混音结构。
@@ -86,14 +85,14 @@ impl FsirDoc {
     ///
     /// 调用方必须先跑完 Pass 0-4 的安全校验。
     /// FSIRGen 本身不做校验——只做转换。
-    pub fn from_ast(source: &FeelingSource, source_hash: &str) -> Self {
+    pub fn from_ast(source: &FeelingSource, source_hash: Option<String>) -> Self {
         let now = chrono::Utc::now().to_rfc3339();
 
         FsirDoc {
             meta: FsirMeta {
                 animi_version: "0.1.0".into(),
                 compiled_at: now,
-                source_hash: source_hash.into(),
+                source_hash,
             },
             name: source.name.clone(),
             mix: FsirMix {
@@ -140,7 +139,7 @@ mod tests {
         let ast = parser.parse()?;
         let checker = TypeChecker::new();
         checker.check(&ast)?;
-        Ok(FsirDoc::from_ast(&ast, ""))
+        Ok(FsirDoc::from_ast(&ast, None))
     }
 
     #[test]
@@ -211,7 +210,7 @@ feeling calm {
         let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
 
         assert_eq!(parsed["meta"]["animi_version"], "0.1.0");
-        // compiled_at 是动态时间戳——只验证存在
+        assert!(parsed["meta"]["source_hash"].is_null());
         assert!(parsed["meta"]["compiled_at"].is_string());
     }
 }
