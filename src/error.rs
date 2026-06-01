@@ -38,7 +38,7 @@ pub enum AnimiError {
         reason: String,
     },
 
-    /// 编译器内部错误——不是用户源码的问题。
+    /// 交织器内部错误——不是用户源码的问题。
     InternalError { msg: String },
 }
 
