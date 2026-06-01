@@ -1,4 +1,4 @@
-feeling deep_rest {
+feeling rest {
     mix {
         main: deep_rest
         accents: [safety 0.3, warmth 0.2]
@@ -6,3 +6,5 @@ feeling deep_rest {
     shape: slow_decay
     intensity: [5, 25]
 }
+-- 休息是基本感受。深度休息/小憩/放松是它的细分。
+-- 这里用的是 deep_rest——低强度深度休息。

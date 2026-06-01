@@ -6,3 +6,5 @@ feeling calm {
     shape: gradual_rise_fall
     intensity: [15, 45]
 }
+-- 平静是基本感受。冥想式平静/专注式平静/休息式平静是它的细分。
+-- 这里用的是 calm_meditative——冥想式。
