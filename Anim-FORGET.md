@@ -77,6 +77,18 @@
 
 ---
 
+## P1 补充 —— 设计审计新增（2026-06-01）
+
+24. **FSIR 跨语言 ABI 零设计** — Go（Feelings-Server 后台预编译）生成 FSIR 缓存文件，Rust（animi/Feelings-Core 前台加载）读取。当前四层 IR 全部定义为内存结构——无磁盘布局规范。1ms 硬实时要求零拷贝 mmap 直读——Go 输出的 FSIR 必须严格对齐、无 padding、跨语言确定性。需定稿二进制格式（FlatBuffers/Bincode 裁剪版或手写大端序滑块）。FIXME: ADR 008。
+
+25. **oi 防颤振（Chattering Hysteresis）零设计** — 用户生理信号恰好卡在 UserStateSafety 临界红线上。帧 N 微幅超限→oi→衰减。帧 N+1 回落→恢复。帧 N+2 再超限→再 oi。在没有迟滞保护的条件下——oi 和衰减状态机每秒乒乓数百次——硬件衰减器像电风扇一样反复拉扯——诱发神经系统次生疲劳。需"一旦触发至少封锁 K 帧"或双限阈值滞回。FIXME: ADR 006 §oi 迟滞。
+
+26. **PBM Checkpoint 持久化零设计** — 逆向看门狗淘汰（Eviction/Freeze）后——PBM 的动态偏置何时落盘。每帧写入 Flash→高频擦写过早崩塌。仅内存留存→掉电丢失整个 Session 的学习偏置——下次启动冷断层。需 Session 级 Checkpoint——在茶歇退出或每 N 分钟时间窗口触发一次脏页冲刷。FIXME: Feelings-OS storaged。
+
+27. **多设备时钟同步与无线抖动零设计** — 耳后设备走有线总线（1ms 帧），腕部设备可能走 BLE。无线物理层天然存在 2-3ms 丢包/抖动——FPGA 已空转 3 帧。迟到帧在第 5ms 突发到达时——DSIR 应丢弃还是缓存到环形抖动缓冲区。需裁剪版 PTP 或 Jitter Buffer 规约。FIXME: ADR 009。
+
+---
+
 ## 设计决策 —— 已论证、暂缓、保留未来路径
 
 ### D1: PBM 因子三硬门控 vs 传统梯度动量（2026-05-30 论证）
@@ -137,6 +149,11 @@ M_f3 = lerp(0.15, 1.0, σ_ema)
 ## 编辑记录
 
 ```
+2026-06-01  v0.1.9 设计审计
+            - P1 新增 4 项（24→27）：FSIR跨语言ABI/oi防颤振/PBM Checkpoint持久化/多设备时钟同步
+            - ADR 003 标题修正：八Pass→九Pass。ADR 004 管线图补回 Pass 4
+            - 待创建：ADR 008（FSIR二进制布局）、ADR 009（时钟同步与无线降级）
+
 2026-05-30  v0.1.8 xattr 文件元数据
             - .anim 文件编译后——FSIR 哈希、编译时间、pattern registry 版本
             - 全部挂成 xattr。文件自描述。不污染内容。不依赖数据库。

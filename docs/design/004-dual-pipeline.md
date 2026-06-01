@@ -86,8 +86,10 @@ DSIR 和 ESIR 下沉到 FPGA 门级逻辑执行——不是软件——是硬件
 ────────────────────────────             ──────────────────────────
 Pass 0: LexParse
 Pass 1: TypeCheck
-Pass 2: StaticSafety                      Session 启动
-Pass 5: FSIRGen                        → Pass 3: UserStateSafety
+Pass 2: StaticSafety
+Pass 4: RuntimeGuard                       Session 启动
+    （交织期预埋，运行期激活）             → Pass 3: UserStateSafety
+Pass 5: FSIRGen                            （用户上下文——只在设备端）
     ↓                                       （用户上下文——只在设备端）
     FSIR 缓存至设备本地                  → 加载缓存 FSIR
                                         → Pass 6: Personalize（PBM 左乘）
