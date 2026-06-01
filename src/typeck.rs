@@ -2,31 +2,22 @@
 //
 // 验证 AST 中的感受原子名和 shape 名是否在 Registry 中存在。
 // 验证点缀配比是否 ≤ 该原子的 max_ratio。
-//
-// v1.1 使用内建 Registry（registry.rs）。
-// v1.2+ 将从外部 JSON/YAML 加载。
 
 use crate::ast::*;
 use crate::error::AnimiError;
 use crate::oi;
-use crate::registry;
+use crate::registry::Registry;
 
 /// 类型检查器。
-pub struct TypeChecker;
+pub struct TypeChecker<'a> {
+    registry: &'a Registry,
+}
 
-impl TypeChecker {
-    pub fn new() -> Self {
-        TypeChecker
+impl<'a> TypeChecker<'a> {
+    pub fn new(registry: &'a Registry) -> Self {
+        TypeChecker { registry }
     }
 
-    /// 对一份 FeelingSource AST 执行类型检查。
-    ///
-    /// 验证内容：
-    /// - 主旋律感受原子名是否在 Registry 中
-    /// - 点缀感受原子名是否在 Registry 中
-    /// - 点缀配比是否 ≤ 该原子的 max_ratio
-    /// - shape 名称是否合法
-    /// - 强度区间是否合法（max >= min + 非零）
     pub fn check(&self, source: &FeelingSource) -> Result<(), AnimiError> {
         // 主旋律
         self.check_atom(&source.mix.main, "主旋律")?;
@@ -48,7 +39,7 @@ impl TypeChecker {
         }
 
         // shape
-        self.lookup_name(&source.shape.name, registry::shape_names(), "shape")?;
+        self.lookup_name(&source.shape.name, super::registry::shape_names(), "shape")?;
 
         // 强度区间——parser 已校验 max >= min，rule.rs 校验全局上限 100
         if source.intensity.max == 0 && source.intensity.min == 0 {
@@ -62,11 +53,10 @@ impl TypeChecker {
         Ok(())
     }
 
-    /// 泛型名称查找，带"你是不是想说 X"建议。
-    fn lookup_name<'a>(
+    fn lookup_name<'b>(
         &self,
         name: &str,
-        values: impl Iterator<Item = &'a str>,
+        values: impl Iterator<Item = &'b str>,
         role: &str,
     ) -> Result<(), AnimiError> {
         let all: Vec<&str> = values.collect();
@@ -106,13 +96,12 @@ impl TypeChecker {
         )
     }
 
-    /// 检查感受原子名是否在 Registry 中，返回 max_ratio。
     fn check_atom(&self, atom: &FeelingAtom, role: &str) -> Result<f64, AnimiError> {
-        if let Some(entry) = registry::lookup_atom(&atom.name) {
+        if let Some(entry) = self.registry.lookup(&atom.name) {
             return Ok(entry.max_ratio);
         }
 
-        self.lookup_name(&atom.name, registry::atom_names(), role)?;
+        self.lookup_name(&atom.name, self.registry.atom_names(), role)?;
         // lookup_name 内部 oi! 总是 return Err——此行不可达
         #[allow(unreachable_code)]
         {
@@ -121,24 +110,21 @@ impl TypeChecker {
     }
 }
 
-impl Default for TypeChecker {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::lexer::Lexer;
     use crate::parser::Parser;
+    use std::sync::LazyLock;
+
+    static REG: LazyLock<Registry> = LazyLock::new(Registry::default);
 
     fn check_source(src: &str) -> Result<(), AnimiError> {
         let mut lexer = Lexer::new(src);
         let tokens = lexer.tokenize()?;
         let mut parser = Parser::new(tokens);
         let ast = parser.parse()?;
-        let checker = TypeChecker::new();
+        let checker = TypeChecker::new(&REG);
         checker.check(&ast)
     }
 
@@ -378,7 +364,6 @@ FEELING calm {
 
     #[test]
     fn unicode_rejected_by_lexer() {
-        // ASCII-only lexer → 中文字符被拒绝
         let src = "feeling calm_平";
         let result = check_source(src);
         assert!(result.is_err());

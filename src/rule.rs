@@ -11,7 +11,7 @@
 use crate::ast::*;
 use crate::error::AnimiError;
 use crate::oi;
-use crate::registry::{self, AtomClass};
+use crate::registry::{AtomClass, Registry};
 
 /// 全局强度的推荐上限。
 pub const MAX_GLOBAL_INTENSITY: u32 = 100;
@@ -23,7 +23,7 @@ const ABRUPT_STOP_MAX: u32 = 20;
 const SANDBOX_ACCENT_MAX: f64 = 0.3;
 
 /// 对源码执行静态安全规则检查。
-pub fn check(source: &FeelingSource) -> Result<(), AnimiError> {
+pub fn check(source: &FeelingSource, registry: &Registry) -> Result<(), AnimiError> {
     // 规则 1：全局强度上限
     if source.intensity.max > MAX_GLOBAL_INTENSITY {
         oi!(
@@ -49,7 +49,7 @@ pub fn check(source: &FeelingSource) -> Result<(), AnimiError> {
     }
 
     // 规则 3：沙箱原子不能作为主旋律
-    if let Some(entry) = registry::lookup_atom(&source.mix.main.name) {
+    if let Some(entry) = registry.lookup(&source.mix.main.name) {
         if entry.class == AtomClass::Sandbox {
             oi!(
                 StaticSafetyError,
@@ -64,7 +64,7 @@ pub fn check(source: &FeelingSource) -> Result<(), AnimiError> {
 
     // 规则 4：沙箱原子点缀配比上限
     for accent in &source.mix.accents {
-        if let Some(entry) = registry::lookup_atom(&accent.atom.name) {
+        if let Some(entry) = registry.lookup(&accent.atom.name) {
             if entry.class == AtomClass::Sandbox && accent.ratio > SANDBOX_ACCENT_MAX {
                 oi!(
                     StaticSafetyError,
@@ -93,9 +93,10 @@ mod tests {
         let tokens = lexer.tokenize()?;
         let mut parser = Parser::new(tokens);
         let ast = parser.parse()?;
-        let checker = TypeChecker::new();
+        let reg = Registry::default();
+        let checker = TypeChecker::new(&reg);
         checker.check(&ast)?;
-        check(&ast)
+        check(&ast, &reg)
     }
 
     #[test]

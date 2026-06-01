@@ -147,7 +147,8 @@ mod tests {
         let tokens = lexer.tokenize()?;
         let mut parser = Parser::new(tokens);
         let ast = parser.parse()?;
-        let checker = TypeChecker::new();
+        let reg = crate::registry::Registry::default();
+        let checker = TypeChecker::new(&reg);
         checker.check(&ast)?;
         Ok(FsirDoc::from_ast(&ast, None))
     }

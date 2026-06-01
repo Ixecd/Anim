@@ -1,0 +1,10 @@
+[
+  { "name": "calm_meditative",  "class": "core", "max_ratio": 1.0 },
+  { "name": "belonging",       "class": "core", "max_ratio": 0.5 },
+  { "name": "clarity",         "class": "core", "max_ratio": 0.5 },
+  { "name": "safety",          "class": "core", "max_ratio": 0.5 },
+  { "name": "post_achievement","class": "core", "max_ratio": 0.3 },
+  { "name": "gentle_focus",    "class": "core", "max_ratio": 0.5 },
+  { "name": "deep_rest",       "class": "core", "max_ratio": 0.5 },
+  { "name": "warmth",          "class": "core", "max_ratio": 0.5 }
+]

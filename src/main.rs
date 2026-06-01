@@ -58,16 +58,21 @@ fn main() {
         }
     };
 
+    let registry = animi::registry::Registry::from_file(&args.get(2).cloned().unwrap_or_default());
+    if args.len() > 2 {
+        eprintln!("加载外部 Registry: {}", args[2]);
+    }
+
     let mut lexer = animi::lexer::Lexer::new(&src);
     let tokens = die(lexer.tokenize());
 
     let mut parser = animi::parser::Parser::new(tokens);
     let ast = die(parser.parse());
 
-    let checker = animi::typeck::TypeChecker::new();
+    let checker = animi::typeck::TypeChecker::new(&registry);
     die(checker.check(&ast));
 
-    die(animi::rule::check(&ast));
+    die(animi::rule::check(&ast, &registry));
     die(animi::safety::check(&ast));
     die(animi::guard::inject(&ast));
 
