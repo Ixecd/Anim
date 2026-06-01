@@ -110,6 +110,19 @@ Rust 项目初始化 → 八 Pass 骨架全部跑通 → 错误诊断系统上�
 
 ---
 
+## v0.5 — 流对接（远期，硬件就绪后）
+
+### 与 Feelings 五股流的耦合点
+
+```
+Anim 不碰传输层（gRPC/NATS/WebSocket）——只把 ESIR 帧塞进 Feelings-OS busd。
+busd 把 ESIR 分发到五股流的"注入流"——Anim 的工作在注入流的上游结束。
+Anim 的前台双流水线（1ms 帧）和 Feelings 的 Stream First 是同构的——
+都是"流不停——不在中间断帧"。
+```
+
+---
+
 ## v0.3 — Milestone 2: 个人适配 + 设备映射
 
 ### 目标

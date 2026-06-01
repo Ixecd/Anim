@@ -1,0 +1,7 @@
+docs: Stream First架构对齐 + 感受全面性 + 四层防火墙
+
+- FORGET v0.1.10：Anim=五股流的编译期预编织，不管传输层只把ESIR塞进busd
+- FORGET v0.1.11：外部锚点感受也是感受——区别在锚点位置不是感受真伪
+- KubePivot是承诺（已兑现），Feelings是立场（感受全面但需监管合规安全）
+- ROADMAP v0.5：流对接——Anim+Feelings-OS busd+注入流耦合点
+- 四层防火墙：Registry签名/rule.rs硬上限/safety.rs硬拒绝/固件Merkle校验
