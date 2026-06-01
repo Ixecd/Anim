@@ -20,7 +20,10 @@ pub fn check(_source: &FeelingSource) -> Result<(), AnimiError> {
     Ok(())
 }
 
-/// 强度等比缩放——当 user_cap < source max 时，不等比截断，等比缩放整个区间。
+/// 强度等比缩放——当 user_cap < source max 时，等比缩放整个区间。
+///
+/// v1.1 未接入：Pass 3 是桩，没有用户档案，拿不到 user_cap。
+/// v1.2+ 接入后——Pass 3 check() 在验证完成时调用此函数缩放强度。
 ///
 /// 例：源码 [15, 60]，用户 cap 45
 ///     ratio = 45/60 = 0.75

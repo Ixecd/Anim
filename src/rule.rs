@@ -30,8 +30,8 @@ pub fn check(source: &FeelingSource) -> Result<(), AnimiError> {
             StaticSafetyError,
             rule = "全局强度上限".into(),
             detail = format!(
-                "源码强度 max={} 超过全局上限 {}. 请等比缩小强度区间",
-                source.intensity.max, MAX_GLOBAL_INTENSITY
+                "源码强度 max={} 超过全局上限 {}. 请在源码中将 max 降到 {} 以下",
+                source.intensity.max, MAX_GLOBAL_INTENSITY, MAX_GLOBAL_INTENSITY
             )
         )
     }
