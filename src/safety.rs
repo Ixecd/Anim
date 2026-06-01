@@ -4,10 +4,11 @@
 // 必须在设备本地运行——用户穿戴并开始 Session 时。
 //
 // v1.1 桩——全部通过。后续版本接入：
+//   - 强度等比缩放（scale_intensity）
 //   - 创伤分型交叉判定（v1/v2/v3 × 社交/情绪/躯体）
 //   - 强度上限 cap（如未成年 max 35）
 //   - 创伤原子黑名单（禁主不禁点）
-//   - 触觉维度锁定（如创伤史禁止高强度触觉）
+//   - 触觉维度锁定
 
 use crate::ast::*;
 use crate::error::AnimiError;
@@ -17,6 +18,22 @@ use crate::error::AnimiError;
 /// v1.1——全部通过。后续版本需要加载用户档案。
 pub fn check(_source: &FeelingSource) -> Result<(), AnimiError> {
     Ok(())
+}
+
+/// 强度等比缩放——当 user_cap < source max 时，不等比截断，等比缩放整个区间。
+///
+/// 例：源码 [15, 60]，用户 cap 45
+///     ratio = 45/60 = 0.75
+///     输出 [11, 45]
+pub fn scale_intensity(intensity: &Intensity, user_cap: u32) -> Intensity {
+    if intensity.max <= user_cap {
+        return intensity.clone();
+    }
+    let ratio = user_cap as f64 / intensity.max as f64;
+    Intensity {
+        min: (intensity.min as f64 * ratio).round() as u32,
+        max: user_cap,
+    }
 }
 
 #[cfg(test)]
@@ -49,5 +66,21 @@ feeling calm {
 }
 "#;
         assert!(check_src(src).is_ok());
+    }
+
+    #[test]
+    fn scale_intensity_no_change() {
+        let original = Intensity { min: 10, max: 20 };
+        let scaled = scale_intensity(&original, 50);
+        assert_eq!(scaled.min, 10);
+        assert_eq!(scaled.max, 20);
+    }
+
+    #[test]
+    fn scale_intensity_proportional() {
+        let original = Intensity { min: 15, max: 60 };
+        let scaled = scale_intensity(&original, 45);
+        assert_eq!(scaled.min, 11);
+        assert_eq!(scaled.max, 45);
     }
 }

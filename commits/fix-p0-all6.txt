@@ -1,0 +1,10 @@
+fix: P0 all 6 fixes — registry extraction, BOM/ASCII lexer, intensity dedup, scale_intensity moved
+
+- registry.rs: 共享原子注册表——AtomClass枚举(Core/Sandbox)，lookup_atom/is_core/max_ratio
+- lexer: ASCII-only (is_ascii_alphabetic/alphanumeric) + BOM skip
+- typeck: 删10000上限检查(rule.rs已卡100)，用共享registry
+- rule.rs: 用共享registry+AtomClass，删scale_intensity
+- safety.rs: 收容scale_intensity(Pass 3该在的地方)
+- main.rs: 删硬编码is_core闭包
+- oi.rs: 删重复文档段
+- 51 tests all green

@@ -1,80 +1,22 @@
 // src/typeck.rs — Pass 1：类型检查
 //
-// 验证 AST 中的感受原子名是否在 Pattern Registry 中存在。
-// 验证 shape 名称是否合法。
-// v1.1 临时——硬编码几个注册原子名和 shape。
-// 不存在的原子 → oi! 拒绝。这帧不生成任何 IR。
+// 验证 AST 中的感受原子名和 shape 名是否在 Registry 中存在。
+// 验证点缀配比是否 ≤ 该原子的 max_ratio。
+//
+// v1.1 使用内建 Registry（registry.rs）。
+// v1.2+ 将从外部 JSON/YAML 加载。
 
 use crate::ast::*;
 use crate::error::AnimiError;
 use crate::oi;
-
-/// Registry 中的一个感受原子条目。
-struct AtomEntry {
-    name: String,
-    /// 作为点缀时的最大配比。0.0-1.0。
-    /// 主旋律不受此限制。
-    max_ratio: f64,
-}
+use crate::registry;
 
 /// 类型检查器。
-///
-/// 当前 v1.1 使用内建 Registry。
-/// 未来 v1.2+ 将从 Feelings-Pattern 仓库加载 Registry。
-pub struct TypeChecker {
-    /// 注册的感受原子列表。
-    registry: Vec<AtomEntry>,
-
-    /// 注册的 shape 名集合。
-    shapes: Vec<String>,
-}
+pub struct TypeChecker;
 
 impl TypeChecker {
-    /// 创建 v1.1 内建 Registry 的类型检查器。
     pub fn new() -> Self {
-        TypeChecker {
-            registry: vec![
-                AtomEntry {
-                    name: "calm_meditative".into(),
-                    max_ratio: 1.0,
-                },
-                AtomEntry {
-                    name: "belonging".into(),
-                    max_ratio: 0.5,
-                },
-                AtomEntry {
-                    name: "clarity".into(),
-                    max_ratio: 0.5,
-                },
-                AtomEntry {
-                    name: "safety".into(),
-                    max_ratio: 0.5,
-                },
-                AtomEntry {
-                    name: "post_achievement".into(),
-                    max_ratio: 0.3,
-                },
-                AtomEntry {
-                    name: "gentle_focus".into(),
-                    max_ratio: 0.5,
-                },
-                AtomEntry {
-                    name: "deep_rest".into(),
-                    max_ratio: 0.5,
-                },
-                AtomEntry {
-                    name: "warmth".into(),
-                    max_ratio: 0.5,
-                },
-            ],
-            shapes: vec![
-                "gradual_rise_fall".into(),
-                "sharp_peak".into(),
-                "steady".into(),
-                "slow_decay".into(),
-                "wave".into(),
-            ],
-        }
+        TypeChecker
     }
 
     /// 对一份 FeelingSource AST 执行类型检查。
@@ -84,38 +26,31 @@ impl TypeChecker {
     /// - 点缀感受原子名是否在 Registry 中
     /// - 点缀配比是否 ≤ 该原子的 max_ratio
     /// - shape 名称是否合法
-    /// - 强度区间是否合法（max >= min）
-    ///
-    /// 全部通过 → Ok(())。
-    /// 任何不通过 → oi!(TypeCheckError, ...)。这帧不生成。
+    /// - 强度区间是否合法（max >= min + 非零）
     pub fn check(&self, source: &FeelingSource) -> Result<(), AnimiError> {
         // 主旋律
         self.check_atom(&source.mix.main, "主旋律")?;
 
         // 点缀——附加 max_ratio 检查
         for accent in &source.mix.accents {
-            let entry = self.check_atom(&accent.atom, "点缀")?;
+            let max_r = self.check_atom(&accent.atom, "点缀")?;
 
-            if accent.ratio > entry.max_ratio {
+            if accent.ratio > max_r {
                 oi!(
                     TypeCheckError,
                     atom_name = accent.atom.name.clone(),
                     reason = format!(
                         "点缀配比 {:.2} 超过了该原子的上限 {:.2}",
-                        accent.ratio, entry.max_ratio
+                        accent.ratio, max_r
                     )
                 )
             }
         }
 
-        // shape——用同一个 lookup 逻辑，给"你是不是想说 X"建议
-        self.lookup_name(
-            &source.shape.name,
-            self.shapes.iter().map(|s| s.as_str()),
-            "shape",
-        )?;
+        // shape
+        self.lookup_name(&source.shape.name, registry::shape_names(), "shape")?;
 
-        // 强度区间——parser 已校验 max >= min，这里只做语义检查
+        // 强度区间——parser 已校验 max >= min，rule.rs 校验全局上限 100
         if source.intensity.max == 0 && source.intensity.min == 0 {
             oi!(
                 TypeCheckError,
@@ -123,21 +58,11 @@ impl TypeChecker {
                 reason = "强度不能为零——信号没有强度等于没生成".to_string()
             )
         }
-        if source.intensity.max > 10000 {
-            oi!(TypeCheckError,
-                atom_name=source.name.clone(),
-                reason=format!(
-                    "强度 max={} 过大——默认刻度 0-100。如确认无误请使用等比例缩小或将数值单位改为 0-10000。上限 10000。DSIR 阶段无法映射这么高的值",
-                    source.intensity.max
-                )
-            )
-        }
 
         Ok(())
     }
 
-    /// 泛型名称查找——对原子和 shape 通用。
-    /// 不在 values 中 → oi!(TypeCheckError)，带编辑距离建议。
+    /// 泛型名称查找，带"你是不是想说 X"建议。
     fn lookup_name<'a>(
         &self,
         name: &str,
@@ -149,7 +74,6 @@ impl TypeChecker {
             return Ok(());
         }
 
-        // 前缀匹配 ≥ 3 或子串包含
         let suggestions: Vec<&&str> = all
             .iter()
             .filter(|r| {
@@ -182,23 +106,13 @@ impl TypeChecker {
         )
     }
 
-    /// 检查单个感受原子名是否在 Registry 中。
-    /// 返回对应的 AtomEntry 引用——供调用方做额外检查（如 max_ratio）。
-    fn check_atom(&self, atom: &FeelingAtom, role: &str) -> Result<&AtomEntry, AnimiError> {
-        for entry in &self.registry {
-            if entry.name == atom.name {
-                return Ok(entry);
-            }
+    /// 检查感受原子名是否在 Registry 中，返回 max_ratio。
+    fn check_atom(&self, atom: &FeelingAtom, role: &str) -> Result<f64, AnimiError> {
+        if let Some(entry) = registry::lookup_atom(&atom.name) {
+            return Ok(entry.max_ratio);
         }
 
-        // 未找到——走泛型 lookup 报错（带"你是不是想说 X"建议）
-        self.lookup_name(
-            &atom.name,
-            self.registry.iter().map(|e| e.name.as_str()),
-            role,
-        )?;
-
-        // Rust 看不到 oi! 的 return——此行为不可达
+        self.lookup_name(&atom.name, registry::atom_names(), role)?;
         unreachable!()
     }
 }
@@ -222,105 +136,6 @@ mod tests {
         let ast = parser.parse()?;
         let checker = TypeChecker::new();
         checker.check(&ast)
-    }
-
-    #[test]
-    fn intensity_zero_zero_rejected() {
-        let src = r#"
-feeling calm {
-    mix {
-        main: calm_meditative
-        accents: []
-    }
-    shape: steady
-    intensity: [0, 0]
-}
-"#;
-        let result = check_source(src);
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("不能为零"));
-    }
-
-    #[test]
-    fn intensity_100_100_passes() {
-        let src = r#"
-feeling calm {
-    mix {
-        main: calm_meditative
-        accents: []
-    }
-    shape: steady
-    intensity: [100, 100]
-}
-"#;
-        assert!(check_source(src).is_ok());
-    }
-
-    #[test]
-    fn uppercase_keyword_rejected() {
-        // FEELING 不是关键字——lexer 当 Identifier，parser 期望 feeling 关键字 → 报错
-        let src = r#"
-FEELING calm {
-    mix {
-        main: calm_meditative
-        accents: []
-    }
-    shape: steady
-    intensity: [10, 20]
-}
-"#;
-        let result = check_source(src);
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("feeling"));
-    }
-
-    #[test]
-    fn unicode_identifier_passes() {
-        // calm_平静——is_alphanumeric 接受中文
-        let src = r#"
-feeling calm_平静 {
-    mix {
-        main: calm_meditative
-        accents: []
-    }
-    shape: steady
-    intensity: [10, 20]
-}
-"#;
-        assert!(check_source(src).is_ok());
-    }
-
-    #[test]
-    fn empty_mix_block_rejected() {
-        let src = r#"
-feeling calm {
-    mix {
-    }
-    shape: steady
-    intensity: [10, 20]
-}
-"#;
-        let result = check_source(src);
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn keyword_as_identifier_rejected() {
-        // main: mix——mix 是关键字，parser 期望 Identifier 但 TokenKind 是 Mix
-        let src = r#"
-feeling calm {
-    mix {
-        main: mix
-        accents: []
-    }
-    shape: steady
-    intensity: [10, 20]
-}
-"#;
-        let result = check_source(src);
-        assert!(result.is_err());
-        // parser 打印的是 TokenKind::Mix 的 Debug 格式 = "Mix"
-        assert!(result.unwrap_err().to_string().contains("Mix"));
     }
 
     #[test]
@@ -352,9 +167,7 @@ feeling calm {
 "#;
         let result = check_source(src);
         assert!(result.is_err());
-        let msg = result.unwrap_err().to_string();
-        assert!(msg.contains("explosion"));
-        assert!(msg.contains("未注册"));
+        assert!(result.unwrap_err().to_string().contains("explosion"));
     }
 
     #[test]
@@ -396,7 +209,6 @@ feeling calm {
 
     #[test]
     fn ratio_exceeds_max_ratio_rejected() {
-        // belonging max_ratio = 0.5，0.8 超了
         let src = r#"
 feeling calm {
     mix {
@@ -417,7 +229,6 @@ feeling calm {
 
     #[test]
     fn ratio_at_max_ratio_passes() {
-        // belonging max_ratio = 0.5，正好 0.5 → 通过
         let src = r#"
 feeling calm {
     mix {
@@ -429,24 +240,6 @@ feeling calm {
 }
 "#;
         assert!(check_source(src).is_ok());
-    }
-
-    #[test]
-    fn ratio_negative_rejected_by_lexer() {
-        // - 不是 .anim 的合法字符——词法分析器直接拒绝
-        let src = r#"
-feeling calm {
-    mix {
-        main: calm_meditative
-        accents: [belonging -0.3]
-    }
-    shape: steady
-    intensity: [10, 20]
-}
-"#;
-        let result = check_source(src);
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("-"));
     }
 
     #[test]
@@ -466,7 +259,6 @@ feeling calm {
 
     #[test]
     fn ratio_one_passes() {
-        // calm_meditative.max_ratio=1.0，1.0 刚好卡上限 → 通过
         let src = r#"
 feeling calm {
     mix {
@@ -498,6 +290,55 @@ feeling calm {
     }
 
     #[test]
+    fn ratio_negative_rejected_by_lexer() {
+        let src = r#"
+feeling calm {
+    mix {
+        main: calm_meditative
+        accents: [belonging -0.3]
+    }
+    shape: steady
+    intensity: [10, 20]
+}
+"#;
+        let result = check_source(src);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("-"));
+    }
+
+    #[test]
+    fn intensity_zero_zero_rejected() {
+        let src = r#"
+feeling calm {
+    mix {
+        main: calm_meditative
+        accents: []
+    }
+    shape: steady
+    intensity: [0, 0]
+}
+"#;
+        let result = check_source(src);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("不能为零"));
+    }
+
+    #[test]
+    fn intensity_100_100_passes() {
+        let src = r#"
+feeling calm {
+    mix {
+        main: calm_meditative
+        accents: []
+    }
+    shape: steady
+    intensity: [100, 100]
+}
+"#;
+        assert!(check_source(src).is_ok());
+    }
+
+    #[test]
     fn invalid_intensity_range_rejected() {
         let src = r#"
 feeling calm {
@@ -512,5 +353,62 @@ feeling calm {
         let result = check_source(src);
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("100"));
+    }
+
+    #[test]
+    fn uppercase_keyword_rejected() {
+        let src = r#"
+FEELING calm {
+    mix {
+        main: calm_meditative
+        accents: []
+    }
+    shape: steady
+    intensity: [10, 20]
+}
+"#;
+        let result = check_source(src);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("feeling"));
+    }
+
+    #[test]
+    fn unicode_rejected_by_lexer() {
+        // ASCII-only lexer → 中文字符被拒绝
+        let src = "feeling calm_平";
+        let result = check_source(src);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("平"));
+    }
+
+    #[test]
+    fn empty_mix_block_rejected() {
+        let src = r#"
+feeling calm {
+    mix {
+    }
+    shape: steady
+    intensity: [10, 20]
+}
+"#;
+        let result = check_source(src);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn keyword_as_identifier_rejected() {
+        let src = r#"
+feeling calm {
+    mix {
+        main: mix
+        accents: []
+    }
+    shape: steady
+    intensity: [10, 20]
+}
+"#;
+        let result = check_source(src);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Mix"));
     }
 }

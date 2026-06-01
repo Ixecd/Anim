@@ -113,7 +113,7 @@ impl Lexer {
             ']' => self.simple(TokenKind::RBracket),
             ':' => self.simple(TokenKind::Colon),
             ',' => self.simple(TokenKind::Comma),
-            ch if ch.is_alphabetic() || ch == '_' => self.ident_or_keyword(),
+            ch if ch.is_ascii_alphabetic() || ch == '_' => self.ident_or_keyword(),
             ch if ch.is_ascii_digit() || ch == '.' => self.number(),
             _ => {
                 let line = self.line;
@@ -145,7 +145,7 @@ impl Lexer {
     fn ident_or_keyword(&mut self) -> Result<Token, AnimiError> {
         let line = self.line;
         let col = self.col;
-        let name = self.read_while(|ch| ch.is_alphanumeric() || ch == '_');
+        let name = self.read_while(|ch| ch.is_ascii_alphanumeric() || ch == '_');
 
         let kind = match name.as_str() {
             "feeling" => TokenKind::Feeling,
@@ -252,6 +252,11 @@ impl Lexer {
     fn skip_whitespace(&mut self) {
         while !self.is_eof() {
             let ch = self.peek();
+            // 跳过 UTF-8 BOM（部分 Windows 编辑器默认行为）
+            if ch == '\u{FEFF}' {
+                self.advance();
+                continue;
+            }
             if ch.is_whitespace() {
                 self.advance();
             } else if ch == '-' && self.peek_next() == Some('-') {

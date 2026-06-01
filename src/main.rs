@@ -51,12 +51,7 @@ fn main() {
     }
 
     // Pass 2 — 静态安全规则
-    let is_core = |name: &str| -> Option<bool> {
-        let core = ["calm_meditative", "belonging", "clarity", "safety",
-                    "post_achievement", "gentle_focus", "deep_rest", "warmth"];
-        Some(core.contains(&name))
-    };
-    animi::rule::check(&ast, &is_core).unwrap_or_else(|e| {
+    animi::rule::check(&ast).unwrap_or_else(|e| {
         eprintln!("{}", e);
         process::exit(1);
     });

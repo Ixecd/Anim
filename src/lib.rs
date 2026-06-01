@@ -7,6 +7,7 @@ pub mod guard;
 pub mod lexer;
 pub mod oi;
 pub mod parser;
+pub mod registry;
 pub mod rule;
 pub mod safety;
 pub mod typeck;
