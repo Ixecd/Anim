@@ -1,0 +1,6 @@
+feat: add AnimiError enum + oi! macro
+
+- AnimiError 四个变体：LexError/ParseError/TypeCheckError/InternalError
+- Display 手写——每个变体含 [oi] 前缀 + 行号 + 具体信息
+- oi! 宏——轻量拒绝。"挡一帧。不 panic。下一帧继续。"
+- 4 个单元测试覆盖 Display 输出格式和 oi! 宏展开
