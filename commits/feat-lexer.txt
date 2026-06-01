@@ -1,0 +1,7 @@
+feat: add lexer (Pass 0a) — tokenize .anim source into Token stream
+
+- 9 种 Token 类型：6 关键字 + Identifier/Int/Float + 6 标点 + Eof
+- 支持 -- 行注释跳过
+- 支持行号/列号追踪（1-indexed）
+- 非法字符 → oi!(LexError)
+- 8 个测试覆盖关键字/标识符/数字/标点/完整示例/注释/错误/行列号
