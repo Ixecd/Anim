@@ -1,0 +1,8 @@
+feeling calm {
+    mix {
+        main: calm_meditative
+        accents: [belonging 0.3, clarity 0.2]
+    }
+    shape: gradual_rise_fall
+    intensity: [15, 45]
+}

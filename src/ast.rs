@@ -8,9 +8,13 @@ use serde::Serialize;
 
 /// 一份 .anim 源码的完整 AST。
 ///
+/// 包名 ≠ 主旋律原子。包名是给创作者的人类标签（如 `calm`）。
+/// 主旋律是给岛叶的信号（如 `calm_meditative`）。
+/// 同一个包名下可以有多种主旋律——"冷静"不是一个东西，是一族状态。
+///
 /// 顶层结构：
 /// ```text
-/// feeling calm_meditative {
+/// feeling calm {
 ///     mix {
 ///         main: calm_meditative
 ///         accents: [belonging 0.3, clarity 0.2]
