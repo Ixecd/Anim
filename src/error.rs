@@ -28,6 +28,16 @@ pub enum AnimiError {
     /// 类型检查错误——感受原子不存在、强度越界等。
     TypeCheckError { atom_name: String, reason: String },
 
+    /// 静态安全错误——Pass 2（rule.rs）。对任何人的硬规则。
+    StaticSafetyError { rule: String, detail: String },
+
+    /// 用户安全错误——Pass 3（safety.rs）。对这个人的拒绝。
+    UserStateSafetyError {
+        cap: String,
+        atom_name: String,
+        reason: String,
+    },
+
     /// 编译器内部错误——不是用户源码的问题。
     InternalError { msg: String },
 }
@@ -52,6 +62,20 @@ impl fmt::Display for AnimiError {
             }
             AnimiError::TypeCheckError { atom_name, reason } => {
                 write!(f, "[oi] 类型错误: {}——{}", atom_name, reason)
+            }
+            AnimiError::StaticSafetyError { rule, detail } => {
+                write!(f, "[oi] 安全规则: {}——{}", rule, detail)
+            }
+            AnimiError::UserStateSafetyError {
+                cap,
+                atom_name,
+                reason,
+            } => {
+                write!(
+                    f,
+                    "[oi] 用户安全({}): {}——{}",
+                    cap, atom_name, reason
+                )
             }
             AnimiError::InternalError { msg } => {
                 write!(f, "[oi] 内部错误: {}", msg)

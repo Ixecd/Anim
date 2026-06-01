@@ -214,9 +214,18 @@ impl Lexer {
     /// 前进一个字符。
     fn advance(&mut self) {
         if self.pos < self.chars.len() {
-            if self.chars[self.pos] == '\n' {
+            let ch = self.chars[self.pos];
+            if ch == '\n' {
                 self.line += 1;
                 self.col = 1;
+            } else if ch == '\r' {
+                // \r\n → 换行。\r 单独出现 → 也换行。
+                self.line += 1;
+                self.col = 1;
+                // \r\n 配对——吞掉紧跟的 \n
+                if self.pos + 1 < self.chars.len() && self.chars[self.pos + 1] == '\n' {
+                    self.pos += 1; // 跳过 \n
+                }
             } else {
                 self.col += 1;
             }
@@ -246,8 +255,8 @@ impl Lexer {
             if ch.is_whitespace() {
                 self.advance();
             } else if ch == '-' && self.peek_next() == Some('-') {
-                // 行注释：-- 到行尾
-                while !self.is_eof() && self.peek() != '\n' {
+                // 行注释：-- 到行尾（\n 或 \r）
+                while !self.is_eof() && self.peek() != '\n' && self.peek() != '\r' {
                     self.advance();
                 }
             } else {

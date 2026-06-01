@@ -1,0 +1,12 @@
+fix: second review round — 13 fixes across all modules
+
+- CRLF line ending support (lexer advance + skip_whitespace)
+- ratio [0.0,1.0] + NaN/Inf check in parser, per-atom max_ratio in typeck
+- shape error now uses same suggestion algorithm as atom lookup
+- intensity no longer validated twice (parser + typeck DRY)
+- intensity sanity: zero rejected, max <= 10000 enforced
+- StaticSafetyError + UserStateSafetyError variants pre-embedded
+- oi_err! macro — no-return variant for match arms
+- suggestion algorithm improved: substring matching in addition to prefix
+- 8 new boundary tests: ratio 0/1/-0.3/1.5, intensity [0.0]/[100.100], uppercase keyword, unicode, empty mix, keyword-as-identifier
+- test count: 33 → 41

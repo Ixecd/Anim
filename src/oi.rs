@@ -14,10 +14,29 @@
 /// // 注意：字符串字段需要显式 .to_string()——oi! 不做隐式转换。
 /// oi!(LexError, line=12_usize, col=5_usize, msg="unexpected @".to_string());
 /// ```
+/// 宏所在模块示例
+///
+/// ```ignore
+/// use animi::oi;
+/// // 注意：字符串字段需要显式 .to_string()——oi! 不做隐式转换。
+/// oi!(LexError, line=12_usize, col=5_usize, msg="unexpected @".to_string());
+/// ```
 #[macro_export]
 macro_rules! oi {
     ($variant:ident, $($field:ident = $value:expr),* $(,)?) => {
         return Err($crate::error::AnimiError::$variant {
+            $($field: $value),*
+        })
+    };
+}
+
+/// 无 `return` 封装——可用于 match 表达式臂等。
+///
+/// 展开为 `Err(AnimiError::Variant { fields })`，不 return——回调里仍需要从闭包返回。
+#[macro_export]
+macro_rules! oi_err {
+    ($variant:ident, $($field:ident = $value:expr),* $(,)?) => {
+        Err($crate::error::AnimiError::$variant {
             $($field: $value),*
         })
     };

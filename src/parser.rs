@@ -178,6 +178,17 @@ impl Parser {
                 ),
             };
 
+            // 基础范围 + NaN/Inf 兜底——typeck 之后做精细 max_ratio
+            if ratio.is_nan() || ratio.is_infinite() || ratio < 0.0 || ratio > 1.0 {
+                oi!(
+                    ParseError,
+                    line = self.peek().line,
+                    col = self.peek().col,
+                    expected = "配比在 [0.0, 1.0] 范围内".to_string(),
+                    found = format!("{}", ratio)
+                )
+            }
+
             accents.push(Accent {
                 atom: FeelingAtom { name: atom_name },
                 ratio,
