@@ -1,0 +1,8 @@
+feeling gentle_focus {
+    mix {
+        main: gentle_focus
+        accents: [clarity 0.4, calm_meditative 0.2]
+    }
+    shape: steady
+    intensity: [15, 35]
+}

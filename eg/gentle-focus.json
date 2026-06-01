@@ -1,30 +1,30 @@
 {
   "meta": {
     "animi_version": "0.1.0",
-    "compiled_at": "2026-06-01T08:13:33.064128+00:00",
+    "compiled_at": "2026-06-01T08:13:33.667609+00:00",
     "source_hash": null,
     "pattern_registry_hash": null,
     "safety_rules_version": null
   },
-  "name": "calm",
+  "name": "gentle_focus",
   "mix": {
-    "main": "calm_meditative",
+    "main": "gentle_focus",
     "accents": [
       {
-        "atom": "belonging",
-        "ratio": 0.3
+        "atom": "clarity",
+        "ratio": 0.4
       },
       {
-        "atom": "clarity",
+        "atom": "calm_meditative",
         "ratio": 0.2
       }
     ]
   },
   "shape": {
-    "name": "gradual_rise_fall"
+    "name": "steady"
   },
   "intensity": {
     "min": 15,
-    "max": 45
+    "max": 35
   }
 }

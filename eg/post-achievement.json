@@ -1,19 +1,15 @@
 {
   "meta": {
     "animi_version": "0.1.0",
-    "compiled_at": "2026-06-01T08:13:33.064128+00:00",
+    "compiled_at": "2026-06-01T08:13:33.258524+00:00",
     "source_hash": null,
     "pattern_registry_hash": null,
     "safety_rules_version": null
   },
-  "name": "calm",
+  "name": "post_achievement",
   "mix": {
-    "main": "calm_meditative",
+    "main": "post_achievement",
     "accents": [
-      {
-        "atom": "belonging",
-        "ratio": 0.3
-      },
       {
         "atom": "clarity",
         "ratio": 0.2
@@ -21,10 +17,10 @@
     ]
   },
   "shape": {
-    "name": "gradual_rise_fall"
+    "name": "sharp_peak"
   },
   "intensity": {
-    "min": 15,
-    "max": 45
+    "min": 20,
+    "max": 60
   }
 }

@@ -1,0 +1,8 @@
+feeling deep_rest {
+    mix {
+        main: deep_rest
+        accents: [safety 0.3, warmth 0.2]
+    }
+    shape: slow_decay
+    intensity: [5, 25]
+}

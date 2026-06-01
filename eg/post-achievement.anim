@@ -1,0 +1,8 @@
+feeling post_achievement {
+    mix {
+        main: post_achievement
+        accents: [clarity 0.2]
+    }
+    shape: sharp_peak
+    intensity: [20, 60]
+}
