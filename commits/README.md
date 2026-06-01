@@ -62,12 +62,23 @@ refactor(pass4): split RuntimeGuard into pre-check and inject
 
 ---
 
-## 发布节奏
+## 发布节奏（tag → 实现 → tag）
 
-Anim 走 Rust 标准发布流程——Cargo.toml 版本号 + git tag。不打半成品 tag。
+和 KubePivot 一致——tag 先行。tag 是起跑线，不是终点线。
 
 ```
-1. 实现功能 → cargo test → cargo clippy 全绿
-2. 每批功能单独 commit（commit 消息用 `-F commits/<file>`）
-3. 功能完整后 bump Cargo.toml version + git tag v0.x
+1. 打起点 tag（锁定当前功能基线）
+   git tag v0.2
+
+2. 实现新功能
+   - cargo test → cargo clippy 全绿
+   - 每批功能单独 commit（commit 消息用 -F commits/<file>）
+
+3. 实现满意后打终点 tag
+   git tag v0.3
 ```
+
+**为什么 tag 先行**：
+- 用 tag 切分"已完成"和"施工中"，回滚有锚点
+- 不在功能写到一半时打 tag（tag 代表稳定基线，不绑定半成品）
+- tag 是起跑线——不是终点线
