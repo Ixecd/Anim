@@ -113,7 +113,11 @@ impl TypeChecker {
         }
 
         self.lookup_name(&atom.name, registry::atom_names(), role)?;
-        unreachable!()
+        // lookup_name 内部 oi! 总是 return Err——此行不可达
+        #[allow(unreachable_code)]
+        {
+            unreachable!()
+        }
     }
 }
 

@@ -17,7 +17,8 @@ pub struct AtomEntry {
     pub max_ratio: f64,
 }
 
-/// 内建 Registry——8 个核心原子。
+/// 内建 Registry——8 个核心原子（v1.1 全部 Core，无 Sandbox）。
+/// v1.2+ 添加沙箱原子时——rule.rs 的 Sandbox 分支才会触发。
 static REGISTRY: &[AtomEntry] = &[
     AtomEntry {
         name: "calm_meditative",
