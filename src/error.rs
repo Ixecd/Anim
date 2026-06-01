@@ -71,11 +71,7 @@ impl fmt::Display for AnimiError {
                 atom_name,
                 reason,
             } => {
-                write!(
-                    f,
-                    "[oi] 用户安全({}): {}——{}",
-                    cap, atom_name, reason
-                )
+                write!(f, "[oi] 用户安全({}): {}——{}", cap, atom_name, reason)
             }
             AnimiError::InternalError { msg } => {
                 write!(f, "[oi] 内部错误: {}", msg)

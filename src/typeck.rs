@@ -34,14 +34,38 @@ impl TypeChecker {
     pub fn new() -> Self {
         TypeChecker {
             registry: vec![
-                AtomEntry { name: "calm_meditative".into(), max_ratio: 1.0 },
-                AtomEntry { name: "belonging".into(), max_ratio: 0.5 },
-                AtomEntry { name: "clarity".into(), max_ratio: 0.5 },
-                AtomEntry { name: "safety".into(), max_ratio: 0.5 },
-                AtomEntry { name: "post_achievement".into(), max_ratio: 0.3 },
-                AtomEntry { name: "gentle_focus".into(), max_ratio: 0.5 },
-                AtomEntry { name: "deep_rest".into(), max_ratio: 0.5 },
-                AtomEntry { name: "warmth".into(), max_ratio: 0.5 },
+                AtomEntry {
+                    name: "calm_meditative".into(),
+                    max_ratio: 1.0,
+                },
+                AtomEntry {
+                    name: "belonging".into(),
+                    max_ratio: 0.5,
+                },
+                AtomEntry {
+                    name: "clarity".into(),
+                    max_ratio: 0.5,
+                },
+                AtomEntry {
+                    name: "safety".into(),
+                    max_ratio: 0.5,
+                },
+                AtomEntry {
+                    name: "post_achievement".into(),
+                    max_ratio: 0.3,
+                },
+                AtomEntry {
+                    name: "gentle_focus".into(),
+                    max_ratio: 0.5,
+                },
+                AtomEntry {
+                    name: "deep_rest".into(),
+                    max_ratio: 0.5,
+                },
+                AtomEntry {
+                    name: "warmth".into(),
+                    max_ratio: 0.5,
+                },
             ],
             shapes: vec![
                 "gradual_rise_fall".into(),
@@ -73,9 +97,10 @@ impl TypeChecker {
             let entry = self.check_atom(&accent.atom, "点缀")?;
 
             if accent.ratio > entry.max_ratio {
-                oi!(TypeCheckError,
-                    atom_name=accent.atom.name.clone(),
-                    reason=format!(
+                oi!(
+                    TypeCheckError,
+                    atom_name = accent.atom.name.clone(),
+                    reason = format!(
                         "点缀配比 {:.2} 超过了该原子的上限 {:.2}",
                         accent.ratio, entry.max_ratio
                     )
@@ -84,13 +109,18 @@ impl TypeChecker {
         }
 
         // shape——用同一个 lookup 逻辑，给"你是不是想说 X"建议
-        self.lookup_name(&source.shape.name, self.shapes.iter().map(|s| s.as_str()), "shape")?;
+        self.lookup_name(
+            &source.shape.name,
+            self.shapes.iter().map(|s| s.as_str()),
+            "shape",
+        )?;
 
         // 强度区间——parser 已校验 max >= min，这里只做语义检查
         if source.intensity.max == 0 && source.intensity.min == 0 {
-            oi!(TypeCheckError,
-                atom_name=source.name.clone(),
-                reason="强度不能为零——信号没有强度等于没生成".to_string()
+            oi!(
+                TypeCheckError,
+                atom_name = source.name.clone(),
+                reason = "强度不能为零——信号没有强度等于没生成".to_string()
             )
         }
         if source.intensity.max > 10000 {
@@ -145,9 +175,10 @@ impl TypeChecker {
             )
         };
 
-        oi!(TypeCheckError,
-            atom_name=name.to_string(),
-            reason=format!("未注册的 {}。{}", role, hint)
+        oi!(
+            TypeCheckError,
+            atom_name = name.to_string(),
+            reason = format!("未注册的 {}。{}", role, hint)
         )
     }
 
@@ -161,7 +192,11 @@ impl TypeChecker {
         }
 
         // 未找到——走泛型 lookup 报错（带"你是不是想说 X"建议）
-        self.lookup_name(&atom.name, self.registry.iter().map(|e| e.name.as_str()), role)?;
+        self.lookup_name(
+            &atom.name,
+            self.registry.iter().map(|e| e.name.as_str()),
+            role,
+        )?;
 
         // Rust 看不到 oi! 的 return——此行为不可达
         unreachable!()
@@ -353,7 +388,10 @@ feeling calm {
 "#;
         let result = check_source(src);
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("nuclear_explosion"));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("nuclear_explosion"));
     }
 
     #[test]
