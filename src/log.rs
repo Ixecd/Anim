@@ -88,30 +88,6 @@ fn emit(level: Level, args: std::fmt::Arguments) {
     eprintln!("[{}] {} {}", ts, level.label(), args);
 }
 
-/// `A.debug(format_args!(...))` 的语法糖——`A_debug!("verbose")`。
-#[macro_export]
-macro_rules! A_debug {
-    ($($arg:tt)*) => { $crate::log::A.debug(format_args!($($arg)*)) };
-}
-
-/// `A.info(format_args!(...))` 的语法糖——`A_info!("hello {}", x)`。
-#[macro_export]
-macro_rules! A_info {
-    ($($arg:tt)*) => { $crate::log::A.info(format_args!($($arg)*)) };
-}
-
-/// `A.warn(format_args!(...))` 的语法糖。
-#[macro_export]
-macro_rules! A_warn {
-    ($($arg:tt)*) => { $crate::log::A.warn(format_args!($($arg)*)) };
-}
-
-/// `A.error(format_args!(...))` 的语法糖。
-#[macro_export]
-macro_rules! A_error {
-    ($($arg:tt)*) => { $crate::log::A.error(format_args!($($arg)*)) };
-}
-
 #[cfg(test)]
 mod tests {
     // emit 直接写 stderr——此处只验证宏可编译和 Level label 正确
@@ -126,9 +102,10 @@ mod tests {
     }
 
     #[test]
-    fn macros_compile() {
-        A_info!("用户发起了交织请求");
-        A_warn!("Registry 加载失败，使用内建列表");
-        A_error!("无法读取文件 {}", "test.anim");
+    fn log_methods_compile() {
+        A.info(format_args!("用户发起了交织请求"));
+        A.warn(format_args!("Registry 加载失败，使用内建列表"));
+        A.error(format_args!("无法读取文件 {}", "test.anim"));
+        A.debug(format_args!("详细调试信息"));
     }
 }
