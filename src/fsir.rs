@@ -132,7 +132,7 @@ impl FsirDoc {
     /// 序列化为 JSON 字符串。
     pub fn to_json(&self) -> Result<String, AnimiError> {
         serde_json::to_string_pretty(self).map_err(|e| AnimiError::InternalError {
-            file_name: String::new(),
+            file_name: crate::error::current_file(),
             msg: format!("FSIR JSON 序列化失败: {}", e),
         })
     }

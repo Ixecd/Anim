@@ -14,6 +14,11 @@ thread_local! {
     pub static CURRENT_FILE: RefCell<String> = const { RefCell::new(String::new()) };
 }
 
+/// 获取当前正在处理的文件名。
+pub fn current_file() -> String {
+    CURRENT_FILE.with(|f| f.borrow().clone())
+}
+
 /// animi 交织器的错误类型。
 #[derive(Debug)]
 pub enum AnimiError {

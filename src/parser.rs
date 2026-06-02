@@ -104,21 +104,21 @@ impl Parser {
 
         // 三个字段必须都存在
         let mix = mix.ok_or_else(|| AnimiError::ParseError {
-            file_name: String::new(),
+            file_name: crate::error::current_file(),
             line: 0,
             col: 0,
             expected: "mix block".to_string(),
             found: "missing".to_string(),
         })?;
         let shape = shape.ok_or_else(|| AnimiError::ParseError {
-            file_name: String::new(),
+            file_name: crate::error::current_file(),
             line: 0,
             col: 0,
             expected: "shape field".to_string(),
             found: "missing".to_string(),
         })?;
         let intensity = intensity.ok_or_else(|| AnimiError::ParseError {
-            file_name: String::new(),
+            file_name: crate::error::current_file(),
             line: 0,
             col: 0,
             expected: "intensity field".to_string(),
@@ -251,7 +251,7 @@ impl Parser {
 
         let intensity = Intensity { min, max };
         intensity.validate().map_err(|msg| AnimiError::ParseError {
-            file_name: String::new(),
+            file_name: crate::error::current_file(),
             line: bracket_line,
             col: bracket_col,
             expected: "合法的强度区间（max >= min）".to_string(),
