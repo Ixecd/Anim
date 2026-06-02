@@ -13,4 +13,4 @@ pub mod rule;
 pub mod safety;
 pub mod typeck;
 
-pub use log::{set_log_level, Level};
+pub use log::{set_log_level, Level, A};
