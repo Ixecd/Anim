@@ -4,8 +4,6 @@
 // A_info! / A_warn! / A_error!——带时间戳 + 颜色。
 // 后续 v1.2+ 可用 tracing 替换底层——宏接口不变。
 
-use std::fmt;
-
 /// 日志级别。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[allow(dead_code)]
@@ -26,35 +24,47 @@ impl Level {
     }
 }
 
-/// 写到 stderr，带时间戳和颜色。
+/// Anim 全局日志器。对齐 KubePivot 的 `P`。
+pub static A: Logger = Logger;
+
+/// 日志器——KubePivot 用 P，Anim 用 A。
+pub struct Logger;
+
+impl Logger {
+    pub fn info(&self, args: std::fmt::Arguments) {
+        emit(Level::Info, args);
+    }
+    pub fn warn(&self, args: std::fmt::Arguments) {
+        emit(Level::Warn, args);
+    }
+    pub fn error(&self, args: std::fmt::Arguments) {
+        emit(Level::Error, args);
+    }
+}
+
+/// 内部写到 stderr，带时间戳和颜色。
 #[allow(dead_code)]
-pub fn emit(level: Level, args: fmt::Arguments) {
+fn emit(level: Level, args: std::fmt::Arguments) {
     let ts = chrono::Local::now().format("%H:%M:%S");
     eprintln!("[{}] {} {}", ts, level.label(), args);
 }
 
-/// 信息日志。
+/// `A.info(format_args!(...))` 的语法糖——`A_info!("hello {}", x)`。
 #[macro_export]
 macro_rules! A_info {
-    ($($arg:tt)*) => {
-        $crate::log::emit($crate::log::Level::Info, format_args!($($arg)*))
-    };
+    ($($arg:tt)*) => { $crate::log::A.info(format_args!($($arg)*)) };
 }
 
-/// 警告日志。
+/// `A.warn(format_args!(...))` 的语法糖。
 #[macro_export]
 macro_rules! A_warn {
-    ($($arg:tt)*) => {
-        $crate::log::emit($crate::log::Level::Warn, format_args!($($arg)*))
-    };
+    ($($arg:tt)*) => { $crate::log::A.warn(format_args!($($arg)*)) };
 }
 
-/// 错误日志。
+/// `A.error(format_args!(...))` 的语法糖。
 #[macro_export]
 macro_rules! A_error {
-    ($($arg:tt)*) => {
-        $crate::log::emit($crate::log::Level::Error, format_args!($($arg)*))
-    };
+    ($($arg:tt)*) => { $crate::log::A.error(format_args!($($arg)*)) };
 }
 
 #[cfg(test)]
