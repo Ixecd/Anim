@@ -84,6 +84,9 @@ fn main() {
         animi::registry::Registry::default()
     };
 
+    // 设置当前文件名——oi! 宏自动从中读取
+    animi::error::CURRENT_FILE.with(|f| *f.borrow_mut() = path.clone());
+
     let src = match fs::read_to_string(path) {
         Ok(s) => s,
         Err(e) => {

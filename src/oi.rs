@@ -19,21 +19,27 @@
 #[macro_export]
 macro_rules! oi {
     ($variant:ident, $($field:ident = $value:expr),* $(,)?) => {
-        return Err($crate::error::AnimiError::$variant {
-            $($field: $value),*
-        })
+        {
+            let _file = $crate::error::CURRENT_FILE.with(|f| f.borrow().clone());
+            return Err($crate::error::AnimiError::$variant {
+                file_name: _file,
+                $($field: $value),*
+            })
+        }
     };
 }
 
 /// 无 `return` 封装——可用于 match 表达式臂等。
-///
-/// 展开为 `Err(AnimiError::Variant { fields })`，不 return——回调里仍需要从闭包返回。
 #[macro_export]
 macro_rules! oi_err {
     ($variant:ident, $($field:ident = $value:expr),* $(,)?) => {
-        Err($crate::error::AnimiError::$variant {
-            $($field: $value),*
-        })
+        {
+            let _file = $crate::error::CURRENT_FILE.with(|f| f.borrow().clone());
+            Err($crate::error::AnimiError::$variant {
+                file_name: _file,
+                $($field: $value),*
+            })
+        }
     };
 }
 
@@ -55,7 +61,7 @@ mod tests {
         assert!(result.is_err());
         let e = result.unwrap_err();
         match e {
-            AnimiError::LexError { line, col, msg } => {
+            AnimiError::LexError { line, col, msg, .. } => {
                 assert_eq!(line, 42);
                 assert_eq!(col, 7);
                 assert_eq!(msg, "test oi");
