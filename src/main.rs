@@ -11,6 +11,7 @@ use std::fs;
 use std::process;
 
 use animi::error::AnimiError;
+use animi::{A_info, A_warn};
 
 /// 错误处理辅助——Ok 则返回值，Err 则打印并退出。
 fn die<T>(r: Result<T, AnimiError>) -> T {
@@ -72,11 +73,11 @@ fn main() {
     let registry = if let Some(path) = reg_path {
         match animi::registry::Registry::from_file(path) {
             Ok(r) => {
-                eprintln!("✅ 加载外部 Registry: {}", path);
+                A_info!("加载外部 Registry: {}", path);
                 r
             }
             Err(e) => {
-                eprintln!("⚠️ 加载外部 Registry 失败: {}，使用内建列表", e);
+                A_warn!("加载外部 Registry 失败: {}，使用内建列表", e);
                 animi::registry::Registry::default()
             }
         }
