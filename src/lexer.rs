@@ -450,6 +450,31 @@ feeling calm_meditative { -- inline comment
     }
 
     #[test]
+    fn tokenize_empty_source() {
+        let src = "";
+        let mut lexer = Lexer::new(src);
+        let tokens = lexer.tokenize().unwrap();
+        assert_eq!(tokens.len(), 1); // 只有 Eof
+        assert_eq!(tokens[0].kind, TokenKind::Eof);
+    }
+
+    #[test]
+    fn tokenize_only_whitespace() {
+        let src = "   \n  \n  ";
+        let mut lexer = Lexer::new(src);
+        let tokens = lexer.tokenize().unwrap();
+        assert_eq!(tokens.len(), 1); // 只有 Eof
+    }
+
+    #[test]
+    fn tokenize_only_comments() {
+        let src = "-- nothing here\n-- still nothing";
+        let mut lexer = Lexer::new(src);
+        let tokens = lexer.tokenize().unwrap();
+        assert_eq!(tokens.len(), 1);
+    }
+
+    #[test]
     fn tokenize_line_column() {
         let src = "feeling\ncalm";
         let mut lexer = Lexer::new(src);

@@ -564,6 +564,46 @@ feeling calm {
     }
 
     #[test]
+    fn parse_empty_file_error() {
+        let src = "";
+        let mut lexer = Lexer::new(src);
+        let tokens = lexer.tokenize().unwrap();
+        let mut parser = Parser::new(tokens);
+        let result = parser.parse();
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("feeling"));
+    }
+
+    #[test]
+    fn parse_missing_main_in_mix() {
+        let src = r#"
+feeling calm {
+    mix {
+        accents: [belonging 0.3]
+    }
+    shape: steady
+    intensity: [10, 20]
+}
+"#;
+        let result = parse_source(src);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("main"));
+    }
+
+    #[test]
+    fn parse_missing_mix_block() {
+        let src = r#"
+feeling calm {
+    shape: steady
+    intensity: [10, 20]
+}
+"#;
+        let result = parse_source(src);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("mix"));
+    }
+
+    #[test]
     fn parse_extra_content_after_close() {
         let src = r#"
 feeling calm {
