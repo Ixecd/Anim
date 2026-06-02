@@ -67,7 +67,7 @@
 
 ### 代码功能
 
-20. **错误信息无文件名** — 所有错误只有行列号无文件名。批量编译时无法定位。FIXME: AnimiError 加 file_name 字段。
+~~20. **错误信息无文件名**~~ ✅ — thread-local `CURRENT_FILE` + `current_file()` 辅助函数，oi! 宏 + 手动构造全带文件名。
 
 ---
 
@@ -105,7 +105,7 @@
 - ✅ Registry from_file 返回 Result——不再静默回退
 - ✅ 四示例覆盖四大类（calm/focus/rest/post_achievement）
 - ✅ 魔法数字提取——`MAX_GLOBAL_INTENSITY`、ratio 范围（P2 #24）
-- ✅ 52 单元测试全绿
+- ✅ 错误信息加文件名——thread-local `CURRENT_FILE`，52 单元测试全绿（P1 #20）
 
 ---
 
