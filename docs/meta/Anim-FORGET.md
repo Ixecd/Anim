@@ -105,7 +105,9 @@
 - ✅ Registry from_file 返回 Result——不再静默回退
 - ✅ 四示例覆盖四大类（calm/focus/rest/post_achievement）
 - ✅ 魔法数字提取——`MAX_GLOBAL_INTENSITY`、ratio 范围（P2 #24）
-- ✅ 错误信息加文件名——thread-local `CURRENT_FILE`，52 单元测试全绿（P1 #20）
+- ✅ 错误信息加文件名——thread-local `CURRENT_FILE`，60 单元测试全绿（P1 #20）
+- ✅ 日志系统——`A.debug/info/warn/error` + 四级过滤 + UTC ISO8601 + `--log-level` 参数（P2 #25）
+- ✅ 错误路径测试——空源/纯空白/纯注释/空文件/缺少main/缺少mix（P2 #26）
 
 ---
 
