@@ -13,13 +13,22 @@ pub enum Level {
     Error,
 }
 
-/// 彩色标签。
+/// 彩色标签——TTY 用 ANSI，非 TTY 用纯文本。
 impl Level {
     fn label(&self) -> &str {
-        match self {
-            Level::Info => "\x1b[36minfo\x1b[0m",
-            Level::Warn => "\x1b[33mwarn\x1b[0m",
-            Level::Error => "\x1b[31merror\x1b[0m",
+        use std::io::IsTerminal;
+        if std::io::stderr().is_terminal() {
+            match self {
+                Level::Info => "\x1b[36minfo\x1b[0m",
+                Level::Warn => "\x1b[33mwarn\x1b[0m",
+                Level::Error => "\x1b[31merror\x1b[0m",
+            }
+        } else {
+            match self {
+                Level::Info => "info",
+                Level::Warn => "warn",
+                Level::Error => "error",
+            }
         }
     }
 }
@@ -73,10 +82,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn level_labels() {
-        assert_eq!(Level::Info.label(), "\x1b[36minfo\x1b[0m");
-        assert_eq!(Level::Warn.label(), "\x1b[33mwarn\x1b[0m");
-        assert_eq!(Level::Error.label(), "\x1b[31merror\x1b[0m");
+    fn level_labels_contain_keywords() {
+        // TTY 或非 TTY 环境都可能——只验证包含关键词
+        assert!(Level::Info.label().contains("info"));
+        assert!(Level::Warn.label().contains("warn"));
+        assert!(Level::Error.label().contains("error"));
     }
 
     #[test]
