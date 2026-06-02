@@ -1,0 +1,5 @@
+fix: 默认日志级别Info + 剩余eprintln统一A.error() + check_with_scale走die()
+
+- 默认日志级别Info (0→1) — CLI不需要Debug输出
+- 文件读取/写入错误统一A.error()
+- check_with_scale接入die()宏——消除最后一段裸eprintln

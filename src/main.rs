@@ -94,7 +94,7 @@ fn main() {
     let src = match fs::read_to_string(path) {
         Ok(s) => s,
         Err(e) => {
-            eprintln!("无法读取文件 {}: {}", path, e);
+            A.error(format_args!("无法读取文件 {}: {}", path, e));
             process::exit(1);
         }
     };
@@ -111,10 +111,7 @@ fn main() {
     die(animi::rule::check(&ast, &registry));
 
     // Pass 3——用户安全检查 + 强度缩放（user_cap 从 --cap 参数或取默认值 100）
-    let scaled = animi::safety::check_with_scale(&ast, user_cap).unwrap_or_else(|e| {
-        eprintln!("{}", e);
-        process::exit(1);
-    });
+    let scaled = die(animi::safety::check_with_scale(&ast, user_cap));
 
     die(animi::guard::inject(&ast));
 
@@ -134,7 +131,7 @@ fn main() {
 
     let out_path = format!("{}.json", path.trim_end_matches(".anim"));
     if let Err(e) = fs::write(&out_path, &json) {
-        eprintln!("无法写入 {}: {}", out_path, e);
+        A.error(format_args!("无法写入 {}: {}", out_path, e));
         process::exit(1);
     }
 

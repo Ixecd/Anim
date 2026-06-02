@@ -7,7 +7,7 @@
 use std::sync::atomic::{AtomicU8, Ordering};
 
 /// 全局日志级别——0=Debug, 1=Info, 2=Warn, 3=Error。
-static LOG_LEVEL: AtomicU8 = AtomicU8::new(0); // 默认 Debug
+static LOG_LEVEL: AtomicU8 = AtomicU8::new(1); // 默认 Info
 
 /// 设置全局日志级别。
 pub fn set_log_level(level: Level) {
