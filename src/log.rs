@@ -4,13 +4,35 @@
 // A_info! / A_warn! / A_error!——带时间戳 + 颜色。
 // 后续 v1.2+ 可用 tracing 替换底层——宏接口不变。
 
-/// 日志级别。
+use std::sync::atomic::{AtomicU8, Ordering};
+
+/// 全局日志级别——0=Debug, 1=Info, 2=Warn, 3=Error。
+static LOG_LEVEL: AtomicU8 = AtomicU8::new(0); // 默认 Debug
+
+/// 设置全局日志级别。
+pub fn set_log_level(level: Level) {
+    LOG_LEVEL.store(level.as_u8(), Ordering::Relaxed);
+}
+
+/// 日志级别——Debug < Info < Warn < Error。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[allow(dead_code)]
 pub enum Level {
+    Debug,
     Info,
     Warn,
     Error,
+}
+
+impl Level {
+    fn as_u8(&self) -> u8 {
+        match self {
+            Level::Debug => 0,
+            Level::Info => 1,
+            Level::Warn => 2,
+            Level::Error => 3,
+        }
+    }
 }
 
 /// 彩色标签——TTY 用 ANSI，非 TTY 用纯文本。
@@ -19,12 +41,14 @@ impl Level {
         use std::io::IsTerminal;
         if std::io::stderr().is_terminal() {
             match self {
+                Level::Debug => "\x1b[90mdebug\x1b[0m",
                 Level::Info => "\x1b[36minfo\x1b[0m",
                 Level::Warn => "\x1b[33mwarn\x1b[0m",
                 Level::Error => "\x1b[31merror\x1b[0m",
             }
         } else {
             match self {
+                Level::Debug => "debug",
                 Level::Info => "info",
                 Level::Warn => "warn",
                 Level::Error => "error",
@@ -40,6 +64,9 @@ pub static A: Logger = Logger;
 pub struct Logger;
 
 impl Logger {
+    pub fn debug(&self, args: std::fmt::Arguments) {
+        emit(Level::Debug, args);
+    }
     pub fn info(&self, args: std::fmt::Arguments) {
         emit(Level::Info, args);
     }
@@ -54,8 +81,17 @@ impl Logger {
 /// 内部写到 stderr，带时间戳和颜色。
 #[allow(dead_code)]
 fn emit(level: Level, args: std::fmt::Arguments) {
+    if level.as_u8() < LOG_LEVEL.load(Ordering::Relaxed) {
+        return;
+    }
     let ts = chrono::Local::now().format("%H:%M:%S");
     eprintln!("[{}] {} {}", ts, level.label(), args);
+}
+
+/// `A.debug(format_args!(...))` 的语法糖——`A_debug!("verbose")`。
+#[macro_export]
+macro_rules! A_debug {
+    ($($arg:tt)*) => { $crate::log::A.debug(format_args!($($arg)*)) };
 }
 
 /// `A.info(format_args!(...))` 的语法糖——`A_info!("hello {}", x)`。

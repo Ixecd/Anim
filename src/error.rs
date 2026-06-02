@@ -11,6 +11,9 @@ use std::fmt;
 thread_local! {
     /// 当前正在处理的源文件名——由 CLI 入口设置。
     /// oi! 宏自动从此读取，无需每个调用点传递。
+    ///
+    /// 注意：v1.1 单线程 CLI 完全安全。未来多线程批量处理时——
+    /// 考虑在每个 Pass 的上下文里显式传递 file_name，而非依赖 thread-local。
     pub static CURRENT_FILE: RefCell<String> = const { RefCell::new(String::new()) };
 }
 
