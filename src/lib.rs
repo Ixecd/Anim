@@ -12,3 +12,5 @@ pub mod registry;
 pub mod rule;
 pub mod safety;
 pub mod typeck;
+
+pub use log::{set_log_level, Level};

@@ -1,0 +1,4 @@
+fix: A_debug/A_info/A_warn/A_error宏回归 + lib.rs导出set_log_level/Level
+
+- 四种宏语法糖全部加回——A.info()和A_info!()两种调用方式都支持
+- lib.rs导出set_log_level和Level——库用户可直接animi::set_log_level(Level::Warn)
