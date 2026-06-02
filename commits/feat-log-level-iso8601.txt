@@ -1,0 +1,4 @@
+feat: --log-level参数 + UTC ISO8601时间戳
+
+- CLI支持 aniani calm.anim --log-level debug
+- 时间戳格式 %Y-%m-%dT%H:%M:%SZ——完整ISO8601+时区标识

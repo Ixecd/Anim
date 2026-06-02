@@ -84,7 +84,7 @@ fn emit(level: Level, args: std::fmt::Arguments) {
     if level.as_u8() < LOG_LEVEL.load(Ordering::Relaxed) {
         return;
     }
-    let ts = chrono::Utc::now().format("%H:%M:%S");
+    let ts = chrono::Utc::now().format("%Y-%m-%dT%H:%M:%SZ");
     eprintln!("[{}] {} {}", ts, level.label(), args);
 }
 

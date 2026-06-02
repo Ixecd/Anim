@@ -61,6 +61,22 @@ fn main() {
         if args[i] == "--cap" && i + 1 < args.len() {
             user_cap = args[i + 1].parse().unwrap_or(100);
             i += 2;
+        } else if args[i] == "--log-level" && i + 1 < args.len() {
+            let lvl = match args[i + 1].to_lowercase().as_str() {
+                "debug" => animi::log::Level::Debug,
+                "info" => animi::log::Level::Info,
+                "warn" => animi::log::Level::Warn,
+                "error" => animi::log::Level::Error,
+                _ => {
+                    A.warn(format_args!(
+                        "无效的日志级别 '{}'，使用默认 info",
+                        args[i + 1]
+                    ));
+                    animi::log::Level::Info
+                }
+            };
+            animi::log::set_log_level(lvl);
+            i += 2;
         } else if reg_path.is_none() {
             reg_path = Some(&args[i]);
             i += 1;
