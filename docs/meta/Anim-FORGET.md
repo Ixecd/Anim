@@ -67,19 +67,11 @@
 
 ### 代码功能
 
-20. **不支持科学计数法** — lexer 只能解析普通整数和小数。FIXME: lexer 扩展。
-
-21. **错误信息无文件名** — 所有错误只有行列号无文件名。批量编译时无法定位。FIXME: AnimiError 加 file_name 字段。
-
-22. **Registry 硬编码** — 所有原子/ shape 硬编码在 typeck.rs。不支持外部 JSON/YAML 加载。FIXME: v0.3。
-
-23. **无错误码自动生成工具** — ADR 001 定稿 codegen 方案但未实现。error.rs 手写 Display。FIXME: v0.5。
+20. **错误信息无文件名** — 所有错误只有行列号无文件名。批量编译时无法定位。FIXME: AnimiError 加 file_name 字段。
 
 ---
 
-## P2 — 代码质量 / 可维护性（0/4）
-
-24. **魔法数字未提取常量** — `10000`、`0.0..=1.0` 散落在代码中。
+## P2 — 代码质量 / 可维护性（0/3）
 
 25. **无日志系统** — 所有错误直写 stderr，无调试/信息日志区分。
 
@@ -105,13 +97,14 @@
 - ✅ 强度零值拒绝 + 10000 上限
 - ✅ shape 建议算法（前缀+子串匹配）
 - ✅ 术语纠正——animi 是交织器，不是编译器
-- ✅ Registry 外部化——JSON 文件加载 + 硬编码 fallback
-- ✅ 四示例覆盖四大类（calm/focus/rest/post_achievement）
-- ✅ 错误码自动生成（build.rs → docs/error-codes.md）
+- ✅ Registry 外部化——JSON 文件加载 + 硬编码 fallback（P1 #22）
+- ✅ 错误码自动生成——build.rs → docs/error-codes.md（P1 #23）
 - ✅ 源码 SHA-256 哈希——SPL 锚定就绪
-- ✅ scale_intensity 接入 main——user_cap 通过 ANIMI_USER_CAP 环境变量
+- ✅ scale_intensity 接入 main——`--cap` 参数 + `check_with_scale`
 - ✅ abrupt_stop 加入 shapes——rule.rs 拦截生效
 - ✅ Registry from_file 返回 Result——不再静默回退
+- ✅ 四示例覆盖四大类（calm/focus/rest/post_achievement）
+- ✅ 魔法数字提取——`MAX_GLOBAL_INTENSITY`、ratio 范围（P2 #24）
 - ✅ 52 单元测试全绿
 
 ---
