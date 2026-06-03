@@ -1,7 +1,7 @@
 # FORGET.md — 待修复项（P0 + P1 + P2）
 
-> 扫描日期：2026-06-01
-> 范围：代码（src/ 12 模块，47 测试）+ 设计文档（7 ADR）
+> 扫描日期：2026-06-03
+> 范围：代码（src/ 14 模块，91 测试）+ 设计文档（8 ADR）
 > 原则：P0 = 生产命门。P1 = 功能受限。P2 = 代码质量/可维护性。
 > 命名：animi 是交织器（interlinker），不是编译器。
 
@@ -11,7 +11,7 @@
 
 ### 安全体系
 
-1. **三层安全防线不全** — rule.rs 已实现基础 3 条（全局强度上限 100、abrupt_stop≤20、沙箱限制）。safety.rs（Pass 3）和 guard.rs（Pass 4）仍为空桩。FIXME: v0.3。
+1. **三层安全防线不全** — rule.rs 已实现基础 3 条（全局强度上限 100、abrupt_stop≤20、沙箱限制）。guard.rs（Pass 4）已实现 OiSmoothing 衰减曲线，不再是空桩。safety.rs（Pass 3）仍为空桩——无创伤分型交叉判定、无未成年标记。FIXME: v0.3。
 
 2. **Session 中用户状态突变安全盲区** — PSIR 只在启动时校验一次。运行中 cap 从 45 降到 30 但旧参数继续输出。需 10Hz 轻量安全看门狗。FIXME: ADR 008+。
 
@@ -140,6 +140,14 @@ feeling <基本感受包名> {
 ## 编辑记录
 
 ```
+2026-06-03  v0.1.15 P0 第1轮——5/9
+            - P0 #9: FSIR Postcard 二进制 ABI + ADR 008
+            - P0 #5: oi 帧平滑过渡 OiSmoothing + guard.rs 不再是空桩
+            - P0 #6: SessionLabel + DataConfidence 数据置信度分级
+            - P0 #7: ColdStartGuard 冷启动守护
+            - P0 #8: DampingMatrix 跨维度阻尼矩阵参数表
+            - 新增 pbm.rs 模块，91 测试全绿
+
 2026-06-01  v0.1.14 P0/P1/P2 重构
             - 全部条目按 P0(生产命门)/P1(功能受限)/P2(代码质量)重组
             - P0 9项：安全盲区5+架构4
