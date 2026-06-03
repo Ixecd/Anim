@@ -7,7 +7,7 @@
 
 ---
 
-## P0 — 生产命门（0/9）
+## P0 — 生产命门（2/9）
 
 ### 安全体系
 
@@ -19,7 +19,7 @@
 
 4. **创伤用户点缀配比的绝对强度** — 禁主不禁点+配比≤0.10，但不考虑绝对强度×创伤敏感系数。需创伤敏感系数+绝对阈值。FIXME: ADR 008+。
 
-5. **oi 帧缺失无平滑处理** — oi 跳过帧 = abrupt_stop。强度>20 的突停需要知情同意。oi 应输出线性插值过渡帧而非直接跳过。FIXME: Pass 4 实现。
+5. ~~**oi 帧缺失无平滑处理**~~ ✅ — OiSmoothing 衰减曲线已实现。强度≤20 硬截断，>20 四帧非线性衰减 [×1.0,×0.6,×0.3,×0.1,×0.0]。对齐 ADR 004 硬件衰减状态机。Pass 8 接入后嵌入 ESIR 帧级插桩。`src/guard.rs`。
 
 ### 架构
 
@@ -29,7 +29,7 @@
 
 8. **跨维度阻尼矩阵无具体参数** — 只有概念没有规则。情绪梯度>X 冻结内脏，Y 冻结触觉。需制定具体参数表。FIXME: ADR 007 §7.7 补充。
 
-9. **FSIR 跨语言 ABI 零设计** — Go（Server 预编译）→ Rust（设备加载）。FSIR 二进制布局未定义。需 FlatBuffers/Bincode 裁剪版或手写大端序滑块。FIXME: ADR 008。
+9. ~~**FSIR 跨语言 ABI 零设计**~~ ✅ — Postcard 二进制格式已实现。`to_binary`/`from_binary`/`from_json` 方法。双格式并存: JSON 调试 + Postcard 设备缓存。ADR 008 已定稿。`src/fsir.rs` + `docs/design/008-fsir-abi.md`。
 
 ---
 
@@ -108,6 +108,8 @@
 - ✅ 错误信息加文件名——thread-local `CURRENT_FILE`，60 单元测试全绿（P1 #20）
 - ✅ 日志系统——`A.debug/info/warn/error` + 四级过滤 + UTC ISO8601 + `--log-level` 参数（P2 #25）
 - ✅ 错误路径测试——空源/纯空白/纯注释/空文件/缺少main/缺少mix（P2 #26）
+- ✅ FSIR Postcard 二进制 ABI——`to_binary`/`from_binary`，双格式并存，ADR 008 定稿（P0 #9）
+- ✅ oi 帧平滑过渡——OiSmoothing 衰减曲线，强度≤20 硬截断，>20 四帧衰减，对齐 ADR 004（P0 #5）
 
 ---
 
