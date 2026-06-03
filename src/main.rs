@@ -129,7 +129,17 @@ fn main() {
     // Pass 3——用户安全检查 + 强度缩放（user_cap 从 --cap 参数或取默认值 100）
     let scaled = die(animi::safety::check_with_scale(&ast, user_cap));
 
-    die(animi::guard::inject(&ast));
+    let smoothing = die(animi::guard::inject(&ast));
+    A.info(format_args!(
+        "oi 帧平滑: {} 帧 {}ms 衰减{}",
+        smoothing.frame_count(),
+        smoothing.duration_ms(),
+        if smoothing.is_hard_cut() {
+            " (硬截断——强度≤20)"
+        } else {
+            ""
+        }
+    ));
 
     // 源码哈希——SPL 锚定用
     let src_hash = hex::encode(Sha256::digest(src.as_bytes()));
