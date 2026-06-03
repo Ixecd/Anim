@@ -1,0 +1,10 @@
+docs: FORGET + HANDOFF 同步至当前状态
+
+- FORGET: 扫描日期→06-04，P0 #5/#8 增强描述（OiSmoothing→FSIR/DampingMatrix HashMap）
+- FORGET: 已完成列表追加 3 项（smoothing→FSIR/DampingMatrix HashMap/日志宏导出）
+- FORGET: 编辑记录新增 v0.1.16 条目
+- HANDOFF: 测试数 52→91，commits 72→111，模块 12→14
+- HANDOFF: FSIR JSON 示例加入 smoothing 字段
+- HANDOFF: P0/P1 状态更新（P0 5/9, P1 3/14, P2 0/0）
+- HANDOFF: 版本说明——v1.0 tag 已打，自举完成前不再打任何 tag
+- HANDOFF: 下一窗口重新排序——P0安全盲区优先→Pass 6-8→数据采集→宏系统

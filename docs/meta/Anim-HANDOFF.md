@@ -1,8 +1,8 @@
 # HANDOFF — Anim v1.0
 
-> 编写日期：2026-06-01
-> Tag: v1.0（起跑线——自举后换 v2.0）
-> Total commits: 72
+> 编写日期：2026-06-04
+> Tag: v1.0（已打 tag——自举前唯一 tag。自举完成前不再打任何 tag）
+> Total commits: 111
 > Co-Authored-By: DeepSeek
 
 ---
@@ -73,11 +73,20 @@ fsir.json
   "name": "calm",
   "mix": { "main": "calm_meditative", "accents": [...] },
   "shape": { "name": "gradual_rise_fall" },
-  "intensity": { "min": 15, "max": 45 }
+  "intensity": { "min": 15, "max": 45 },
+  "smoothing": {
+    "steps": [
+      { "multiplier": 1.0 },
+      { "multiplier": 0.6 },
+      { "multiplier": 0.3 },
+      { "multiplier": 0.1 },
+      { "multiplier": 0.0 }
+    ]
+  }
 }
 ```
 
-**测试**：52 单测全绿。覆盖 lexer（8）/ parser（12）/ typeck（17）/ rule（3）/ safety（4）/ guard（1）/ fsir（3）/ oi（2）/ error（2）。
+**测试**：91 单测全绿。覆盖 lexer / parser / typeck / rule / safety / guard / fsir / pbm / oi / error / log。
 
 ---
 
@@ -85,8 +94,8 @@ fsir.json
 
 ```
 Anim/
-├── src/                    # 12 模块 + build.rs
-│   ├── main.rs             CLI 入口（--help/--version/--cap）
+├── src/                    # 14 模块 + build.rs
+│   ├── main.rs             CLI 入口（--help/--version/--cap/--log-level）
 │   ├── lib.rs              库入口
 │   ├── ast.rs              AST 类型（FeelingSource/Mix/Accent/Shape/Intensity）
 │   ├── lexer.rs            Pass 0a 词法分析
@@ -94,10 +103,12 @@ Anim/
 │   ├── typeck.rs           Pass 1 类型检查
 │   ├── rule.rs             Pass 2 静态安全规则
 │   ├── safety.rs           Pass 3 用户安全 + scale_intensity
-│   ├── guard.rs            Pass 4 运行期插桩预埋
-│   ├── fsir.rs             Pass 5 FSIR 生成 + JSON 序列化
+│   ├── guard.rs            Pass 4 运行期插桩 + OiSmoothing 衰减曲线
+│   ├── fsir.rs             Pass 5 FSIR 生成 + JSON/Postcard 双序列化
+│   ├── pbm.rs              PBM 地基——SessionLabel/DataConfidence/ColdStartGuard/DampingMatrix
 │   ├── registry.rs         Pattern Registry（外部 JSON + 内建 fallback）
 │   ├── oi.rs               oi! + oi_err! 宏
+│   ├── log.rs              日志系统——A_debug!/A_info!/A_warn!/A_error! + 四级过滤
 │   ├── error.rs            AnimiError 6 变体
 │   └── build.rs            错误码文档自动生成
 ├── eg/                     示例 .anim 文件（4 个）+ registry.json
@@ -133,20 +144,24 @@ Anim/
 ## 五、FORGET 状态
 
 ```
-P0: 0/9   — 安全盲区5 + 架构4（全部设计层，代码层 P0=0）
-P1: 0/14  — 设备3 + 语法2 + 缓存1 + 可观测1 + 代码7
-P2: 0/4   — 常量/日志/测试/版本兼容
+P0: 5/9   — 安全盲区 4（三层防线不全/Session突变/沙箱混合/创伤阈值）+ 架构 5 全清
+P1: 3/14  — IR管线3+设备3+语法2+缓存1+可观测1+代码功能3（错误文件名✅/日志✅/错误测试✅）
+P2: 0/0   — 全清
 ```
+
+- v1.0 tag 已打——自举完成前不再打任何 tag
+- 下一阶段关键入口：P0 安全盲区补齐（ADR 009）→ Pass 6-8（PSIR/DSIR/ESIR）
 
 ---
 
 ## 六、下一窗口
 
+- P0 安全盲区补齐（ADR 009）——三层防线/状态突变/沙箱混合/创伤阈值
 - Pass 6-8（Personalize/DeviceMap/CodeGen）—— v0.3
+- PBM 四维差异化冷启动系数 + sigmoidal 收敛
+- 阶段零数据采集（Polar H10 + Empatica E4）——PBM 不能凭空写数值
 - 可视化编辑器（ZENO 节点图框架）—— v0.2.5
-- PBM + 四维冷启动 —— v0.3
-- ADR 008（FSIR 二进制布局）+ ADR 009（时钟同步）
-- 数据采集（阶段零——Polar H10 + Empatica E4）
+- 宏系统——ADR 005 已定稿，macro_rules! 解析器+展开器未实现
 
 ---
 

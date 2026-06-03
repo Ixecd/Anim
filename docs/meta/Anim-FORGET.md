@@ -1,9 +1,10 @@
 # FORGET.md — 待修复项（P0 + P1 + P2）
 
-> 扫描日期：2026-06-03
+> 扫描日期：2026-06-04
 > 范围：代码（src/ 14 模块，91 测试）+ 设计文档（8 ADR）
 > 原则：P0 = 生产命门。P1 = 功能受限。P2 = 代码质量/可维护性。
 > 命名：animi 是交织器（interlinker），不是编译器。
+> 版本：v1.0 已打 tag——自举前唯一 tag。自举完成前不再打任何 tag。
 
 ---
 
@@ -19,7 +20,7 @@
 
 4. **创伤用户点缀配比的绝对强度** — 禁主不禁点+配比≤0.10，但不考虑绝对强度×创伤敏感系数。需创伤敏感系数+绝对阈值。FIXME: ADR 009。
 
-5. ~~**oi 帧缺失无平滑处理**~~ ✅ — OiSmoothing 衰减曲线已实现。强度≤20 硬截断，>20 四帧非线性衰减 [×1.0,×0.6,×0.3,×0.1,×0.0]。对齐 ADR 004 硬件衰减状态机。Pass 8 接入后嵌入 ESIR 帧级插桩。`src/guard.rs`。
+5. ~~**oi 帧缺失无平滑处理**~~ ✅ — OiSmoothing 衰减曲线已实现。强度≤20 硬截断，>20 四帧非线性衰减 [×1.0,×0.6,×0.3,×0.1,×0.0]。对齐 ADR 004 硬件衰减状态机。已写入 FSIR（FsirDoc.smoothing 字段），后续 Pass 可直接读取。`src/guard.rs` + `src/fsir.rs`。
 
 ### 架构
 
@@ -27,7 +28,7 @@
 
 7. ~~**新用户预测器冷启动灾难**~~ ✅ — `ColdStartGuard` 已实现。前 10 次 Session 强制关闭预测器，`predictor_enabled()` 返回 false。`src/pbm.rs`。
 
-8. ~~**跨维度阻尼矩阵无具体参数**~~ ✅ — `DampingMatrix` 参数表已实现。情绪梯度>2.0×步长→冻结内脏+触觉，内脏>1.5×→冻结情绪。具体阈值+`should_freeze()`+`apply()`。`src/pbm.rs`。
+8. ~~**跨维度阻尼矩阵无具体参数**~~ ✅ — `DampingMatrix` 参数表已实现。情绪梯度>2.0×步长→冻结内脏+触觉，内脏>1.5×→冻结情绪。返回 `HashMap<PbmDimension, StepState>` 按维度名查询消除顺序依赖。多维度同时触发阻尼时冻结集合取并集。`src/pbm.rs`。
 
 9. ~~**FSIR 跨语言 ABI 零设计**~~ ✅ — Postcard 二进制格式已实现。`to_binary`/`from_binary`/`from_json` 方法。双格式并存: JSON 调试 + Postcard 设备缓存。ADR 008 已定稿。`src/fsir.rs` + `docs/design/008-fsir-abi.md`。
 
@@ -113,6 +114,9 @@
 - ✅ FSIR Postcard 二进制 ABI——`to_binary`/`from_binary`，双格式并存，ADR 008 定稿（P0 #9）
 - ✅ oi 帧平滑过渡——OiSmoothing 衰减曲线，强度≤20 硬截断，>20 四帧衰减，对齐 ADR 004（P0 #5）
 - ✅ PBM 地基——SessionLabel + DataConfidence 数据置信度分级 + ColdStartGuard 冷启动守护 + DampingMatrix 跨维度阻尼矩阵（P0 #6/#7/#8）
+- ✅ OiSmoothing 写入 FSIR——FsirDoc.smoothing 字段，from_ast() 第五参数，main.rs 接线。Pass 6-8 可直接读取衰减序列（2026-06-04）
+- ✅ DampingMatrix::apply() 返回 HashMap——按维度名查询，消除顺序依赖。多维度同时触发阻尼覆盖规则注释（2026-06-04）
+- ✅ 日志宏导出——A_debug!/A_info!/A_warn!/A_error! 由 #[macro_export] 自动导出到 crate root（2026-06-04）
 
 ---
 
@@ -142,6 +146,14 @@ feeling <基本感受包名> {
 ## 编辑记录
 
 ```
+2026-06-04  v0.1.16 P1 review round 3 —— smoothing→FSIR + DampingMatrix HashMap
+            - P0 #5 增强：OiSmoothing 写入 FSIR（FsirDoc.smoothing 字段），Pass 6-8 可直接读取
+            - P0 #8 增强：DampingMatrix::apply() 返回 HashMap<PbmDimension, StepState>，消除顺序依赖
+            - 新增多维度同时触发阻尼覆盖规则注释——冻结集合取并集
+            - lib.rs：日志宏导出注释——#[macro_export] 自动导出到 crate root
+            - txt/：src/*.rs → txt/*.txt 全量同步
+            - 91 测试全绿，clippy 零 warning
+
 2026-06-03  v0.1.15 P0 第1轮——5/9
             - P0 #9: FSIR Postcard 二进制 ABI + ADR 008
             - P0 #5: oi 帧平滑过渡 OiSmoothing + guard.rs 不再是空桩
