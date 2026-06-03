@@ -13,11 +13,11 @@
 
 1. **三层安全防线不全** — rule.rs 已实现基础 3 条（全局强度上限 100、abrupt_stop≤20、沙箱限制）。guard.rs（Pass 4）已实现 OiSmoothing 衰减曲线，不再是空桩。safety.rs（Pass 3）仍为空桩——无创伤分型交叉判定、无未成年标记。FIXME: v0.3。
 
-2. **Session 中用户状态突变安全盲区** — PSIR 只在启动时校验一次。运行中 cap 从 45 降到 30 但旧参数继续输出。需 10Hz 轻量安全看门狗。FIXME: ADR 008+。
+2. **Session 中用户状态突变安全盲区** — PSIR 只在启动时校验一次。运行中 cap 从 45 降到 30 但旧参数继续输出。需 10Hz 轻量安全看门狗。FIXME: ADR 009。
 
-3. **混合原子包强度叠加绕过沙箱** — 核心+沙箱原子混合时总强度可能超上限。沙箱强度必须独立校验。FIXME: ADR 008+。
+3. **混合原子包强度叠加绕过沙箱** — 核心+沙箱原子混合时总强度可能超上限。沙箱强度必须独立校验。FIXME: ADR 009。
 
-4. **创伤用户点缀配比的绝对强度** — 禁主不禁点+配比≤0.10，但不考虑绝对强度×创伤敏感系数。需创伤敏感系数+绝对阈值。FIXME: ADR 008+。
+4. **创伤用户点缀配比的绝对强度** — 禁主不禁点+配比≤0.10，但不考虑绝对强度×创伤敏感系数。需创伤敏感系数+绝对阈值。FIXME: ADR 009。
 
 5. ~~**oi 帧缺失无平滑处理**~~ ✅ — OiSmoothing 衰减曲线已实现。强度≤20 硬截断，>20 四帧非线性衰减 [×1.0,×0.6,×0.3,×0.1,×0.0]。对齐 ADR 004 硬件衰减状态机。Pass 8 接入后嵌入 ESIR 帧级插桩。`src/guard.rs`。
 
@@ -33,7 +33,7 @@
 
 ---
 
-## P1 — 功能受限（0/14）
+## P1 — 功能受限（3/14）
 
 ### 交织管线
 
@@ -56,6 +56,8 @@
 16. **Anim 宏系统零代码** — ADR 005 已定稿。`macro_rules!` 解析器+展开器未实现。
 
 17. **宏递归组合风险绕过** — 组合风险必须在完全展开后的 AST 上计算，非展开前。FIXME: 宏展开阶段实现时。
+
+21. **科学计数法浮点字面量不支持** — `1e-5` / `2.5E-3` 等科学计数法格式词法分析器未识别，对极小配比场景（敏感用户）不友好。需要 lexer.rs 的 `number()` 分支增加 `e`/`E` + 可选 `+`/`-` 解析。FIXME: ADR 009。
 
 ### 缓存
 
@@ -91,7 +93,7 @@
 - ✅ CLI 入口（main.rs）——animi <file.anim> → file.json
 - ✅ oi! 宏 + oi_err! 宏——轻量拒绝
 - ✅ AnimiError 6 变体——Lex/Parse/TypeCheck/StaticSafety/UserStateSafety/Internal
-- ✅ 47 单元测试全绿
+- ✅ 91 单元测试全绿
 - ✅ CRLF 行尾处理
 - ✅ ratio [0.0,1.0] 基础校验 + per-atom max_ratio
 - ✅ 强度零值拒绝 + 10000 上限
@@ -105,7 +107,7 @@
 - ✅ Registry from_file 返回 Result——不再静默回退
 - ✅ 四示例覆盖四大类（calm/focus/rest/post_achievement）
 - ✅ 魔法数字提取——`MAX_GLOBAL_INTENSITY`、ratio 范围（P2 #24）
-- ✅ 错误信息加文件名——thread-local `CURRENT_FILE`，60 单元测试全绿（P1 #20）
+- ✅ 错误信息加文件名——thread-local `CURRENT_FILE`，91 单元测试全绿（P1 #20）
 - ✅ 日志系统——`A.debug/info/warn/error` + 四级过滤 + UTC ISO8601 + `--log-level` 参数（P2 #25）
 - ✅ 错误路径测试——空源/纯空白/纯注释/空文件/缺少main/缺少mix（P2 #26）
 - ✅ FSIR Postcard 二进制 ABI——`to_binary`/`from_binary`，双格式并存，ADR 008 定稿（P0 #9）
