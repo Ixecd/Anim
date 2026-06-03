@@ -15,3 +15,6 @@ pub mod safety;
 pub mod typeck;
 
 pub use log::{set_log_level, Level, A};
+
+// 日志便捷宏由 #[macro_export] 自动导出到 crate root。
+// 库用户可直接 `use animi::A_info;` 后调用 `A_info!("hello")` 等。

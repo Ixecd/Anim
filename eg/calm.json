@@ -1,7 +1,7 @@
 {
   "meta": {
     "animi_version": "0.1.0",
-    "compiled_at": "2026-06-03T08:46:18.725143+00:00",
+    "compiled_at": "2026-06-03T23:25:49.097677+00:00",
     "source_hash": "46b195dc515e8ec18efd51f25308610505a8c39922d36f201ce91092b988753c",
     "pattern_registry_hash": "a367e3ee18bb62719ba033d495ef01a2967d88773637bcaef413658179cf1e69",
     "safety_rules_version": null
@@ -26,5 +26,24 @@
   "intensity": {
     "min": 15,
     "max": 45
+  },
+  "smoothing": {
+    "steps": [
+      {
+        "multiplier": 1.0
+      },
+      {
+        "multiplier": 0.6
+      },
+      {
+        "multiplier": 0.3
+      },
+      {
+        "multiplier": 0.1
+      },
+      {
+        "multiplier": 0.0
+      }
+    ]
   }
 }

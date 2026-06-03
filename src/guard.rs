@@ -11,6 +11,7 @@
 
 use crate::ast::*;
 use crate::error::AnimiError;
+use serde::{Deserialize, Serialize};
 
 // ── OiSmoothing —— oi 帧缺失平滑过渡 ──────────────────────────
 
@@ -18,7 +19,7 @@ use crate::error::AnimiError;
 ///
 /// `multiplier = 1.0` 表示本帧不变。`0.3` 表示降到当前强度的 30%。
 /// `0.0` 表示回到安全基线（保底空包）。不是硬截断——是平滑降。
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DecayStep {
     /// 衰减乘数 [0.0, 1.0]。
     pub multiplier: f64,
@@ -53,7 +54,7 @@ impl DecayStep {
 /// Pass 8 CodeGen 将这些系数嵌入 ESIR 帧级安全插桩。
 /// 触发时——FPGA 硬件衰减状态机按这些系数在 4-8ms 内平滑归零。
 /// 不是软件循环。是门级逻辑。微秒级响应。
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct OiSmoothing {
     /// 衰减序列——从当前帧到安全基线的过渡。
     ///

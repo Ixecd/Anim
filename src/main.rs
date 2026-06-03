@@ -151,6 +151,7 @@ fn main() {
             min: scaled.min,
             max: scaled.max,
         },
+        Some(smoothing),
     );
 
     let json = die(doc.to_json());

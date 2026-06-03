@@ -33,6 +33,13 @@ pub struct FsirDoc {
 
     /// 强度区间。
     pub intensity: FsirIntensity,
+
+    /// oi 帧平滑过渡策略（Pass 4 guard::inject 产出）。
+    ///
+    /// 当运行期安全插桩检测到一帧应被拒绝时——
+    /// 硬件衰减状态机按此序列在 4-8ms 内平滑归零。
+    /// 后续 Pass（Personalize/CodeGen）从此字段读取衰减系数。
+    pub smoothing: Option<crate::guard::OiSmoothing>,
 }
 
 /// FSIR 交织元数据。
@@ -103,6 +110,7 @@ impl FsirDoc {
         source_hash: Option<String>,
         registry_hash: Option<String>,
         intensity: &FsirIntensity,
+        smoothing: Option<crate::guard::OiSmoothing>,
     ) -> Self {
         let now = chrono::Utc::now().to_rfc3339();
 
@@ -131,6 +139,7 @@ impl FsirDoc {
                 name: source.shape.name.clone(),
             },
             intensity: intensity.clone(),
+            smoothing,
         }
     }
 
@@ -196,7 +205,7 @@ mod tests {
             min: ast.intensity.min,
             max: ast.intensity.max,
         };
-        Ok(FsirDoc::from_ast(&ast, None, None, &scaled))
+        Ok(FsirDoc::from_ast(&ast, None, None, &scaled, None))
     }
 
     #[test]

@@ -12,6 +12,7 @@
 // 待 v0.3 实现。本文件是那一切的底座。
 
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 // ── Session 标签与数据置信度 (P0 #6) ──────────────────────────
 
@@ -236,11 +237,23 @@ impl DampingMatrix {
     /// `gradients`: 每个维度的梯度值（|本帧偏移 - 上帧偏移|）
     /// `current_steps`: 每个维度的当前步长乘数
     ///
-    /// 返回每个维度的步长状态。
+    /// 返回每个维度 → 步长状态的映射。调用方通过维度名查询，无需关心顺序。
+    ///
+    /// # 多维度同时触发阻尼时的覆盖规则
+    ///
+    /// 当多个维度同时触发阻尼时，所有受影响的维度**都会被冻结**——
+    /// 不管处理顺序如何，最终结果一致：只要存在任一触发维度指向目标维度，
+    /// 目标维度即被冻结。不会出现"后处理的维度覆盖先处理的维度导致结果不同"的问题。
+    ///
+    /// 例：Emotional 和 Visceral 同时超阈值 →
+    ///   - Emotional 触发 → 冻结 Visceral、冻结 Tactile
+    ///   - Visceral 触发 → 冻结 Emotional
+    ///   - 最终：Visceral 被冻结、Tactile 被冻结、Emotional 被冻结、Auditory 保持 Active
+    ///   - 无论先处理哪个维度，结果相同——冻结集合的并集，无覆盖歧义。
     pub fn apply(
         gradients: &[(PbmDimension, f64); 4],
         current_steps: &[(PbmDimension, f64); 4],
-    ) -> [StepState; 4] {
+    ) -> HashMap<PbmDimension, StepState> {
         let step_map = |dim: PbmDimension| -> f64 {
             current_steps
                 .iter()
@@ -249,16 +262,20 @@ impl DampingMatrix {
                 .unwrap_or(1.0)
         };
 
-        let mut states = [StepState::Active; 4];
+        // 初始化所有维度为 Active
+        let mut states: HashMap<_, _> = gradients
+            .iter()
+            .map(|(d, _)| (*d, StepState::Active))
+            .collect();
 
-        // 先检查哪些维度触发了阻尼
+        // 检查哪些维度触发了阻尼
         for (dim, grad) in gradients.iter() {
             let threshold = Self::gradient_threshold(*dim) * step_map(*dim);
             if *grad > threshold {
-                // 此维度触发了阻尼——冻结受影响维度
-                for (j, (target_dim, _)) in gradients.iter().enumerate() {
-                    if let Some(_frozen_by) = Self::should_freeze(*dim, *target_dim) {
-                        states[j] = StepState::Frozen { frozen_by: *dim };
+                // 此维度触发了阻尼——冻结所有受影响的维度
+                for (target_dim, _) in gradients.iter() {
+                    if let Some(frozen_by) = Self::should_freeze(*dim, *target_dim) {
+                        states.insert(*target_dim, StepState::Frozen { frozen_by });
                     }
                 }
             }
@@ -416,7 +433,7 @@ mod tests {
             (PbmDimension::Auditory, 0.5),
         ];
         let states = DampingMatrix::apply(&gradients, &steps);
-        for s in &states {
+        for (_, s) in &states {
             assert_eq!(*s, StepState::Active);
         }
     }
@@ -438,22 +455,22 @@ mod tests {
         let states = DampingMatrix::apply(&gradients, &steps);
         // Visceral 应被 Emotional 冻结
         assert_eq!(
-            states[0],
+            states[&PbmDimension::Visceral],
             StepState::Frozen {
                 frozen_by: PbmDimension::Emotional
             }
         );
         // Emotional 自身保持 Active
-        assert_eq!(states[1], StepState::Active);
+        assert_eq!(states[&PbmDimension::Emotional], StepState::Active);
         // Tactile 应被 Emotional 冻结
         assert_eq!(
-            states[2],
+            states[&PbmDimension::Tactile],
             StepState::Frozen {
                 frozen_by: PbmDimension::Emotional
             }
         );
         // Auditory 保持
-        assert_eq!(states[3], StepState::Active);
+        assert_eq!(states[&PbmDimension::Auditory], StepState::Active);
     }
 
     #[test]

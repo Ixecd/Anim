@@ -1,0 +1,10 @@
+fix: P1 review round — macro export + FSIR smoothing + DampingMatrix HashMap
+
+- lib.rs: 日志宏 A_debug!/A_info!/A_warn!/A_error! 由 #[macro_export] 自动导出 (#1)
+- guard.rs: DecayStep/OiSmoothing 加 Serialize/Deserialize derive
+- fsir.rs: FsirDoc 新增 smoothing 字段，from_ast() 接收第五参数
+- main.rs: Pass 4 产出的 OiSmoothing 传入 from_ast(..., Some(smoothing)) (#2)
+- pbm.rs: DampingMatrix::apply() 返回 HashMap<PbmDimension, StepState> 替代 [StepState;4]，按维度名查询消除顺序依赖 (#3)
+- pbm.rs: apply() 添加多维度同时触发阻尼覆盖规则注释——冻结集合取并集 (#4)
+- txt/: src/*.rs → txt/*.txt 全量同步，14 files diff verified
+- 91 tests all green, clippy zero warning, JSON output verified ([1.0,0.6,0.3,0.1,0.0])
