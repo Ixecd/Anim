@@ -305,7 +305,12 @@ feeling calm {
         assert_eq!(from_json.name, from_binary.name);
         assert_eq!(from_json.mix.main, from_binary.mix.main);
         assert_eq!(from_json.mix.accents.len(), from_binary.mix.accents.len());
-        for (a, b) in from_json.mix.accents.iter().zip(from_binary.mix.accents.iter()) {
+        for (a, b) in from_json
+            .mix
+            .accents
+            .iter()
+            .zip(from_binary.mix.accents.iter())
+        {
             assert_eq!(a.atom, b.atom);
             assert_eq!(a.ratio, b.ratio);
         }

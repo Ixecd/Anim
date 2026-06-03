@@ -176,10 +176,12 @@ pub fn inject(source: &FeelingSource) -> Result<OiSmoothing, AnimiError> {
     let smoothing = smoothing_for_intensity(source.intensity.min, source.intensity.max);
 
     // 验证策略有效性
-    smoothing.validate().map_err(|msg| AnimiError::InternalError {
-        file_name: crate::error::current_file(),
-        msg: format!("OiSmoothing 验证失败: {}", msg),
-    })?;
+    smoothing
+        .validate()
+        .map_err(|msg| AnimiError::InternalError {
+            file_name: crate::error::current_file(),
+            msg: format!("OiSmoothing 验证失败: {}", msg),
+        })?;
 
     Ok(smoothing)
 }

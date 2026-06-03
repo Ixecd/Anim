@@ -202,25 +202,22 @@ impl DampingMatrix {
     /// 给定触发维度和被检查维度——返回是否应冻结。
     ///
     /// 返回 `Some(frozen_by)` = 冻结；`None` = 保持活跃。
-    pub fn should_freeze(
-        trigger: PbmDimension,
-        target: PbmDimension,
-    ) -> Option<PbmDimension> {
+    pub fn should_freeze(trigger: PbmDimension, target: PbmDimension) -> Option<PbmDimension> {
         if trigger == target {
             return None; // 自身不冻结自身
         }
 
         match trigger {
             PbmDimension::Emotional => match target {
-                PbmDimension::Visceral => Some(trigger),  // 冻结
-                PbmDimension::Tactile => Some(trigger),    // 冻结
-                PbmDimension::Auditory => None,            // 保持
-                PbmDimension::Emotional => None,           // unreachable
+                PbmDimension::Visceral => Some(trigger), // 冻结
+                PbmDimension::Tactile => Some(trigger),  // 冻结
+                PbmDimension::Auditory => None,          // 保持
+                PbmDimension::Emotional => None,         // unreachable
             },
             PbmDimension::Visceral => match target {
-                PbmDimension::Emotional => Some(trigger),  // 冻结
-                PbmDimension::Tactile => None,             // 保持
-                PbmDimension::Auditory => None,            // 保持
+                PbmDimension::Emotional => Some(trigger), // 冻结
+                PbmDimension::Tactile => None,            // 保持
+                PbmDimension::Auditory => None,           // 保持
                 PbmDimension::Visceral => None,
             },
             PbmDimension::Tactile => {
@@ -245,7 +242,11 @@ impl DampingMatrix {
         current_steps: &[(PbmDimension, f64); 4],
     ) -> [StepState; 4] {
         let step_map = |dim: PbmDimension| -> f64 {
-            current_steps.iter().find(|(d, _)| *d == dim).map(|(_, s)| *s).unwrap_or(1.0)
+            current_steps
+                .iter()
+                .find(|(d, _)| *d == dim)
+                .map(|(_, s)| *s)
+                .unwrap_or(1.0)
         };
 
         let mut states = [StepState::Active; 4];
@@ -277,7 +278,10 @@ mod tests {
 
     #[test]
     fn session_label_normal_full_update() {
-        assert_eq!(SessionLabel::Normal.update_strategy(), PbmUpdateStrategy::Full);
+        assert_eq!(
+            SessionLabel::Normal.update_strategy(),
+            PbmUpdateStrategy::Full
+        );
     }
 
     #[test]
@@ -433,11 +437,21 @@ mod tests {
         ];
         let states = DampingMatrix::apply(&gradients, &steps);
         // Visceral 应被 Emotional 冻结
-        assert_eq!(states[0], StepState::Frozen { frozen_by: PbmDimension::Emotional });
+        assert_eq!(
+            states[0],
+            StepState::Frozen {
+                frozen_by: PbmDimension::Emotional
+            }
+        );
         // Emotional 自身保持 Active
         assert_eq!(states[1], StepState::Active);
         // Tactile 应被 Emotional 冻结
-        assert_eq!(states[2], StepState::Frozen { frozen_by: PbmDimension::Emotional });
+        assert_eq!(
+            states[2],
+            StepState::Frozen {
+                frozen_by: PbmDimension::Emotional
+            }
+        );
         // Auditory 保持
         assert_eq!(states[3], StepState::Active);
     }
