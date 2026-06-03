@@ -11,5 +11,5 @@
 - 005-anim-macros.md — 宏系统
 - 006-error-handling-oi.md — oi 错误处理
 - 007-branch-prediction.md — 分支预测五讲
-- 008 (待写) — FSIR 跨语言 ABI
+- 008-fsir-abi.md — FSIR 跨语言 ABI（Postcard 二进制格式）
 - 009 (待写) — 多设备时钟同步

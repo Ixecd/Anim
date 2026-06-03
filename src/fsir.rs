@@ -6,13 +6,18 @@
 
 use crate::ast::*;
 use crate::error::AnimiError;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 /// FSIR 文档——交织产物的顶层结构。
 ///
 /// 这是 `.anim` 源码经过 Pass 0-4 之后的第一份 IR。
 /// 所有后续 Pass（Personalize/DeviceMap/CodeGen）的输入。
-#[derive(Debug, Clone, Serialize)]
+///
+/// 双序列化格式：
+///   - JSON（to_json / from_json）——人类可读，Git diff，调试
+///   - Postcard 二进制（to_binary / from_binary）——Go Server→Rust 设备预编译缓存
+///     零拷贝反序列化，`#[no_std]` 兼容，Feelings-OS 裸机可直接加载
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FsirDoc {
     /// 编译元数据。
     pub meta: FsirMeta,
@@ -31,7 +36,7 @@ pub struct FsirDoc {
 }
 
 /// FSIR 交织元数据。
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FsirMeta {
     /// 交织器版本。
     pub animi_version: String,
@@ -52,7 +57,7 @@ pub struct FsirMeta {
 }
 
 /// FSIR 混音结构。
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FsirMix {
     /// 主旋律感受原子。
     pub main: String,
@@ -62,7 +67,7 @@ pub struct FsirMix {
 }
 
 /// FSIR 点缀条目。
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FsirAccent {
     /// 感受原子名。
     pub atom: String,
@@ -72,14 +77,14 @@ pub struct FsirAccent {
 }
 
 /// FSIR 形状曲线。
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FsirShape {
     /// 形状名称（如 gradual_rise_fall）。
     pub name: String,
 }
 
 /// FSIR 强度区间。
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FsirIntensity {
     /// 最低强度。
     pub min: u32,
@@ -134,6 +139,40 @@ impl FsirDoc {
         serde_json::to_string_pretty(self).map_err(|e| AnimiError::InternalError {
             file_name: crate::error::current_file(),
             msg: format!("FSIR JSON 序列化失败: {}", e),
+        })
+    }
+
+    /// 从 JSON 字符串反序列化。
+    pub fn from_json(json: &str) -> Result<Self, AnimiError> {
+        serde_json::from_str(json).map_err(|e| AnimiError::InternalError {
+            file_name: crate::error::current_file(),
+            msg: format!("FSIR JSON 反序列化失败: {}", e),
+        })
+    }
+
+    /// 序列化为 Postcard 二进制（大端序风格 wire format）。
+    ///
+    /// Postcard 是 `#[no_std]` 兼容的 Serde 二进制格式：
+    ///   - 变长整数编码（u32/u64 不会浪费高位零字节）
+    ///   - 字符串/序列前导 varint 长度
+    ///   - 结构体字段顺序串联（无分隔符/无填充）
+    ///
+    /// Go Server 端需要一个 Postcard encoder 来生成相同的字节流。
+    /// Postcard wire format 规范简单（~2 页），适合手写 Go 端。
+    pub fn to_binary(&self) -> Result<Vec<u8>, AnimiError> {
+        postcard::to_allocvec(self).map_err(|e| AnimiError::InternalError {
+            file_name: crate::error::current_file(),
+            msg: format!("FSIR 二进制序列化失败: {}", e),
+        })
+    }
+
+    /// 从 Postcard 二进制反序列化。
+    ///
+    /// Feelings-OS 裸机环境可用——Postcard 不依赖 std，不依赖 alloc 之外的任何东西。
+    pub fn from_binary(bytes: &[u8]) -> Result<Self, AnimiError> {
+        postcard::from_bytes(bytes).map_err(|e| AnimiError::InternalError {
+            file_name: crate::error::current_file(),
+            msg: format!("FSIR 二进制反序列化失败: {}", e),
         })
     }
 }
@@ -209,6 +248,104 @@ feeling calm {
         assert_eq!(parsed["shape"]["name"], "sharp_peak");
         assert_eq!(parsed["intensity"]["min"], 0);
         assert_eq!(parsed["intensity"]["max"], 100);
+    }
+
+    #[test]
+    fn fsir_binary_roundtrip() {
+        let src = r#"
+feeling calm {
+    mix {
+        main: calm_meditative
+        accents: [belonging 0.3, clarity 0.2]
+    }
+    shape: gradual_rise_fall
+    intensity: [15, 45]
+}
+"#;
+        let doc = interlink(src).unwrap();
+
+        // round-trip: struct → binary → struct
+        let bytes = doc.to_binary().unwrap();
+        assert!(!bytes.is_empty(), "二进制输出不应为空");
+        let doc2 = FsirDoc::from_binary(&bytes).unwrap();
+
+        assert_eq!(doc2.name, "calm");
+        assert_eq!(doc2.mix.main, "calm_meditative");
+        assert_eq!(doc2.mix.accents.len(), 2);
+        assert_eq!(doc2.mix.accents[0].atom, "belonging");
+        assert_eq!(doc2.mix.accents[0].ratio, 0.3);
+        assert_eq!(doc2.shape.name, "gradual_rise_fall");
+        assert_eq!(doc2.intensity.min, 15);
+        assert_eq!(doc2.intensity.max, 45);
+    }
+
+    #[test]
+    fn fsir_json_binary_consistency() {
+        // 同一份 FSIR → JSON 的语义内容 = binary 的语义内容
+        let src = r#"
+feeling calm {
+    mix {
+        main: calm_meditative
+        accents: [safety 0.1, warmth 0.2]
+    }
+    shape: slow_decay
+    intensity: [5, 25]
+}
+"#;
+        let doc = interlink(src).unwrap();
+
+        // 分别从 JSON 和 binary 恢复
+        let json = doc.to_json().unwrap();
+        let bytes = doc.to_binary().unwrap();
+
+        let from_json = FsirDoc::from_json(&json).unwrap();
+        let from_binary = FsirDoc::from_binary(&bytes).unwrap();
+
+        // 结构字段完全一致
+        assert_eq!(from_json.name, from_binary.name);
+        assert_eq!(from_json.mix.main, from_binary.mix.main);
+        assert_eq!(from_json.mix.accents.len(), from_binary.mix.accents.len());
+        for (a, b) in from_json.mix.accents.iter().zip(from_binary.mix.accents.iter()) {
+            assert_eq!(a.atom, b.atom);
+            assert_eq!(a.ratio, b.ratio);
+        }
+        assert_eq!(from_json.shape.name, from_binary.shape.name);
+        assert_eq!(from_json.intensity.min, from_binary.intensity.min);
+        assert_eq!(from_json.intensity.max, from_binary.intensity.max);
+    }
+
+    #[test]
+    fn fsir_binary_compactness() {
+        // 二进制格式应比 JSON 紧凑（JSON 有大量空白和引号）
+        let src = r#"
+feeling calm {
+    mix {
+        main: calm_meditative
+        accents: [belonging 0.3, clarity 0.2, safety 0.1, warmth 0.1]
+    }
+    shape: gradual_rise_fall
+    intensity: [15, 45]
+}
+"#;
+        let doc = interlink(src).unwrap();
+        let json = doc.to_json().unwrap();
+        let bytes = doc.to_binary().unwrap();
+
+        // postcard 二进制应显著小于带格式的 JSON
+        assert!(
+            bytes.len() < json.len(),
+            "binary {} bytes should be smaller than JSON {} bytes",
+            bytes.len(),
+            json.len()
+        );
+    }
+
+    #[test]
+    fn fsir_binary_corrupted_rejected() {
+        // 随机垃圾字节 → from_binary 应返回 Err
+        let garbage = vec![0xFF, 0x00, 0xAB, 0xCD, 0x01, 0x02];
+        let result = FsirDoc::from_binary(&garbage);
+        assert!(result.is_err());
     }
 
     #[test]
