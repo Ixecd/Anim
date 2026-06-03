@@ -8,6 +8,7 @@ pub mod lexer;
 pub mod log;
 pub mod oi;
 pub mod parser;
+pub mod pbm;
 pub mod registry;
 pub mod rule;
 pub mod safety;

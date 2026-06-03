@@ -7,7 +7,7 @@
 
 ---
 
-## P0 — 生产命门（2/9）
+## P0 — 生产命门（5/9）
 
 ### 安全体系
 
@@ -23,11 +23,11 @@
 
 ### 架构
 
-6. **异常终止 Session 数据污染** — 安全插桩强制终止后 PBM 要不要更新。需数据置信度分级——异常 Session 只更新安全阈值不更新基线。FIXME: v0.3。
+6. ~~**异常终止 Session 数据污染**~~ ✅ — `SessionLabel` + `DataConfidence` + `PbmUpdateStrategy` 三级置信度分级已实现。Abnormal→仅安全阈值更新。Contaminated→步长×0.0。`src/pbm.rs`。
 
-7. **新用户预测器冷启动灾难** — 无历史数据→预测准确率<50%→频繁安全插桩→数据污染。前 10 次 Session 强制关闭预测器。FIXME: v0.3。
+7. ~~**新用户预测器冷启动灾难**~~ ✅ — `ColdStartGuard` 已实现。前 10 次 Session 强制关闭预测器，`predictor_enabled()` 返回 false。`src/pbm.rs`。
 
-8. **跨维度阻尼矩阵无具体参数** — 只有概念没有规则。情绪梯度>X 冻结内脏，Y 冻结触觉。需制定具体参数表。FIXME: ADR 007 §7.7 补充。
+8. ~~**跨维度阻尼矩阵无具体参数**~~ ✅ — `DampingMatrix` 参数表已实现。情绪梯度>2.0×步长→冻结内脏+触觉，内脏>1.5×→冻结情绪。具体阈值+`should_freeze()`+`apply()`。`src/pbm.rs`。
 
 9. ~~**FSIR 跨语言 ABI 零设计**~~ ✅ — Postcard 二进制格式已实现。`to_binary`/`from_binary`/`from_json` 方法。双格式并存: JSON 调试 + Postcard 设备缓存。ADR 008 已定稿。`src/fsir.rs` + `docs/design/008-fsir-abi.md`。
 
@@ -41,7 +41,7 @@
 
 11. **Pass 6-8（Personalize/DeviceMap/CodeGen）零代码** — FIXME: v0.3。
 
-12. **PBM 零代码** — 四维差异化冷启动系数未实现。FIXME: v0.3。
+12. **PBM 地基就绪，完整冷启动未实现** — `pbm.rs` 已有 `SessionLabel`/`DataConfidence`/`ColdStartGuard`/`DampingMatrix`。四维差异化冷启动系数（内脏0.75/情绪0.40/触觉0.80/听觉0.85）+ sigmoidal 收敛 + 因子三实时置信度待 v0.3。FIXME: v0.3。
 
 ### 设备
 
@@ -110,6 +110,7 @@
 - ✅ 错误路径测试——空源/纯空白/纯注释/空文件/缺少main/缺少mix（P2 #26）
 - ✅ FSIR Postcard 二进制 ABI——`to_binary`/`from_binary`，双格式并存，ADR 008 定稿（P0 #9）
 - ✅ oi 帧平滑过渡——OiSmoothing 衰减曲线，强度≤20 硬截断，>20 四帧衰减，对齐 ADR 004（P0 #5）
+- ✅ PBM 地基——SessionLabel + DataConfidence 数据置信度分级 + ColdStartGuard 冷启动守护 + DampingMatrix 跨维度阻尼矩阵（P0 #6/#7/#8）
 
 ---
 
