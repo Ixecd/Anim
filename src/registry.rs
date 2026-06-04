@@ -6,6 +6,8 @@
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
 
+use crate::error::AnimiError;
+
 /// 原子类型——核心（官方审核）vs 沙箱（用户上传，未验证）。
 #[derive(Debug, Clone, Copy, PartialEq, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -43,10 +45,16 @@ impl Default for Registry {
 
 impl Registry {
     /// 从外部 JSON 文件加载。失败 → 返回错误信息。
-    pub fn from_file(path: &str) -> Result<Self, String> {
-        let json = std::fs::read_to_string(path).map_err(|e| format!("读取失败: {}", e))?;
+    pub fn from_file(path: &str) -> Result<Self, AnimiError> {
+        let json = std::fs::read_to_string(path).map_err(|e| AnimiError::InternalError {
+            file_name: path.to_string(),
+            msg: format!("读取 Registry 失败: {}", e),
+        })?;
         let defs: Vec<AtomDef> =
-            serde_json::from_str(&json).map_err(|e| format!("JSON 解析失败: {}", e))?;
+            serde_json::from_str(&json).map_err(|e| AnimiError::InternalError {
+                file_name: path.to_string(),
+                msg: format!("Registry JSON 解析失败: {}", e),
+            })?;
         let atoms: Vec<AtomEntry> = defs
             .into_iter()
             .map(|d| AtomEntry {

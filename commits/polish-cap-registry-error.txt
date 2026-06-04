@@ -1,0 +1,7 @@
+fix: polish round — cap parse warn + smoothing cleanup + Registry AnimiError
+
+- main.rs: --cap 解析失败时 A.warn 提示（替代静默 unwrap_or(100)）
+- main.rs: smoothing_multipliers 空判断删除——inject() validate() 保证至少 1 个元素
+- registry.rs: from_file() 返回 Result<Self, AnimiError> 替代 Result<Self, String>
+  from_file 是唯一返回裸 String 的 API——统一为 InternalError 变体
+- 93 tests all green, clippy zero warning

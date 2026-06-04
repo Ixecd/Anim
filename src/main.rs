@@ -59,7 +59,16 @@ fn main() {
     let mut i = 2;
     while i < args.len() {
         if args[i] == "--cap" && i + 1 < args.len() {
-            user_cap = args[i + 1].parse().unwrap_or(100);
+            user_cap = match args[i + 1].parse() {
+                Ok(v) => v,
+                Err(_) => {
+                    A.warn(format_args!(
+                        "无效的 cap 值 '{}'，使用默认 100",
+                        args[i + 1]
+                    ));
+                    100
+                }
+            };
             i += 2;
         } else if args[i] == "--log-level" && i + 1 < args.len() {
             let lvl = match args[i + 1].to_lowercase().as_str() {
@@ -143,8 +152,7 @@ fn main() {
 
     // 源码哈希——SPL 锚定用
     let src_hash = hex::encode(Sha256::digest(src.as_bytes()));
-    let smoothing_multipliers: Vec<f64> =
-        smoothing.steps.iter().map(|s| s.multiplier).collect();
+    let multipliers: Vec<f64> = smoothing.steps.iter().map(|s| s.multiplier).collect();
     let doc = animi::fsir::FsirDoc::from_ast(
         &ast,
         Some(src_hash),
@@ -153,11 +161,7 @@ fn main() {
             min: scaled.min,
             max: scaled.max,
         },
-        if smoothing_multipliers.is_empty() {
-            None
-        } else {
-            Some(&smoothing_multipliers)
-        },
+        Some(&multipliers),
     );
 
     let json = die(doc.to_json());
