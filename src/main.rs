@@ -143,6 +143,8 @@ fn main() {
 
     // 源码哈希——SPL 锚定用
     let src_hash = hex::encode(Sha256::digest(src.as_bytes()));
+    let smoothing_multipliers: Vec<f64> =
+        smoothing.steps.iter().map(|s| s.multiplier).collect();
     let doc = animi::fsir::FsirDoc::from_ast(
         &ast,
         Some(src_hash),
@@ -151,7 +153,11 @@ fn main() {
             min: scaled.min,
             max: scaled.max,
         },
-        Some(smoothing),
+        if smoothing_multipliers.is_empty() {
+            None
+        } else {
+            Some(&smoothing_multipliers)
+        },
     );
 
     let json = die(doc.to_json());

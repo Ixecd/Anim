@@ -12,8 +12,12 @@ thread_local! {
     /// 当前正在处理的源文件名——由 CLI 入口设置。
     /// oi! 宏自动从此读取，无需每个调用点传递。
     ///
-    /// 注意：v1.1 单线程 CLI 完全安全。未来多线程批量处理时——
-    /// 考虑在每个 Pass 的上下文里显式传递 file_name，而非依赖 thread-local。
+    /// 注意：v1.1 单线程 CLI 完全安全。
+    ///
+    /// TODO(v0.3): 多设备 Session / daemon 模式 / batch compile 时，
+    /// 替换为显式 InterlinkContext { file_name, registry, user_cap } 结构体。
+    /// 在各 Pass 的 check 函数间显式传递——消除 thread-local 的并行风险。
+    /// 当前 thread_local! 零侵入，够用——不为还没发生的场景写代码。
     pub static CURRENT_FILE: RefCell<String> = const { RefCell::new(String::new()) };
 }
 

@@ -8,6 +8,29 @@ use crate::ast::*;
 use crate::error::AnimiError;
 use serde::{Deserialize, Serialize};
 
+// ── oi 帧平滑过渡（FSIR 自有类型，不依赖 guard 模块）────────────
+
+/// FSIR 侧的 oi 帧平滑过渡策略。
+///
+/// 这是 Pass 4（guard::inject）产出的衰减系数在 IR 层的投影。
+/// 类型定义在 FSIR 侧——IR 层不依赖 Pass 层。
+/// 当运行期安全插桩检测到一帧应被拒绝时，
+/// 硬件衰减状态机按此序列在 4-8ms 内平滑归零。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FsirSmoothing {
+    /// 衰减序列——从当前帧到安全基线的过渡。
+    pub steps: Vec<FsirDecayStep>,
+}
+
+/// FSIR 侧的一次衰减步。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FsirDecayStep {
+    /// 衰减乘数 [0.0, 1.0]。1.0 = 原值，0.0 = 安全基线。
+    pub multiplier: f64,
+}
+
+// ── FsirDoc ──────────────────────────────────────────────────
+
 /// FSIR 文档——交织产物的顶层结构。
 ///
 /// 这是 `.anim` 源码经过 Pass 0-4 之后的第一份 IR。
@@ -34,12 +57,13 @@ pub struct FsirDoc {
     /// 强度区间。
     pub intensity: FsirIntensity,
 
-    /// oi 帧平滑过渡策略（Pass 4 guard::inject 产出）。
+    /// oi 帧平滑过渡策略（Pass 4 guard::inject 产出 → 转为 FSIR 自有类型）。
     ///
     /// 当运行期安全插桩检测到一帧应被拒绝时——
     /// 硬件衰减状态机按此序列在 4-8ms 内平滑归零。
     /// 后续 Pass（Personalize/CodeGen）从此字段读取衰减系数。
-    pub smoothing: Option<crate::guard::OiSmoothing>,
+    /// 类型定义在 FSIR 侧——不依赖 guard 模块，避免 IR 层反向依赖 Pass 层。
+    pub smoothing: Option<FsirSmoothing>,
 }
 
 /// FSIR 交织元数据。
@@ -110,7 +134,7 @@ impl FsirDoc {
         source_hash: Option<String>,
         registry_hash: Option<String>,
         intensity: &FsirIntensity,
-        smoothing: Option<crate::guard::OiSmoothing>,
+        smoothing_multipliers: Option<&Vec<f64>>,
     ) -> Self {
         let now = chrono::Utc::now().to_rfc3339();
 
@@ -139,7 +163,12 @@ impl FsirDoc {
                 name: source.shape.name.clone(),
             },
             intensity: intensity.clone(),
-            smoothing,
+            smoothing: smoothing_multipliers.map(|m| FsirSmoothing {
+                steps: m
+                    .iter()
+                    .map(|&multiplier| FsirDecayStep { multiplier })
+                    .collect(),
+            }),
         }
     }
 
@@ -159,7 +188,7 @@ impl FsirDoc {
         })
     }
 
-    /// 序列化为 Postcard 二进制（大端序风格 wire format）。
+    /// 序列化为 Postcard 二进制（LEB128 varint 编码）。
     ///
     /// Postcard 是 `#[no_std]` 兼容的 Serde 二进制格式：
     ///   - 变长整数编码（u32/u64 不会浪费高位零字节）

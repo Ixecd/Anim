@@ -1,0 +1,11 @@
+fix: review round — FSIR/Guard 解耦 + lexer 浮点修复 + 注释漂移 + Thread Local TODO
+
+- fsir.rs: FsirSmoothing/FsirDecayStep 独立定义在 IR 层，FSIR 不再依赖 guard 模块
+  from_ast() 接收 Vec<f64> 衰减乘数——IR 层和 Pass 层零耦合
+- lexer.rs: "3." 尾随小数点报词法错误（trailing dot），".3" 仍为合法浮点
+  新增 2 个测试：trailing_dot_is_error + leading_dot_is_valid_float
+- guard.rs: "4帧非线性衰减"→"5帧序列（1帧原值+4帧非线性衰减）"，注释与实现对齐
+- error.rs: CURRENT_FILE 加 TODO(v0.3)——多线程时替换为显式 InterlinkContext
+- fsir.rs: Postcard 注释 "大端序"→"LEB128 varint 编码"
+- main.rs: smoothing multipliers 提取后传入 from_ast
+- 93 tests all green, clippy zero warning

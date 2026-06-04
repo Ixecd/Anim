@@ -174,18 +174,34 @@ impl Lexer {
 
         // 遇到小数点 → 浮点数
         if self.peek() == '.' {
-            self.advance(); // 吞掉 '.'
-            let frac_part = self.read_while(|ch| ch.is_ascii_digit());
-
-            // 孤立小数点——既没有整数部分也没有小数部分 → 非法字符
-            if int_part.is_empty() && frac_part.is_empty() {
+            // 小数点后必须有数字。"3." 不是合法浮点——词法错误。
+            let has_frac = self.peek_next().is_some_and(|c| c.is_ascii_digit());
+            if !has_frac {
+                if int_part.is_empty() {
+                    // 孤立小数点——没有数字直接跟在后面
+                    self.advance(); // 吞掉 '.'
+                    oi!(
+                        LexError,
+                        line = line,
+                        col = col,
+                        msg = "isolated '.' is not a valid number".to_string()
+                    )
+                }
+                // "3."——小数点后没有小数部分。吞掉 '.' 并报词法错误。
+                self.advance(); // 吞掉 '.'
                 oi!(
                     LexError,
                     line = line,
                     col = col,
-                    msg = "isolated '.' is not a valid number".to_string()
+                    msg = format!(
+                        "trailing dot in '{}.' — expected a fractional digit after '.'",
+                        int_part
+                    )
                 )
             }
+
+            self.advance(); // 吞掉 '.'
+            let frac_part = self.read_while(|ch| ch.is_ascii_digit());
 
             let literal = format!("{}.{}", int_part, frac_part);
             return Ok(Token {
@@ -487,5 +503,26 @@ feeling calm_meditative { -- inline comment
         // "calm" 在第 2 行第 1 列
         assert_eq!(tokens[1].line, 2);
         assert_eq!(tokens[1].col, 1);
+    }
+
+    #[test]
+    fn tokenize_trailing_dot_is_error() {
+        // "3." → 词法错误——小数点后必须有数字
+        let src = "3.";
+        let mut lexer = Lexer::new(src);
+        let result = lexer.tokenize();
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("trailing dot"));
+    }
+
+    #[test]
+    fn tokenize_leading_dot_is_valid_float() {
+        // ".3" 仍然是合法浮点字面量
+        let src = ".3";
+        let mut lexer = Lexer::new(src);
+        let tokens = lexer.tokenize().unwrap();
+        assert_eq!(tokens.len(), 2);
+        assert_eq!(tokens[0].kind, TokenKind::Float);
+        assert_eq!(tokens[0].literal, ".3");
     }
 }
