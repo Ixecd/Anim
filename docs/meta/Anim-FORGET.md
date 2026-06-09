@@ -64,6 +64,10 @@
 
 23. **Pass 6 基线偏移硬编码情绪维度** — `personalize.rs` 中所有原子无条件使用 `coeffs.emotional` 做基线偏移，听觉/触觉维度的原子会被错误缩放（听觉系数 0.85 被 0.40 替代）。需在 Registry 的 `AtomEntry` 中增加 `dimension: PbmDimension` 字段。FIXME: v0.3。
 
+24. **Shape 校验不对称——原子走 Registry 实例，Shape 走静态函数** — `typeck.rs` 里感受原子用 `registry.check_atom()` 实例方法（支持外部 JSON 动态加载），但 shape 校验用的 `shape_names()` 是模块级静态函数。未来扩展自定义 shape 时不对称。需将 `shape_names` 收拢到 Registry 实例中管理。FIXME: v0.3。
+
+25. **DampingMatrix 在 Pass 6 中被架空** — `personalize()` 参数 `_damping` 被下划线闲置，判定是纯静态的——只要 `damping_active=true` 则 `damped_main` 永远为 `true`，没有检查当前帧的瞬时梯度是否真的超标。v0.4 需接收各维度实测梯度，调用 `DampingMatrix::apply(&gradients, &steps)` 替代静态判断。FIXME: v0.4。
+
 ### 缓存
 
 18. **后台预编译 FSIR 缓存失效策略缺失** — 安全规则更新后本地缓存仍用旧参数。FSIR 需携带规则版本号+Registry 哈希。FIXME: FSIR meta 字段扩展。

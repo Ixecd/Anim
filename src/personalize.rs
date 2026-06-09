@@ -45,11 +45,14 @@ impl Default for PbmColdStartCoefficients {
 ///   - Mid intensity (30-70%): response slows
 ///   - High intensity (70-100%): near saturation
 ///
-/// 公式:
-///   applied = original × baseline_coeff × σ(original / cap)
+/// 公式（详见 docs/design/009-pbm-math.md §一）:
+///   x = original / cap
+///   σ(x) = 1/(1+e^{-k(x-x0)}), k=6, x0=0.5
+///   compression(x) = 1 − α×σ(x), α=0.5
+///   applied = original × baseline_coeff × compression(x)
 ///
-/// 其中 σ(x) 是 logistic sigmoid: 1/(1+e^{-k × (x - x0)})
-/// k = 6, x0 = 0.5 → 低强度 linear，高强度趋近饱和。
+/// 低强度 compression≈0.97 → ≈linear; 中compression=0.75 → 压缩;
+/// 高强度 compression≈0.52 → 饱和。
 pub fn sigmoidal_scale(original: u32, baseline_coeff: f64, cap: u32) -> u32 {
     if cap == 0 {
         return 0;
@@ -57,8 +60,10 @@ pub fn sigmoidal_scale(original: u32, baseline_coeff: f64, cap: u32) -> u32 {
     let x = original as f64 / cap as f64;
     let k: f64 = 6.0;
     let x0: f64 = 0.5;
+    let alpha: f64 = 0.5;
     let sigmoid = 1.0 / (1.0 + (-k * (x - x0)).exp());
-    let scaled = original as f64 * baseline_coeff * sigmoid;
+    let compression = 1.0 - alpha * sigmoid;
+    let scaled = original as f64 * baseline_coeff * compression;
     let applied = scaled.round() as u32;
     applied.min(cap)
 }
@@ -245,12 +250,36 @@ mod tests {
     }
 
     #[test]
-    fn sigmoidal_threshold() {
+    fn sigmoidal_low_linear() {
         let cap = 100;
         let baseline = 1.0;
-        let scaled = sigmoidal_scale(cap / 2, baseline, cap);
-        // 50% × 1.0 × 约为 0.5 的 sigmoid → 应在 25 附近
-        assert!((20..=30).contains(&scaled));
+        // 10% → compression≈0.96 → applied≈9.6 → 10
+        let applied = sigmoidal_scale(10, baseline, cap);
+        assert_eq!(applied, 10);
+    }
+
+    #[test]
+    fn sigmoidal_mid_compression() {
+        let cap = 100;
+        let baseline = 1.0;
+        // 50% → compression=0.75 → applied≈37.5 → 38
+        let applied = sigmoidal_scale(cap / 2, baseline, cap);
+        assert_eq!(applied, 38);
+    }
+
+    #[test]
+    fn sigmoidal_high_saturation() {
+        let cap = 100;
+        let baseline = 1.0;
+        // 100% → compression≈0.52 → applied≈52
+        let applied = sigmoidal_scale(100, baseline, cap);
+        assert_eq!(applied, 52);
+    }
+
+    #[test]
+    fn sigmoidal_respects_cap() {
+        let applied = sigmoidal_scale(200, 1.0, 100);
+        assert!(applied <= 100);
     }
 
     #[test]
