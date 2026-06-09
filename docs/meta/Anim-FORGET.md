@@ -34,7 +34,7 @@
 
 ---
 
-## P1 — 功能受限（10/19）
+## P1 — 功能受限（11/20）
 
 ### 交织管线
 
@@ -70,7 +70,9 @@
 
 26. **damping_gradients=None 信号缺失降级策略缺失** — 当传感器层抖动导致连续 `None` 时，代码退化为 `HashMap::new()`（零冻结=no-damping 安全默认态）。但规范规定的"因子三降级体系"要求区分：是 Damping Hold（保持上一帧阻尼状态）还是安全降级？信号缺失 ≠ 用户安全——不冻结也许是错的。需在 personalize 内部增加 `previous_frozen` 状态记忆 + `None` 降级分支。FIXME: v0.4。
 
-27. **点缀冻结维度判定硬编码 Tactile——其他维度点缀漏网** — `personalize.rs:121` `damped_accent = is_frozen(PbmDimension::Tactile)` 只查 Tactile。Visceral/Auditory/Emotional 维度的点缀即使阻尼判定为 Frozen，也不会被 `/2.0` 斩断。冻结态半逻辑——需改为每原子查自身维度：`let damped_this_accent = is_frozen(atom_dimension(&acc.atom))`。FIXME: v0.4。
+27. **点缀冻结维度判定硬编码 Tactile——其他维度点缀漏网** — `personalize.rs:121` `damped_accent = is_frozen(PbmDimension::Tactile)` 只查 Tactile。Visceral/Auditory/Emotional 维度的点缀即使阻尼判定为 Frozen，也不会被 `/2.0` 斩断，且 PSIR 输出的 `damped` 字段被统一刷成同一个值（丢失逐原子粒度）。需改为每原子查自身维度：`let damped_this_accent = is_frozen(atom_dimension(&acc.atom))`。FIXME: v0.4。
+
+28. **主旋律阻尼维度硬编码 Emotional——非情绪主旋律漏网** — 和 #27 完全对称的 bug，同一行上下。`personalize.rs:120` `damped_main = is_frozen(PbmDimension::Emotional)` 硬编码查情绪维度。主旋律是 `warmth`（触觉）→ 触觉冻结不触发阻尼 → 生理冲击直接绕过。修复：`let damped_main = is_frozen(atom_dimension(&fsir.mix.main))`。FIXME: v0.4。
 
 ### 缓存
 
@@ -167,9 +169,10 @@ feeling <基本感受包名> {
 ## 编辑记录
 
 ```
-2026-06-09  v0.1.19 豆包 review #2——damping_gradients悬空 + 点缀冻结漏网
+2026-06-09  v0.1.19 豆包 review #2——damping_gradients悬空 + 点缀/主旋律冻结漏网
             - P1 #26 新增：damping_gradients=None 信号缺失降级策略缺失——因子三降级体系待落地
             - P1 #27 新增：点缀冻结维度判定硬编码Tactile——其他维度点缀漏网
+            - P1 #28 新增：主旋律冻结维度硬编码Emotional——非情绪主旋律漏网（#27的对称bug）
 
 2026-06-09  v0.1.18 FORGET 刷新——Pass 6 闭合 + 扫描日期/测试数/模块数全更新
             - P1 #23 闭合——AtomEntry.dimension 打通四维系数
