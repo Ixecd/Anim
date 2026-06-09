@@ -50,7 +50,7 @@
 
 14. **outline 模式安全约束缺失** — 缺设备时降级行为未定义。每个原子需声明设备依赖等级+降级策略。FIXME: ADR 009+。
 
-15. **多设备时钟同步与无线抖动零设计** — 耳后有线 1ms 帧，腕部 BLE 天然 2-3ms 抖动。迟到帧丢弃还是缓存。需 Jitter Buffer 规约。FIXME: ADR 009。
+15. **多设备时钟同步与无线抖动零设计** — 耳后有线 1ms 帧，腕部 BLE 天然 2-3ms 抖动。迟到帧丢弃还是缓存。需 Jitter Buffer 规约。边界——不在 Anim。FIXME: Feelings-OS `timerd`（PLL 锁相时钟源）+ `busd`（主时钟分发）。Anim 只输出 ESIR 帧——不管帧之间的时钟对齐。FIXME: Anim 侧——定义 ESIR 帧时序约束（1ms 帧周期），不实现 Jitter Buffer。本行留在 Anim FORGET 中仅作为提醒——实现不在此仓库进行。
 
 ### 语法
 
