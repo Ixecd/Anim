@@ -1,7 +1,7 @@
 # FORGET.md — 待修复项（P0 + P1 + P2）
 
-> 扫描日期：2026-06-04
-> 范围：代码（src/ 14 模块，91 测试）+ 设计文档（8 ADR）
+> 扫描日期：2026-06-09
+> 范围：代码（src/ 17 模块，99 测试）+ 设计文档（10 ADR）
 > 原则：P0 = 生产命门。P1 = 功能受限。P2 = 代码质量/可维护性。
 > 命名：animi 是交织器（interlinker），不是编译器。
 > 版本：v1.0 已打 tag——自举前唯一 tag。自举完成前不再打任何 tag。
@@ -34,13 +34,13 @@
 
 ---
 
-## P1 — 功能受限（3/14）
+## P1 — 功能受限（8/17）
 
 ### 交织管线
 
 10. **四层 IR 仅 FSIR 实现** — PSIR/DSIR/ESIR 仅为规范描述。FIXME: v0.3。
 
-11. **Pass 6-8（Personalize/DeviceMap/CodeGen）零代码** — FIXME: v0.3。
+11. **Pass 6-8（Personalize/DeviceMap/CodeGen）** — Pass 6 已完成（src/personalize.rs, src/psir.rs）。Pass 7-8 零代码。FIXME: v0.3 续行。
 
 12. **PBM 地基就绪，完整冷启动未实现** — `pbm.rs` 已有 `SessionLabel`/`DataConfidence`/`ColdStartGuard`/`DampingMatrix`。四维差异化冷启动系数（内脏0.75/情绪0.40/触觉0.80/听觉0.85）+ sigmoidal 收敛 + 因子三实时置信度待 v0.3。FIXME: v0.3。
 
@@ -62,11 +62,11 @@
 
 22. **Registry 哈希依赖原子顺序** — 两个语义完全相同的 Registry（原子相同但顺序不同）会生成不同哈希，导致不必要的 FSIR 缓存失效。需先按名称排序再计算哈希。FIXME: v0.3。
 
-23. **Pass 6 基线偏移硬编码情绪维度** — `personalize.rs` 中所有原子无条件使用 `coeffs.emotional` 做基线偏移，听觉/触觉维度的原子会被错误缩放（听觉系数 0.85 被 0.40 替代）。需在 Registry 的 `AtomEntry` 中增加 `dimension: PbmDimension` 字段。FIXME: v0.3。
+~~23. **Pass 6 基线偏移硬编码情绪维度**~~ ✅ — AtomEntry新增dimension:PbmDimension字段。8原子全标注。外部JSON支持serde(default)。四维系数全部打通。
 
 24. **Shape 校验不对称——原子走 Registry 实例，Shape 走静态函数** — `typeck.rs` 里感受原子用 `registry.check_atom()` 实例方法（支持外部 JSON 动态加载），但 shape 校验用的 `shape_names()` 是模块级静态函数。未来扩展自定义 shape 时不对称。需将 `shape_names` 收拢到 Registry 实例中管理。FIXME: v0.3。
 
-25. **DampingMatrix 在 Pass 6 中被架空** — v0.3 无实时传感器数据，`personalize()` 现接受 `damping_gradients: Option<&[(PbmDimension, f64); 4]>`——`None` = 阻尼关闭，`Some` = 调用 `DampingMatrix::apply()` 计算冻结维度。四维系数已打通。点缀比例帽已从 Registry 读取。FORGET v0.3 已全部修正。FIXME: v0.4——传入实测梯度数据启用动态阻尼。
+~~25. **DampingMatrix 在 Pass 6 中被架空**~~ ✅ — damping_gradients:Option(None=关闭)。四维系数打通。点缀帽从Registry驱动。v0.4传入实测梯度启用动态阻尼。
 
 ### 缓存
 
@@ -82,9 +82,9 @@
 
 ---
 
-## P2 — 代码质量 / 可维护性（0/1）
+## P2 — 代码质量 / 可维护性（1/1）
 
-24. **log.rs 全局日志级别使用 Relaxed 内存顺序** — 多线程环境下可能出现"设置了日志级别但部分线程仍用旧级别"的情况，概率极低影响极小——当前单线程 CLI 不触发。需将 `store` 改为 `Release`、`load` 改为 `Acquire`。FIXME: v0.4（daemon 模式引入前必须修）。
+25. **log.rs 全局日志级别使用 Relaxed 内存顺序** — 多线程环境下可能出现"设置了日志级别但部分线程仍用旧级别"的情况，概率极低影响极小——当前单线程 CLI 不触发。需将 `store` 改为 `Release`、`load` 改为 `Acquire`。FIXME: v0.4（daemon 模式引入前必须修）。
 
 ~~25. **无日志系统**~~ ✅ — `A_info!`/`A_warn!`/`A_error!` 宏，时间戳+ANSI颜色。KubePivot用P，Anim用A。
 
@@ -127,6 +127,13 @@
 - ✅ OiSmoothing 写入 FSIR——FsirDoc.smoothing 字段，from_ast() 第五参数，main.rs 接线。Pass 6-8 可直接读取衰减序列（2026-06-04）
 - ✅ DampingMatrix::apply() 返回 HashMap——按维度名查询，消除顺序依赖。多维度同时触发阻尼覆盖规则注释（2026-06-04）
 - ✅ 日志宏导出——A_debug!/A_info!/A_warn!/A_error! 由 #[macro_export] 自动导出到 crate root（2026-06-04）
+- ✅ Pass 6 Personalize——src/personalize.rs + src/psir.rs。FSIR × PBM → PSIR（2026-06-09）
+- ✅ DampingMatrix 死锁解除——damping_gradients:Option(None=关闭)（2026-06-09）
+- ✅ 四维系数打通——AtomEntry.dimension:PbmDimension，8原子全标注（2026-06-09）
+- ✅ 点缀比例帽 Registry 驱动——不再硬编码 0.30（2026-06-09）
+- ✅ 数学与约束规范——009-math-and-constraints.md 11章全公式（2026-06-09）
+- ✅ 架构全景图——010-architecture-diagram.md（2026-06-09）
+- ✅ FORGET P1#15 时钟同步边界——归 Feelings-OS timerd+busd（2026-06-09）
 
 ---
 
@@ -156,6 +163,14 @@ feeling <基本感受包名> {
 ## 编辑记录
 
 ```
+2026-06-09  v0.1.18 FORGET 刷新——Pass 6 闭合 + 扫描日期/测试数/模块数全更新
+            - P1 #23 闭合——AtomEntry.dimension 打通四维系数
+            - P1 #25 闭合——DampingMatrix damping_gradients:Option 解除死锁
+            - P1 #11 更新——Pass 6 完成，7-8 续行
+            - P1 #15 边界修正——时钟同步归 Feelings-OS
+            - 扫描日期→2026-06-09，模块数 14→17，测试数 91→99
+            - 已完成章新增 9 条——Pass 6 / DampingMatrix / 四维 / Registry驱动棒 / 数学手册 / 架构图 / FORGET边界
+
 2026-06-09  v0.1.17 豆包 review——Pass 6 三漏洞修复 + P1 新增3项
             - P0 fix: personalize.rs damped_main 双向查询（Emotional⊕Visceral）
             - P0 fix: personalize.rs damping_active 去掉 strategy 条件——异常Session也应用阻尼
