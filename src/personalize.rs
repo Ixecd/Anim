@@ -1,13 +1,13 @@
 // src/personalize.rs — Pass 6：FSIR × PBM → PSIR
 
+use crate::error::AnimiError;
 use crate::fsir::FsirDoc;
 use crate::pbm::{ColdStartGuard, DampingMatrix, PbmDimension, SessionLabel, StepState};
 use crate::psir::{
-    PersonalizedAccent, PersonalizedFeeling, PsirDecayStep, PsirDoc,
-    PsirSmoothing,
+    PersonalizedAccent, PersonalizedFeeling, PsirDecayStep, PsirDoc, PsirFeelingInput,
+    PsirIntensityInput, PsirMetaInput, PsirSmoothing,
 };
 use crate::registry::Registry;
-use crate::error::AnimiError;
 use std::collections::HashMap;
 
 // ── 冷启动四维系数 ──────────────────────────────────────────
@@ -70,41 +70,35 @@ pub fn sigmoidal_scale(original: u32, baseline_coeff: f64, cap: u32) -> u32 {
     applied.min(cap)
 }
 
+// ── PBM 状态输入（收拢8个参数的复数 param） ───────────────────
+
+/// PBM 状态——用于 `personalize()` 将 8 个参数收拢为 1 个。
+pub struct PbmState<'a> {
+    pub guard: &'a ColdStartGuard,
+    pub damping_gradients: Option<&'a [(PbmDimension, f64); 4]>,
+    pub session_label: SessionLabel,
+    pub coeffs: PbmColdStartCoefficients,
+    pub user_cap: u32,
+    pub pbm_updated_at: &'a str,
+}
+
 // ── 主函数：personalize ──────────────────────────────────────
 
 /// Pass 6 Personalize：FSIR × PBM → PSIR。
 ///
-/// # 参数
-/// - `fsir`: 待个性化的通用感受结构
-/// - `guard`: 冷启动守卫——当前用户的 Session 计数状态
-/// - `damping_gradients`: 四维度实测梯度（v0.3: None = 无传感器数据, 阻尼关闭）
-/// - `session_label`: 本次 Session 的标记——ColdStart/Normal/Abnormal
-/// - `coeffs`: PBM 四维冷启动基线系数
-/// - `user_cap`: 用户的强度上限
-/// - `pbm_updated_at`: PBM 最后更新时间（RFC 3339）
-/// - `registry`: Pattern Registry——查询原子主维度和独立比例帽
-///
-/// # 返回
-/// - 成功：PsirDoc
-/// - 失败：AnimiError（强度越界/沙箱违规/创伤路径）
+/// 参数已按结构体收拢——`PbmState` 携带全部 PBM 状态入参。
 pub fn personalize(
     fsir: &FsirDoc,
-    guard: &ColdStartGuard,
-    damping_gradients: Option<&[(PbmDimension, f64); 4]>,
-    _session_label: SessionLabel,
-    coeffs: PbmColdStartCoefficients,
-    user_cap: u32,
-    pbm_updated_at: &str,
     registry: &Registry,
+    pbm: &PbmState,
 ) -> Result<PsirDoc, AnimiError> {
     // ── 1. 冷启动判定 ──────────────────────────────────────
-    let cold_start = guard.is_cold_start();
-    let session_count = guard.session_count;
+    let cold_start = pbm.guard.is_cold_start();
+    let session_count = pbm.guard.session_count;
 
     // ── 2. 阻尼矩阵判定 ──────────────────────────────────────
     // v0.3: 无传感器数据 → damping_gradients = None → 阻尼关闭。
-    // v0.4+: 传入四维度实测梯度 → DampingMatrix::apply() 计算冻结维度。
-    let frozen: HashMap<PbmDimension, StepState> = match damping_gradients {
+    let frozen: HashMap<PbmDimension, StepState> = match pbm.damping_gradients {
         Some(gradients) => {
             let default_steps = [
                 (PbmDimension::Visceral, 1.0),
@@ -127,8 +121,6 @@ pub fn personalize(
     let damped_accent = is_frozen(PbmDimension::Tactile);
 
     // ── 3. 四维偏移——按原子主维度选择系数 ──────────────────────
-    // v0.3: 从 Registry 查询原子的主维度，对号选用四维系数。
-    // 未被 Registry 收录的原子——default Emotional (0.40)。
     let atom_dimension = |atom_name: &str| -> PbmDimension {
         registry
             .lookup(atom_name)
@@ -136,10 +128,10 @@ pub fn personalize(
             .unwrap_or(PbmDimension::Emotional)
     };
     let baseline_coeff = match atom_dimension(&fsir.mix.main) {
-        PbmDimension::Visceral => coeffs.visceral,
-        PbmDimension::Emotional => coeffs.emotional,
-        PbmDimension::Tactile => coeffs.tactile,
-        PbmDimension::Auditory => coeffs.auditory,
+        PbmDimension::Visceral => pbm.coeffs.visceral,
+        PbmDimension::Emotional => pbm.coeffs.emotional,
+        PbmDimension::Tactile => pbm.coeffs.tactile,
+        PbmDimension::Auditory => pbm.coeffs.auditory,
     };
 
     // ── 4. 主旋律——FSIR 原子名 → 个人偏移 → 个人参数 ──────────
@@ -153,9 +145,7 @@ pub fn personalize(
     let mut accents = Vec::new();
     for acc in &fsir.mix.accents {
         // v0.3: 从 Registry 读取每原子独立比例帽，fallback 0.30
-        let ratio_cap = registry
-            .max_ratio(&acc.atom)
-            .unwrap_or(0.30);
+        let ratio_cap = registry.max_ratio(&acc.atom).unwrap_or(0.30);
         let applied_ratio = if damped_accent {
             (acc.ratio / 2.0).min(ratio_cap)
         } else {
@@ -171,21 +161,18 @@ pub fn personalize(
     }
 
     // ── 6. 强度 sigmoidal 缩放 ─────────────────────────────
-    let applied_min = sigmoidal_scale(fsir.intensity.min, baseline_coeff, user_cap);
-    let applied_max = sigmoidal_scale(fsir.intensity.max, baseline_coeff, user_cap);
+    let applied_min = sigmoidal_scale(fsir.intensity.min, baseline_coeff, pbm.user_cap);
+    let applied_max = sigmoidal_scale(fsir.intensity.max, baseline_coeff, pbm.user_cap);
 
     // 强度上限二次校验
-    if applied_max > user_cap {
+    if applied_max > pbm.user_cap {
         return Err(AnimiError::UserStateSafetyError {
             file_name: String::new(),
-            cap: format!("{}", user_cap),
+            cap: format!("{}", pbm.user_cap),
             atom_name: fsir.name.clone(),
             reason: format!(
                 "个人校准后强度 {} 超过用户上限 {}（FSIR 强度范围 {}-{}）",
-                applied_max,
-                user_cap,
-                fsir.intensity.min,
-                fsir.intensity.max,
+                applied_max, pbm.user_cap, fsir.intensity.min, fsir.intensity.max,
             ),
         });
     }
@@ -206,20 +193,26 @@ pub fn personalize(
 
     // ── 9. 组装 PSIR ─────────────────────────────────────
     Ok(PsirDoc::new(
-        fsir.name.clone(),
-        main,
-        accents,
-        fsir.shape.name.clone(),
-        fsir.intensity.min,
-        fsir.intensity.max,
-        applied_min,
-        applied_max,
-        user_cap,
-        smoothing,
-        cold_start,
-        trauma_rerouted,
-        pbm_updated_at.to_string(),
-        session_count,
+        PsirFeelingInput {
+            name: fsir.name.clone(),
+            main,
+            accents,
+            shape_name: fsir.shape.name.clone(),
+        },
+        PsirIntensityInput {
+            original_min: fsir.intensity.min,
+            original_max: fsir.intensity.max,
+            applied_min,
+            applied_max,
+            cap: pbm.user_cap,
+        },
+        PsirMetaInput {
+            smoothing,
+            cold_start,
+            trauma_rerouted,
+            pbm_updated_at: pbm.pbm_updated_at.to_string(),
+            session_count,
+        },
     ))
 }
 
@@ -228,11 +221,15 @@ pub fn personalize(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fsir::{
-        FsirAccent, FsirIntensity, FsirMeta, FsirMix, FsirShape,
-    };
+    use crate::fsir::{FsirAccent, FsirIntensity, FsirMeta, FsirMix, FsirShape};
 
-    fn make_fsir(name: &str, main: &str, accents_data: Vec<(&str, f64)>, min: u32, max: u32) -> FsirDoc {
+    fn make_fsir(
+        name: &str,
+        main: &str,
+        accents_data: Vec<(&str, f64)>,
+        min: u32,
+        max: u32,
+    ) -> FsirDoc {
         let accents = accents_data
             .into_iter()
             .map(|(a, r)| FsirAccent {
@@ -303,20 +300,16 @@ mod tests {
     #[test]
     fn basic_personalize() {
         let fsir = make_fsir("calm", "calm_meditative", vec![("belonging", 0.3)], 15, 45);
-        let guard = ColdStartGuard::default(); // session_count = 0
-        let coeffs = PbmColdStartCoefficients::default();
         let registry = Registry::default();
-        let psir = personalize(
-            &fsir,
-            &guard,
-            None, // v0.3: 无传感器数据
-            SessionLabel::ColdStart,
-            coeffs,
-            100,
-            "2026-06-09T10:00:00Z",
-            &registry,
-        )
-        .expect("personalize failed");
+        let pbm = PbmState {
+            guard: &ColdStartGuard::default(),
+            damping_gradients: None,
+            session_label: SessionLabel::ColdStart,
+            coeffs: PbmColdStartCoefficients::default(),
+            user_cap: 100,
+            pbm_updated_at: "2026-06-09T10:00:00Z",
+        };
+        let psir = personalize(&fsir, &registry, &pbm).expect("personalize failed");
         assert_eq!(psir.name, "calm");
         assert!(psir.cold_start);
         assert!(!psir.trauma_rerouted);

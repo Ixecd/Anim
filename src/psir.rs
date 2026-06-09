@@ -143,43 +143,60 @@ pub struct PsirPbmStamp {
 
 // ── 构造函数 ──────────────────────────────────────────────────
 
+/// PSIR 感受输入——用于 `PsirDoc::new()` 将参数收拢。
+pub struct PsirFeelingInput {
+    pub name: String,
+    pub main: PersonalizedFeeling,
+    pub accents: Vec<PersonalizedAccent>,
+    pub shape_name: String,
+}
+
+/// PSIR 强度输入——用于 `PsirDoc::new()` 将参数收拢。
+pub struct PsirIntensityInput {
+    pub original_min: u32,
+    pub original_max: u32,
+    pub applied_min: u32,
+    pub applied_max: u32,
+    pub cap: u32,
+}
+
+/// PSIR 元数据输入——用于 `PsirDoc::new()` 将参数收拢。
+pub struct PsirMetaInput {
+    pub smoothing: Option<PsirSmoothing>,
+    pub cold_start: bool,
+    pub trauma_rerouted: bool,
+    pub pbm_updated_at: String,
+    pub session_count: u32,
+}
+
 impl PsirDoc {
-    /// 从 FSIR 的数据和 PBM 的状态构造一份 PsirDoc。
+    /// 从三组结构体构造一份 PsirDoc。
     pub fn new(
-        name: String,
-        main: PersonalizedFeeling,
-        accents: Vec<PersonalizedAccent>,
-        shape_name: String,
-        original_min: u32,
-        original_max: u32,
-        applied_min: u32,
-        applied_max: u32,
-        cap: u32,
-        smoothing: Option<PsirSmoothing>,
-        cold_start: bool,
-        trauma_rerouted: bool,
-        pbm_updated_at: String,
-        session_count: u32,
+        feeling: PsirFeelingInput,
+        intensity: PsirIntensityInput,
+        meta: PsirMetaInput,
     ) -> Self {
         PsirDoc {
-            name,
-            main,
-            accents,
-            shape: PsirShape { name: shape_name },
-            intensity: PsirIntensity {
-                original_min,
-                original_max,
-                applied_min,
-                applied_max,
-                cap,
+            name: feeling.name,
+            main: feeling.main,
+            accents: feeling.accents,
+            shape: PsirShape {
+                name: feeling.shape_name,
             },
-            smoothing,
-            cold_start,
-            trauma_rerouted,
+            intensity: PsirIntensity {
+                original_min: intensity.original_min,
+                original_max: intensity.original_max,
+                applied_min: intensity.applied_min,
+                applied_max: intensity.applied_max,
+                cap: intensity.cap,
+            },
+            smoothing: meta.smoothing,
+            cold_start: meta.cold_start,
+            trauma_rerouted: meta.trauma_rerouted,
             pbm_stamp: PsirPbmStamp {
-                pbm_updated_at,
-                session_count,
-                cold_start,
+                pbm_updated_at: meta.pbm_updated_at,
+                session_count: meta.session_count,
+                cold_start: meta.cold_start,
             },
         }
     }
