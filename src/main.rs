@@ -90,6 +90,7 @@ fn main() {
             reg_path = Some(&args[i]);
             i += 1;
         } else {
+            A.warn(format_args!("未知参数 '{}'，已忽略", args[i]));
             i += 1;
         }
     }

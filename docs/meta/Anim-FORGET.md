@@ -60,6 +60,10 @@
 
 21. **科学计数法浮点字面量不支持** — `1e-5` / `2.5E-3` 等科学计数法格式词法分析器未识别，对极小配比场景（敏感用户）不友好。需要 lexer.rs 的 `number()` 分支增加 `e`/`E` + 可选 `+`/`-` 解析。FIXME: ADR 009。
 
+22. **Registry 哈希依赖原子顺序** — 两个语义完全相同的 Registry（原子相同但顺序不同）会生成不同哈希，导致不必要的 FSIR 缓存失效。需先按名称排序再计算哈希。FIXME: v0.3。
+
+23. **Pass 6 基线偏移硬编码情绪维度** — `personalize.rs` 中所有原子无条件使用 `coeffs.emotional` 做基线偏移，听觉/触觉维度的原子会被错误缩放（听觉系数 0.85 被 0.40 替代）。需在 Registry 的 `AtomEntry` 中增加 `dimension: PbmDimension` 字段。FIXME: v0.3。
+
 ### 缓存
 
 18. **后台预编译 FSIR 缓存失效策略缺失** — 安全规则更新后本地缓存仍用旧参数。FSIR 需携带规则版本号+Registry 哈希。FIXME: FSIR meta 字段扩展。
@@ -74,7 +78,9 @@
 
 ---
 
-## P2 — 代码质量 / 可维护性（0/0）
+## P2 — 代码质量 / 可维护性（0/1）
+
+24. **log.rs 全局日志级别使用 Relaxed 内存顺序** — 多线程环境下可能出现"设置了日志级别但部分线程仍用旧级别"的情况，概率极低影响极小——当前单线程 CLI 不触发。需将 `store` 改为 `Release`、`load` 改为 `Acquire`。FIXME: v0.4（daemon 模式引入前必须修）。
 
 ~~25. **无日志系统**~~ ✅ — `A_info!`/`A_warn!`/`A_error!` 宏，时间戳+ANSI颜色。KubePivot用P，Anim用A。
 
@@ -146,6 +152,16 @@ feeling <基本感受包名> {
 ## 编辑记录
 
 ```
+2026-06-09  v0.1.17 豆包 review——Pass 6 三漏洞修复 + P1 新增3项
+            - P0 fix: personalize.rs damped_main 双向查询（Emotional⊕Visceral）
+            - P0 fix: personalize.rs damping_active 去掉 strategy 条件——异常Session也应用阻尼
+            - P0 fix: registry.rs max_ratio [0.0,1.0] + NaN/Infinity 校验
+            - P0 fix: main.rs 未知参数静默吞噬——加 warn
+            - P1 #22 新增：Registry 哈希依赖原子顺序
+            - P1 #23 新增：Pass 6 基线偏移硬编码情绪维度——需 AtomEntry.dimension 字段
+            - P2 #24 新增：log.rs Relaxed 内存顺序→Release/Acquire
+            - 96 测试全绿，0 warnings
+
 2026-06-04  v0.1.16 P1 review round 3 —— smoothing→FSIR + DampingMatrix HashMap
             - P0 #5 增强：OiSmoothing 写入 FSIR（FsirDoc.smoothing 字段），Pass 6-8 可直接读取
             - P0 #8 增强：DampingMatrix::apply() 返回 HashMap<PbmDimension, StepState>，消除顺序依赖

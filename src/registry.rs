@@ -57,12 +57,20 @@ impl Registry {
             })?;
         let atoms: Vec<AtomEntry> = defs
             .into_iter()
-            .map(|d| AtomEntry {
-                name: d.name,
-                class: d.class,
-                max_ratio: d.max_ratio,
+            .map(|d| {
+                if d.max_ratio < 0.0 || d.max_ratio > 1.0 || d.max_ratio.is_nan() || d.max_ratio.is_infinite() {
+                    return Err(AnimiError::InternalError {
+                        file_name: path.to_string(),
+                        msg: format!("原子 '{}' 的 max_ratio {} 必须在 [0.0, 1.0] 范围内", d.name, d.max_ratio),
+                    });
+                }
+                Ok(AtomEntry {
+                    name: d.name,
+                    class: d.class,
+                    max_ratio: d.max_ratio,
+                })
             })
-            .collect();
+            .collect::<Result<_, _>>()?;
         Ok(Registry { atoms })
     }
 

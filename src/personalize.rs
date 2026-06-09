@@ -1,7 +1,7 @@
 // src/personalize.rs — Pass 6：FSIR × PBM → PSIR
 
 use crate::fsir::FsirDoc;
-use crate::pbm::{ColdStartGuard, DampingMatrix, PbmDimension, PbmUpdateStrategy, SessionLabel};
+use crate::pbm::{ColdStartGuard, DampingMatrix, PbmDimension, SessionLabel};
 use crate::psir::{
     PersonalizedAccent, PersonalizedFeeling, PsirDecayStep, PsirDoc,
     PsirSmoothing,
@@ -83,22 +83,24 @@ pub fn personalize(
     fsir: &FsirDoc,
     guard: &ColdStartGuard,
     _damping: &DampingMatrix,
-    session_label: SessionLabel,
+    _session_label: SessionLabel,
     coeffs: PbmColdStartCoefficients,
     user_cap: u32,
     pbm_updated_at: &str,
 ) -> Result<PsirDoc, AnimiError> {
     // ── 1. 冷启动判定 ──────────────────────────────────────
     let cold_start = guard.is_cold_start();
-    let strategy = session_label.update_strategy();
     let session_count = guard.session_count;
 
     // ── 2. 阻尼矩阵判定 ──────────────────────────────────────
-    // 新用户 / 冷启动前 10 次——所有维度都不冻结
-    // 正常 Session——查阻尼矩阵
-    let damping_active = !cold_start && strategy == PbmUpdateStrategy::Full;
-    let damped_main = damping_active
-        && DampingMatrix::should_freeze(PbmDimension::Emotional, PbmDimension::Visceral).is_some();
+    // 所有 Session 都应用阻尼，只排除冷启动前 10 次。
+    // 阻尼是本次 Session 的输出保护——异常 Session 恰恰最需要阻尼。
+    let damping_active = !cold_start;
+    // 主维度（默认 Emotional）：Emotional 触发或 Visceral 触发都能冻结
+    let damped_main = damping_active && (
+        DampingMatrix::should_freeze(PbmDimension::Emotional, PbmDimension::Visceral).is_some()
+        || DampingMatrix::should_freeze(PbmDimension::Visceral, PbmDimension::Emotional).is_some()
+    );
 
     // ── 3. 四维偏移——选择主维度系数 ──────────────────────────
     // 简化版 v0.3——默认按情绪维度做基线偏移
