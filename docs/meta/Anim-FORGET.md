@@ -34,7 +34,7 @@
 
 ---
 
-## P1 — 功能受限（8/17）
+## P1 — 功能受限（10/19）
 
 ### 交织管线
 
@@ -67,6 +67,10 @@
 24. **Shape 校验不对称——原子走 Registry 实例，Shape 走静态函数** — `typeck.rs` 里感受原子用 `registry.check_atom()` 实例方法（支持外部 JSON 动态加载），但 shape 校验用的 `shape_names()` 是模块级静态函数。未来扩展自定义 shape 时不对称。需将 `shape_names` 收拢到 Registry 实例中管理。FIXME: v0.3。
 
 ~~25. **DampingMatrix 在 Pass 6 中被架空**~~ ✅ — damping_gradients:Option(None=关闭)。四维系数打通。点缀帽从Registry驱动。v0.4传入实测梯度启用动态阻尼。
+
+26. **damping_gradients=None 信号缺失降级策略缺失** — 当传感器层抖动导致连续 `None` 时，代码退化为 `HashMap::new()`（零冻结=no-damping 安全默认态）。但规范规定的"因子三降级体系"要求区分：是 Damping Hold（保持上一帧阻尼状态）还是安全降级？信号缺失 ≠ 用户安全——不冻结也许是错的。需在 personalize 内部增加 `previous_frozen` 状态记忆 + `None` 降级分支。FIXME: v0.4。
+
+27. **点缀冻结维度判定硬编码 Tactile——其他维度点缀漏网** — `personalize.rs:121` `damped_accent = is_frozen(PbmDimension::Tactile)` 只查 Tactile。Visceral/Auditory/Emotional 维度的点缀即使阻尼判定为 Frozen，也不会被 `/2.0` 斩断。冻结态半逻辑——需改为每原子查自身维度：`let damped_this_accent = is_frozen(atom_dimension(&acc.atom))`。FIXME: v0.4。
 
 ### 缓存
 
@@ -163,6 +167,10 @@ feeling <基本感受包名> {
 ## 编辑记录
 
 ```
+2026-06-09  v0.1.19 豆包 review #2——damping_gradients悬空 + 点缀冻结漏网
+            - P1 #26 新增：damping_gradients=None 信号缺失降级策略缺失——因子三降级体系待落地
+            - P1 #27 新增：点缀冻结维度判定硬编码Tactile——其他维度点缀漏网
+
 2026-06-09  v0.1.18 FORGET 刷新——Pass 6 闭合 + 扫描日期/测试数/模块数全更新
             - P1 #23 闭合——AtomEntry.dimension 打通四维系数
             - P1 #25 闭合——DampingMatrix damping_gradients:Option 解除死锁
