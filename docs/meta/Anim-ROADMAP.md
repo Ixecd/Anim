@@ -1,254 +1,95 @@
 # Anim ROADMAP
 
 > 创建日期：2026-05-20
-> 最后更新：2026-06-01
-> 当前版本：v1.0（已打 tag——自举前唯一 tag。52 tests，最小闭环+Registry外部化+error codegen+强度缩放+源码哈希全部就绪）
+> 最后更新：2026-06-09
+> 当前版本：v1.0（已打 tag——自举前唯一 tag。93 tests，Pass 0-5 完成，FSIR JSON + Postcard 双格式闭环）
 > 原则：语言规范先于代码。模糊想法 → [FUTURE.md](Anim-FUTURE.md)
 
 ---
 
-## v0.1.0 — 语言规范定稿（当前）
+## 当前状态 (2026-06-09)
 
-### 已完成
+### ✅ Pass 0-5 — 已完成
 
-- `Feelings-LANGUAGE.md` — Anim 语言完整规范（上级项目根目录）
-- 类型系统：双层感受原子体系（核心 + 沙盒）
-- 九 Pass 交织管线（Pass 0-8）：LexParse → TypeCheck → StaticSafety → UserStateSafety → RuntimeGuard → FSIRGen → Personalize → DeviceMap → CodeGen
-- 四层 IR：FSIR / PSIR / DSIR / ESIR
-- 双流水线架构：前台实时 + 后台离线
-- 三层安全防线：静态规则 + 用户状态 + 运行期插桩
-- 创伤分型交叉判定：v1/v2/v3 × 社交/情绪/躯体
-- PBM 四维差异化冷启动
-- 声明式动态注解：`@auto_reduce_on` / `@auto_hold_on` / `@auto_release_on` / `@intensity_ceiling` / `@recovery_required`
-- 动态 ratio + 自定义 shape 曲线
-- 自举三步：Rust 寄居 → Anim 自举 → 从 01 裸奔
+| Pass | 名称 | 文件 | 代码行 | 测试 | 状态 |
+|------|------|------|--------|------|------|
+| 0a | LexParse (词法) | `lexer.rs` | 528 | 14 | ✅ |
+| 0b | LexParse (语法) | `parser.rs` | 623 | 14 | ✅ |
+| 1 | TypeCheck | `typeck.rs` | 403 | 17 | ✅ |
+| 2 | StaticSafety | `rule.rs` | 150 | 3 | ✅ |
+| 3 | UserSafety | `safety.rs` | 118 | 4 | ⚠️ STUB — check() 是 no-op |
+| 4 | RuntimeGuard | `guard.rs` | 355 | 13 | ✅ — OiSmoothing 衰减曲线完整 |
+| 5 | FSIR Gen | `fsir.rs` | 416 | 7 | ✅ — JSON + Postcard 双格式 |
 
-**设计文档（ADR）**
-- `docs/design/001-error-codegen.md` — 错误码代码生成器。Rust enum + 注释 → build script → Display impl + Markdown 编目。正则严格校验注释格式。源在代码，文档全自动，对手写零容忍。
-- `docs/design/002-ir-architecture.md` — 四层 IR 架构决策。为什么是四层不是三层或五层。每层织入一股独立流。PSIR 和 FSIR 分离 = PBM 永不离设备的隐私硬约束。
-- `docs/design/003-pass-pipeline.md` — 九 Pass 交织管线（Pass 0-8）决策。每个 Pass 只做一件事——织入一股新信息流或施加一层新安全约束。Pass 边界不冲刷 CPU 流水线。
-- `docs/design/004-dual-pipeline.md` — 双流水线架构决策。前台只跑 DSIR→ESIR（1ms 硬实时），后台离线预交织 Pass 0-5。物理隔离互不抢占。分支预测跑在 FPGA 上。
-- `docs/design/005-anim-macros.md` — Anim 宏系统决策。语法树级展开 + 三层感受安全保证（类型检查 + 强度生命周期 + 创伤作用域）。不是 C `#define` 的文本替换。
-- `docs/design/006-error-handling-oi.md` — Anim 错误处理决策。不是 Err 不是 Error。是 oi。轻。短。不堆栈。不 panic。交叉被挡 = 这帧不生成。下一帧继续。
-- `docs/design/007-branch-prediction.md` — **分支预测五讲（Smith 1981 → TAGE-SC-L 2016 → Anim PBM-RG）。** Smith 2-bit 饱和计数器、Yeh & Patt 两层自适应分类学、McFarling 锦标赛预测器、Jiménez 感知器（θ阈值+超维流形）、Seznec TAGE-SC-L + Anim 多速率时间频率域。十二行进化链终极对决表。PBM = 关联预测器。Rust 不提供安全——实现完 Pass 0 再深究。
+**总代码: 3,903 行 Rust。93 个测试，0 fail。** 6 个依赖——serde、serde_json、postcard、chrono、sha2、hex。零异步运行时。
 
-**架构文档**
-- `Anim-SAFETY.md` — 为什么安全必须死在交织期。三层防线各自挡在哪一层。紧急截断曲线不是硬截断。盲人重见光明的教训。
-- `Anim-LOCALITY.md` — 时间局部性与空间局部性。1ms 硬死线的物理约束。ESIR 帧环形缓冲区原地更新。Pattern Registry 按共现频率分桶。双流水线分支预测隔离。
-- `Anim-CROSSOVER.md` — 交叉、织入、回退与绳结。Anim 的一等数据交互模型。不是借用/引用/地址/解引用。是 cross_over(warp, weft)。cross checker 替代 borrow checker。
+**PBM 地基已就绪** (`pbm.rs`, 485 行, 15 测试):
+- SessionLabel (Normal/Abnormal/ColdStart) → PbmUpdateStrategy
+- DataConfidence (High/Low/Contaminated) → step multipliers
+- ColdStartGuard (前 10 次 Session 强制关闭预测器)
+- DampingMatrix (情绪梯度>2.0×→冻结内脏+触觉, 内脏>1.5×→冻结情绪)
+- 全部未接入管线——仅类型定义和单元测试
 
-**项目管理文档**
-- MEMORY / README / PHILOSOPHY / HANDOFF / ROADMAP / SNAPSHOT / FORGET / FUTURE / MISTAKES / DEPENDENCY_POLICY / CONVENTIONS / DEEPSEEK
-
-### 待完成
-
-- `examples/` — 示例 .anim 文件（v0.2 验收需要）
-- EBNF 形式语法
-- `src/` — 代码零行
+**示例文件** (`eg/`): 4 份 .anim + 1 份 registry.json (8 个核心原子)
 
 ---
 
-## 阶段零——数据采集（并行，不阻塞代码线）
+### ❌ Pass 6-8 — 零代码
 
-### 为什么必须先采集
-
-```
-感受不能凭空写数值给用户注入。没有生理数据基线——PBM 是空的——信号注入是盲的。
-
-"平静"在数据里长什么样——不是猜的——是测出来的。
-HRV、皮肤电导、EEG——先采集——有了基线——再开 write。
-PBM 知道"这个人的平静基线在这"——注入的信号才不会偏。
-```
-
-### 采集路线
-
-```
-现有（零成本）   Apple Watch / 华为手表
-                睡眠时长 + 静息心率 + HRV（SDNN）
-                够做"身体信了"的最终验证
-
-入门（几百块）   Polar H10 胸带
-                心电级 HRV——RMSSD、LF/HF 比值
-                迷走神经张力 = 安全基线 = PBM 情绪维度底座
-
-进阶（几千块）   Empatica E4 手环
-                皮肤电导 + 皮肤温度 + 加速度 + 血容量脉冲
-                四通道——覆盖情绪 + 触觉维度外围信号
-```
+| Pass | 名称 | 描述 |
+|------|------|------|
+| 6 | Personalize | FSIR × PBM → PSIR — PBM 左乘, 个人基线织入 |
+| 7 | DeviceMap | PSIR → DSIR — 设备感知交织, 算力分配 |
+| 8 | CodeGen | DSIR → ESIR — 帧级指令生成, FPGA 对接 |
 
 ---
 
-## v0.2 — Milestone 1: 交织器骨架
+### 📋 FORGET 摘要
+
+**P0 — 生产命门 (4/9 剩余):** 全部安全盲区——Pass 3 空桩修复、10Hz 安全看门狗、沙箱混合绕过、创伤绝对阈值——全部推迟到 ADR 009。
+
+**P1 — 功能受限 (11/14 剩余):** Pass 6-8 零代码、PBM 冷启动系数+收敛未实现、宏系统零代码、设备热插拔/抖动/outline 零设计。
+
+**P2 — 代码质量: 全部清零。**
+
+---
+
+## 下一步: v0.3 — Personalize + DeviceMap + CodeGen 骨架
 
 ### 目标
 
 ```
-Rust 项目初始化 → 八 Pass 骨架全部跑通 → 错误诊断系统上线
+FSIR × PBM → PSIR → DSIR → ESIR 完整链路（不含 FPGA 固件对接）
 ```
 
 ### 核心交付
 
-- `Cargo.toml` — 依赖声明（见 DEPENDENCY_POLICY.md）
-- `src/ast.rs` — AST 类型定义（.anim 源码的完整语法树）
-- `src/lexer.rs` — Pass 0 前半：词法分析
-- `src/parser.rs` — Pass 0 后半：语法分析 → AST
-- `src/typeck.rs` — Pass 1：类型检查 + Pattern Registry 查询接口
-- `src/static_safety.rs` — Pass 2：静态安全规则校验
-- `src/user_safety.rs` — Pass 3：用户状态安全（创伤分型交叉判定骨架）
-- `src/runtime_guard.rs` — Pass 4：运行期插桩代码生成
-- `src/fsir.rs` — Pass 5：FSIR 生成 + FSIR JSON 序列化
-- `src/error.rs` — 错误诊断系统（Rust 风格错误信息 + 修复建议）
-- `Makefile` — dev / test / lint
+- **ADR 009** — 覆盖 P0 剩余 4 项安全盲区（10Hz 看门狗、沙箱混合、创伤绝对阈值、设备热插拔）
+- **Pass 6 Personalize** — `personalize.rs`。pbm.rs 已有类型接入管线——ColdStartGuard 判定 SessionLabel → PbmUpdateStrategy 选 Full/SafetyOnly/Disabled → DampingMatrix 查冻结维度 → 生成 PSIR
+- **PSIR 序列化** — JSON 调试 + Postcard 二进制
+- **Pass 7 DeviceMap** — `device_map.rs`。PSIR → DSIR, 设备缺失降级 outline 模式
+- **Pass 8 CodeGen** — `codegen.rs`。DSIR → ESIR 帧级指令骨架（不含 FPGA 协议对接）
+- **测试** — FSIR JSON → Pass 6 → PSIR → Pass 7 → DSIR → Pass 8 → ESIR 闭环验证
 
 ### 验收
 
 ```
-✓ cargo build 通过
-✓ 一份完整的 .anim 示例文件 → FSIR JSON 输出
-✓ 错误示例（强度越界、点缀越界、未成年人违规）→ 交织期报错
-✓ cargo test --lib 覆盖所有公开 API
-✓ cargo clippy -- -D warnings 零报错
-```
-
----
-
-## v0.2.5 — Milestone 1.5: 可视化编辑器（基于 ZENO 节点图框架）
-
-### 目标
-
-```
-文本编译器稳定后 —— 感受创作者不需要手写 .anim 源码。
-基于 ZENO 节点图框架 (github.com/zenustech/zeno) 注册 Anim 节点类型，
-拖拽连线 → 导出 .anim 源码 → 喂给 animi。
-```
-
-### 核心交付
-
-- 注册 Anim 节点类型：`FeelingNode`（感受原子选择器）、`MixNode`（混音结构）、`ShapeNode`（shape 曲线编辑）
-- 右侧属性面板：强度区间、点缀配比、设备依赖
-- 连线 = 数据流：主旋律 → 点缀列表 → shape → 导出
-- 导出 = `.anim` 源码 → `animi` 编译 → FSIR JSON
-- 低强度 preview session 试戴
-
-### 验收
-
-```
-✓ 拖一个"平静"节点 + "归属"节点 → 连线 → 调强度 → 导出 .anim
-✓ 导出的 .anim 被 animi 正确编译为 FSIR
-✓ ZENO 的节点注册/连线/序列化全复用——不重复造编辑器框架
-```
-
----
-
-## v0.5 — 流对接（远期，硬件就绪后）
-
-### 与 Feelings 五股流的耦合点
-
-```
-Anim 不碰传输层（gRPC/NATS/WebSocket）——只把 ESIR 帧塞进 Feelings-OS busd。
-busd 把 ESIR 分发到五股流的"注入流"——Anim 的工作在注入流的上游结束。
-Anim 的前台双流水线（1ms 帧）和 Feelings 的 Stream First 是同构的——
-都是"流不停——不在中间断帧"。
-```
-
----
-
-## v0.3 — Milestone 2: 个人适配 + 设备映射
-
-### 目标
-
-```
-FSIR → PSIR（PBM 偏移）→ DSIR（设备分配）→ ESIR（帧级指令骨架）
-```
-
-### 核心交付
-
-- `src/pbm.rs` — 个人基线矩阵（四维差异化冷启动 + 收敛）
-- `src/personalize.rs` — Pass 6 核心：FSIR × PBM → PSIR
-- `src/device_map.rs` — Pass 7：PSIR → DSIR（算力感知交织）
-- `src/codegen.rs` — Pass 8：DSIR → ESIR 帧级指令骨架
-- 声明式注解展开（`@auto_reduce_on` 等 → ESIR 插桩）
-
-### 验收
-
-```
-✓ FSIR → ESIR 完整链路跑通（不含 FPGA 固件对接）
-✓ PBM 冷启动四维系数独立生效
+✓ FSIR → ESIR 完整链路跑通
+✓ PBM 冷启动四维系数独立生效（内脏0.75/情绪0.40/触觉0.80/听觉0.85）
+✓ ColdStartGuard + DampingMatrix 在管线中正向验证
 ✓ 设备缺失降级（缺 neck → outline 模式）
 ✓ cargo test 全绿
 ```
 
 ---
 
-## v0.4 — Milestone 3: 双流水线 + 离线预交织
-
-### 目标
+## 远期里程碑
 
 ```
-后台离线预交织 FSIR 缓存 + 前台只跑 Personalize→CodeGen
-```
-
-### 核心交付
-
-- 后台离线交织管线（server 端，空闲时触发）
-- FSIR 缓存格式 + 设备本地存储
-- Session 启动快速加载（跳过 Parse/TypeCheck/StaticSafety）
-- 双流水线调度器（前后台互不抢占）
-
-### 验收
-
-```
-✓ 离线预交织 FSIR → 设备缓存
-✓ Session 启动延迟 < 100ms（加载缓存 FSIR）
-✓ 后台交织不抢占前台时隙
-```
-
----
-
-## v0.5 — Milestone 4: 实时交织 + FPGA 对接
-
-### 目标
-
-```
-ESIR → FPGA 固件接口 → 硬件闭环验证
-```
-
-### 核心交付
-
-- FPGA 通信协议（ESIR 帧格式 → 硬件数据包）
-- 闭环偏差修正（上一帧生理反馈 → 下一帧参数微调）
-- 紧急冲刷 + 安全停止帧对接
-
-### 验收
-
-```
-✓ ESIR 帧级指令被 FPGA 固件正确解析
-✓ 闭环修正回路跑通（模拟生理数据 → 偏差 → 下一帧调整）
-✓ 紧急停止帧触发后硬件信号归零
-```
-
----
-
-## v1.0 — 自举
-
-### 目标
-
-```
-用 v0.x 的 animi 编译一份 Anim 写的 animi 源码
-新 animi 不再依赖 Rust 工具链
-向下兼容 v0.x 生成的 FSIR 产物
-```
-
----
-
-## v2.0 — 从 01 裸奔
-
-### 目标
-
-```
-animi 运行在 Feelings 设备上
-直接管理自己的内存、调度、I/O
-不经过 OS
+v0.4   双流水线 + 离线预交织 — 后台离线 FSIR 缓存, Session 启动延迟 <100ms
+v0.5   实时交织 + FPGA 对接 — ESIR → 硬件数据包, 闭环偏差修正, 紧急冲刷
+v1.0   自举 — 用 v0.x 的 animi 编译 Anim 写的 animi, 不再依赖 Rust 工具链
+v2.0   从 01 裸奔 — animi 运行在 Feelings 设备上, 不经过 OS
 ```
 
 ---
@@ -259,6 +100,4 @@ animi 运行在 Feelings 设备上
 v0.x      Rust 寄居阶段，一切可变
 v1.0      自举完成
 v2.0      从 01 裸奔
-
-v0.1 → v0.2 → v0.3 → v0.4 → v0.5 → v1.0 → v2.0
 ```

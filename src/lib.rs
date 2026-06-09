@@ -9,6 +9,8 @@ pub mod log;
 pub mod oi;
 pub mod parser;
 pub mod pbm;
+pub mod personalize;
+pub mod psir;
 pub mod registry;
 pub mod rule;
 pub mod safety;
