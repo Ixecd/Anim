@@ -7,6 +7,7 @@ use serde::Deserialize;
 use sha2::{Digest, Sha256};
 
 use crate::error::AnimiError;
+use crate::pbm::PbmDimension;
 
 /// 原子类型——核心（官方审核）vs 沙箱（用户上传，未验证）。
 #[derive(Debug, Clone, Copy, PartialEq, Deserialize)]
@@ -22,6 +23,12 @@ struct AtomDef {
     name: String,
     class: AtomClass,
     max_ratio: f64,
+    #[serde(default = "default_dimension")]
+    dimension: PbmDimension,
+}
+
+fn default_dimension() -> PbmDimension {
+    PbmDimension::Emotional
 }
 
 /// 运行时 Registry。由外部 JSON 或内建列表初始化。
@@ -35,6 +42,8 @@ pub struct AtomEntry {
     pub name: String,
     pub class: AtomClass,
     pub max_ratio: f64,
+    /// 该原子的主感受维度——用于 PBM 四维系数选择。
+    pub dimension: PbmDimension,
 }
 
 impl Default for Registry {
@@ -68,6 +77,7 @@ impl Registry {
                     name: d.name,
                     class: d.class,
                     max_ratio: d.max_ratio,
+                    dimension: d.dimension,
                 })
             })
             .collect::<Result<_, _>>()?;
@@ -76,22 +86,24 @@ impl Registry {
 
     /// 内建 fallback——8 个核心原子。
     fn from_builtin() -> Self {
+        use PbmDimension::*;
         let builtin = vec![
-            ("calm_meditative", AtomClass::Core, 1.0),
-            ("belonging", AtomClass::Core, 0.5),
-            ("clarity", AtomClass::Core, 0.5),
-            ("safety", AtomClass::Core, 0.5),
-            ("post_achievement", AtomClass::Core, 0.3),
-            ("gentle_focus", AtomClass::Core, 0.5),
-            ("deep_rest", AtomClass::Core, 0.5),
-            ("warmth", AtomClass::Core, 0.5),
+            ("calm_meditative", AtomClass::Core, 1.0, Emotional),
+            ("belonging", AtomClass::Core, 0.5, Emotional),
+            ("clarity", AtomClass::Core, 0.5, Auditory),
+            ("safety", AtomClass::Core, 0.5, Visceral),
+            ("post_achievement", AtomClass::Core, 0.3, Emotional),
+            ("gentle_focus", AtomClass::Core, 0.5, Auditory),
+            ("deep_rest", AtomClass::Core, 0.5, Visceral),
+            ("warmth", AtomClass::Core, 0.5, Tactile),
         ];
         let atoms = builtin
             .into_iter()
-            .map(|(n, c, r)| AtomEntry {
+            .map(|(n, c, r, d)| AtomEntry {
                 name: n.into(),
                 class: c,
                 max_ratio: r,
+                dimension: d,
             })
             .collect();
         Registry { atoms }

@@ -1,12 +1,14 @@
 // src/personalize.rs — Pass 6：FSIR × PBM → PSIR
 
 use crate::fsir::FsirDoc;
-use crate::pbm::{ColdStartGuard, DampingMatrix, PbmDimension, SessionLabel};
+use crate::pbm::{ColdStartGuard, DampingMatrix, PbmDimension, SessionLabel, StepState};
 use crate::psir::{
     PersonalizedAccent, PersonalizedFeeling, PsirDecayStep, PsirDoc,
     PsirSmoothing,
 };
+use crate::registry::Registry;
 use crate::error::AnimiError;
+use std::collections::HashMap;
 
 // ── 冷启动四维系数 ──────────────────────────────────────────
 
@@ -45,7 +47,7 @@ impl Default for PbmColdStartCoefficients {
 ///   - Mid intensity (30-70%): response slows
 ///   - High intensity (70-100%): near saturation
 ///
-/// 公式（详见 docs/design/009-pbm-math.md §一）:
+/// 公式（详见 docs/design/009-math-and-constraints.md §一）:
 ///   x = original / cap
 ///   σ(x) = 1/(1+e^{-k(x-x0)}), k=6, x0=0.5
 ///   compression(x) = 1 − α×σ(x), α=0.5
@@ -75,11 +77,12 @@ pub fn sigmoidal_scale(original: u32, baseline_coeff: f64, cap: u32) -> u32 {
 /// # 参数
 /// - `fsir`: 待个性化的通用感受结构
 /// - `guard`: 冷启动守卫——当前用户的 Session 计数状态
-/// - `damping`: 阻尼矩阵——判定哪些维度在当前 Session 被冻结
+/// - `damping_gradients`: 四维度实测梯度（v0.3: None = 无传感器数据, 阻尼关闭）
 /// - `session_label`: 本次 Session 的标记——ColdStart/Normal/Abnormal
 /// - `coeffs`: PBM 四维冷启动基线系数
 /// - `user_cap`: 用户的强度上限
 /// - `pbm_updated_at`: PBM 最后更新时间（RFC 3339）
+/// - `registry`: Pattern Registry——查询原子主维度和独立比例帽
 ///
 /// # 返回
 /// - 成功：PsirDoc
@@ -87,30 +90,57 @@ pub fn sigmoidal_scale(original: u32, baseline_coeff: f64, cap: u32) -> u32 {
 pub fn personalize(
     fsir: &FsirDoc,
     guard: &ColdStartGuard,
-    _damping: &DampingMatrix,
+    damping_gradients: Option<&[(PbmDimension, f64); 4]>,
     _session_label: SessionLabel,
     coeffs: PbmColdStartCoefficients,
     user_cap: u32,
     pbm_updated_at: &str,
+    registry: &Registry,
 ) -> Result<PsirDoc, AnimiError> {
     // ── 1. 冷启动判定 ──────────────────────────────────────
     let cold_start = guard.is_cold_start();
     let session_count = guard.session_count;
 
     // ── 2. 阻尼矩阵判定 ──────────────────────────────────────
-    // 所有 Session 都应用阻尼，只排除冷启动前 10 次。
-    // 阻尼是本次 Session 的输出保护——异常 Session 恰恰最需要阻尼。
-    let damping_active = !cold_start;
-    // 主维度（默认 Emotional）：Emotional 触发或 Visceral 触发都能冻结
-    let damped_main = damping_active && (
-        DampingMatrix::should_freeze(PbmDimension::Emotional, PbmDimension::Visceral).is_some()
-        || DampingMatrix::should_freeze(PbmDimension::Visceral, PbmDimension::Emotional).is_some()
-    );
+    // v0.3: 无传感器数据 → damping_gradients = None → 阻尼关闭。
+    // v0.4+: 传入四维度实测梯度 → DampingMatrix::apply() 计算冻结维度。
+    let frozen: HashMap<PbmDimension, StepState> = match damping_gradients {
+        Some(gradients) => {
+            let default_steps = [
+                (PbmDimension::Visceral, 1.0),
+                (PbmDimension::Emotional, 1.0),
+                (PbmDimension::Tactile, 1.0),
+                (PbmDimension::Auditory, 1.0),
+            ];
+            DampingMatrix::apply(gradients, &default_steps)
+        }
+        None => HashMap::new(),
+    };
+    let is_frozen = |dim: PbmDimension| -> bool {
+        !cold_start
+            && frozen
+                .get(&dim)
+                .map(|s| matches!(s, StepState::Frozen { .. }))
+                .unwrap_or(false)
+    };
+    let damped_main = is_frozen(PbmDimension::Emotional);
+    let damped_accent = is_frozen(PbmDimension::Tactile);
 
-    // ── 3. 四维偏移——选择主维度系数 ──────────────────────────
-    // 简化版 v0.3——默认按情绪维度做基线偏移
-    // 后续版本在 registry 里标注每个原子的主维度
-    let baseline_coeff = coeffs.emotional;
+    // ── 3. 四维偏移——按原子主维度选择系数 ──────────────────────
+    // v0.3: 从 Registry 查询原子的主维度，对号选用四维系数。
+    // 未被 Registry 收录的原子——default Emotional (0.40)。
+    let atom_dimension = |atom_name: &str| -> PbmDimension {
+        registry
+            .lookup(atom_name)
+            .map(|e| e.dimension)
+            .unwrap_or(PbmDimension::Emotional)
+    };
+    let baseline_coeff = match atom_dimension(&fsir.mix.main) {
+        PbmDimension::Visceral => coeffs.visceral,
+        PbmDimension::Emotional => coeffs.emotional,
+        PbmDimension::Tactile => coeffs.tactile,
+        PbmDimension::Auditory => coeffs.auditory,
+    };
 
     // ── 4. 主旋律——FSIR 原子名 → 个人偏移 → 个人参数 ──────────
     let main = PersonalizedFeeling {
@@ -122,9 +152,10 @@ pub fn personalize(
     // ── 5. 点缀——遍历FSIR点缀 + 比例帽校验 + 缩放 ─────────────
     let mut accents = Vec::new();
     for acc in &fsir.mix.accents {
-        let ratio_cap = default_accent_cap(&acc.atom);
-        let damped_accent = damping_active
-            && DampingMatrix::should_freeze(PbmDimension::Emotional, PbmDimension::Tactile).is_some();
+        // v0.3: 从 Registry 读取每原子独立比例帽，fallback 0.30
+        let ratio_cap = registry
+            .max_ratio(&acc.atom)
+            .unwrap_or(0.30);
         let applied_ratio = if damped_accent {
             (acc.ratio / 2.0).min(ratio_cap)
         } else {
@@ -190,19 +221,6 @@ pub fn personalize(
         pbm_updated_at.to_string(),
         session_count,
     ))
-}
-
-// ── 点缀默认比例帽 ──────────────────────────────────────────
-
-/// 返回指定原子的默认点缀比例上限。
-///
-/// 基于 ADR 003 §4.3 和 Feelings-LANGUAGE.md §4.1。
-/// 硬帽——不接受扩展。
-fn default_accent_cap(_atom: &str) -> f64 {
-    // 硬帽。需要补充 Registry 驱动的查找。
-    // 后面 v0.3 会改为通过 Pattern Registry 的 max_ratio 字段拓展。
-    // 目前——全原子统一 0.30。
-    0.30
 }
 
 // ── tests ──────────────────────────────────────────────────────
@@ -286,16 +304,17 @@ mod tests {
     fn basic_personalize() {
         let fsir = make_fsir("calm", "calm_meditative", vec![("belonging", 0.3)], 15, 45);
         let guard = ColdStartGuard::default(); // session_count = 0
-        let damping = DampingMatrix;
         let coeffs = PbmColdStartCoefficients::default();
+        let registry = Registry::default();
         let psir = personalize(
             &fsir,
             &guard,
-            &damping,
+            None, // v0.3: 无传感器数据
             SessionLabel::ColdStart,
             coeffs,
             100,
             "2026-06-09T10:00:00Z",
+            &registry,
         )
         .expect("personalize failed");
         assert_eq!(psir.name, "calm");
@@ -303,11 +322,13 @@ mod tests {
         assert!(!psir.trauma_rerouted);
         assert_eq!(psir.main.atom, "calm_meditative");
         assert!((psir.main.baseline_offset - 0.40).abs() < 0.001); // emotional
+        assert!(!psir.main.damped); // cold_start → 不冻结
         assert_eq!(psir.intensity.cap, 100);
         assert!(psir.intensity.applied_max <= 100);
         assert_eq!(psir.accents.len(), 1);
         assert_eq!(psir.accents[0].atom, "belonging");
         let accent = &psir.accents[0];
         assert!(accent.applied_ratio <= accent.ratio_cap);
+        assert!(!accent.damped); // cold_start → 不冻结
     }
 }

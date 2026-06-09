@@ -66,7 +66,7 @@
 
 24. **Shape 校验不对称——原子走 Registry 实例，Shape 走静态函数** — `typeck.rs` 里感受原子用 `registry.check_atom()` 实例方法（支持外部 JSON 动态加载），但 shape 校验用的 `shape_names()` 是模块级静态函数。未来扩展自定义 shape 时不对称。需将 `shape_names` 收拢到 Registry 实例中管理。FIXME: v0.3。
 
-25. **DampingMatrix 在 Pass 6 中被架空** — `personalize()` 参数 `_damping` 被下划线闲置，判定是纯静态的——只要 `damping_active=true` 则 `damped_main` 永远为 `true`，没有检查当前帧的瞬时梯度是否真的超标。v0.4 需接收各维度实测梯度，调用 `DampingMatrix::apply(&gradients, &steps)` 替代静态判断。FIXME: v0.4。
+25. **DampingMatrix 在 Pass 6 中被架空** — v0.3 无实时传感器数据，`personalize()` 现接受 `damping_gradients: Option<&[(PbmDimension, f64); 4]>`——`None` = 阻尼关闭，`Some` = 调用 `DampingMatrix::apply()` 计算冻结维度。四维系数已打通。点缀比例帽已从 Registry 读取。FORGET v0.3 已全部修正。FIXME: v0.4——传入实测梯度数据启用动态阻尼。
 
 ### 缓存
 
