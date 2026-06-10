@@ -34,7 +34,7 @@
 
 ---
 
-## P1 — 功能受限（11/20）
+## P1 — 功能受限（8/20）
 
 ### 交织管线
 
@@ -68,11 +68,11 @@
 
 ~~25. **DampingMatrix 在 Pass 6 中被架空**~~ ✅ — damping_gradients:Option(None=关闭)。四维系数打通。点缀帽从Registry驱动。v0.4传入实测梯度启用动态阻尼。
 
-26. **damping_gradients=None 信号缺失降级策略缺失** — 当传感器层抖动导致连续 `None` 时，代码退化为 `HashMap::new()`（零冻结=no-damping 安全默认态）。但规范规定的"因子三降级体系"要求区分：是 Damping Hold（保持上一帧阻尼状态）还是安全降级？信号缺失 ≠ 用户安全——不冻结也许是错的。需在 personalize 内部增加 `previous_frozen` 状态记忆 + `None` 降级分支。FIXME: v0.4。
+~~26. **damping_gradients=None 信号缺失降级策略缺失**~~ ✅ — PbmState新增 previous_frozen 字段。None→Damping Hold（保持上一帧冻结状态），previous_frozen也为 None→安全降级零冻结。因子三降级体系第一条已落地。`src/personalize.rs`。
 
-27. **点缀冻结维度判定硬编码 Tactile——其他维度点缀漏网** — `personalize.rs:121` `damped_accent = is_frozen(PbmDimension::Tactile)` 只查 Tactile。Visceral/Auditory/Emotional 维度的点缀即使阻尼判定为 Frozen，也不会被 `/2.0` 斩断，且 PSIR 输出的 `damped` 字段被统一刷成同一个值（丢失逐原子粒度）。需改为每原子查自身维度：`let damped_this_accent = is_frozen(atom_dimension(&acc.atom))`。FIXME: v0.4。
+~~27. **点缀冻结维度判定硬编码 Tactile——其他维度点缀漏网**~~ ✅ — 改为每原子按自身维度逐个判定：`is_frozen(atom_dimension(&acc.atom))`。PSIR 输出 `damped` 字段逐原子粒度正确。`src/personalize.rs`。
 
-28. **主旋律阻尼维度硬编码 Emotional——非情绪主旋律漏网** — 和 #27 完全对称的 bug，同一行上下。`personalize.rs:120` `damped_main = is_frozen(PbmDimension::Emotional)` 硬编码查情绪维度。主旋律是 `warmth`（触觉）→ 触觉冻结不触发阻尼 → 生理冲击直接绕过。修复：`let damped_main = is_frozen(atom_dimension(&fsir.mix.main))`。FIXME: v0.4。
+~~28. **主旋律阻尼维度硬编码 Emotional——非情绪主旋律漏网**~~ ✅ — 改为 `atom_dimension(&fsir.mix.main)` 查主旋律自身维度。warmth(触觉)→触觉冻结正确触发阻尼。`src/personalize.rs`。
 
 ### 缓存
 
@@ -140,6 +140,9 @@
 - ✅ 数学与约束规范——009-math-and-constraints.md 11章全公式（2026-06-09）
 - ✅ 架构全景图——010-architecture-diagram.md（2026-06-09）
 - ✅ FORGET P1#15 时钟同步边界——归 Feelings-OS timerd+busd（2026-06-09）
+- ✅ P1 #26 damping_gradients=None 降级——PbmState.previous_frozen + Damping Hold（2026-06-10）
+- ✅ P1 #27 点缀冻结逐原子维度——is_frozen(atom_dimension(&acc.atom))（2026-06-10）
+- ✅ P1 #28 主旋律冻结自身维度——is_frozen(atom_dimension(&fsir.mix.main))（2026-06-10）
 
 ---
 
@@ -169,6 +172,13 @@ feeling <基本感受包名> {
 ## 编辑记录
 
 ```
+2026-06-10  v0.1.20 豆包 review #2 闭合——阻尼冻结维度三漏洞全部 fix
+            - P1 #26 闭合——PbmState 新增 previous_frozen 字段。None→Damping Hold。
+            - P1 #27 闭合——点缀冻结逐原子查自身维度，PSIR damped 字段逐原子粒度正确。
+            - P1 #28 闭合——主旋律冻结查 atom_dimension(&fsir.mix.main)。
+            - make dev: fmt ✅ | clippy ✅ 0 warnings | test ✅ 99 passed | build ✅
+            - P1: 11/20 → 8/20。
+
 2026-06-09  v0.1.19 豆包 review #2——damping_gradients悬空 + 点缀/主旋律冻结漏网
             - P1 #26 新增：damping_gradients=None 信号缺失降级策略缺失——因子三降级体系待落地
             - P1 #27 新增：点缀冻结维度判定硬编码Tactile——其他维度点缀漏网

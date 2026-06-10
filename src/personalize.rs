@@ -75,7 +75,11 @@ pub fn sigmoidal_scale(original: u32, baseline_coeff: f64, cap: u32) -> u32 {
 /// PBM 状态——用于 `personalize()` 将 8 个参数收拢为 1 个。
 pub struct PbmState<'a> {
     pub guard: &'a ColdStartGuard,
+    /// 当前帧的四维传感器梯度（None = 传感器信号缺失）。
     pub damping_gradients: Option<&'a [(PbmDimension, f64); 4]>,
+    /// 上一帧的冻结状态——当 damping_gradients=None 时使用 (Damping Hold)。
+    /// None = 无历史状态（首帧或长时间无信号→安全降级为零阻尼）。
+    pub previous_frozen: Option<&'a HashMap<PbmDimension, StepState>>,
     pub session_label: SessionLabel,
     pub coeffs: PbmColdStartCoefficients,
     pub user_cap: u32,
@@ -97,7 +101,8 @@ pub fn personalize(
     let session_count = pbm.guard.session_count;
 
     // ── 2. 阻尼矩阵判定 ──────────────────────────────────────
-    // v0.3: 无传感器数据 → damping_gradients = None → 阻尼关闭。
+    // v0.4: damping_gradients=None → Damping Hold（保持上一帧冻结状态）。
+    //      previous_frozen=None → 安全降级为 HashMap::new()（零冻结）。
     let frozen: HashMap<PbmDimension, StepState> = match pbm.damping_gradients {
         Some(gradients) => {
             let default_steps = [
@@ -108,7 +113,7 @@ pub fn personalize(
             ];
             DampingMatrix::apply(gradients, &default_steps)
         }
-        None => HashMap::new(),
+        None => pbm.previous_frozen.cloned().unwrap_or_default(),
     };
     let is_frozen = |dim: PbmDimension| -> bool {
         !cold_start
@@ -117,8 +122,6 @@ pub fn personalize(
                 .map(|s| matches!(s, StepState::Frozen { .. }))
                 .unwrap_or(false)
     };
-    let damped_main = is_frozen(PbmDimension::Emotional);
-    let damped_accent = is_frozen(PbmDimension::Tactile);
 
     // ── 3. 四维偏移——按原子主维度选择系数 ──────────────────────
     let atom_dimension = |atom_name: &str| -> PbmDimension {
@@ -127,26 +130,33 @@ pub fn personalize(
             .map(|e| e.dimension)
             .unwrap_or(PbmDimension::Emotional)
     };
-    let baseline_coeff = match atom_dimension(&fsir.mix.main) {
+
+    // ── 4. 主旋律——按自身维度判定阻尼 ────────────────────────
+    let main_dim = atom_dimension(&fsir.mix.main);
+    let damped_main = is_frozen(main_dim);
+    let baseline_coeff = match main_dim {
         PbmDimension::Visceral => pbm.coeffs.visceral,
         PbmDimension::Emotional => pbm.coeffs.emotional,
         PbmDimension::Tactile => pbm.coeffs.tactile,
         PbmDimension::Auditory => pbm.coeffs.auditory,
     };
 
-    // ── 4. 主旋律——FSIR 原子名 → 个人偏移 → 个人参数 ──────────
+    // ── 5. 主旋律——FSIR 原子名 → 个人偏移 → 个人参数 ──────────
     let main = PersonalizedFeeling {
         atom: fsir.mix.main.clone(),
         baseline_offset: baseline_coeff,
         damped: damped_main,
     };
 
-    // ── 5. 点缀——遍历FSIR点缀 + 比例帽校验 + 缩放 ─────────────
+    // ── 6. 点缀——遍历FSIR点缀 + 比例帽校验 + 缩放 ─────────────
     let mut accents = Vec::new();
     for acc in &fsir.mix.accents {
+        // v0.4: 按点缀自身的维度判定阻尼 (P1 #27 fix)
+        let accent_dim = atom_dimension(&acc.atom);
+        let damped = is_frozen(accent_dim);
         // v0.3: 从 Registry 读取每原子独立比例帽，fallback 0.30
         let ratio_cap = registry.max_ratio(&acc.atom).unwrap_or(0.30);
-        let applied_ratio = if damped_accent {
+        let applied_ratio = if damped {
             (acc.ratio / 2.0).min(ratio_cap)
         } else {
             acc.ratio.min(ratio_cap)
@@ -156,11 +166,11 @@ pub fn personalize(
             original_ratio: acc.ratio,
             applied_ratio,
             ratio_cap,
-            damped: damped_accent,
+            damped,
         });
     }
 
-    // ── 6. 强度 sigmoidal 缩放 ─────────────────────────────
+    // ── 7. 强度 sigmoidal 缩放 ─────────────────────────────
     let applied_min = sigmoidal_scale(fsir.intensity.min, baseline_coeff, pbm.user_cap);
     let applied_max = sigmoidal_scale(fsir.intensity.max, baseline_coeff, pbm.user_cap);
 
@@ -304,6 +314,7 @@ mod tests {
         let pbm = PbmState {
             guard: &ColdStartGuard::default(),
             damping_gradients: None,
+            previous_frozen: None,
             session_label: SessionLabel::ColdStart,
             coeffs: PbmColdStartCoefficients::default(),
             user_cap: 100,
