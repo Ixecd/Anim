@@ -34,7 +34,7 @@
 
 ---
 
-## P1 — 功能受限（8/20）
+## P1 — 功能受限（7/20）
 
 ### 交织管线
 
@@ -74,6 +74,8 @@
 
 ~~28. **主旋律阻尼维度硬编码 Emotional——非情绪主旋律漏网**~~ ✅ — 改为 `atom_dimension(&fsir.mix.main)` 查主旋律自身维度。warmth(触觉)→触觉冻结正确触发阻尼。`src/personalize.rs`。
 
+~~29. **冷启动阻尼断崖——Session 10 首次触发阻尼无过渡**~~ ✅ — PbmState 新增 `cold_start_window` 字段（默认 5 Session）。冷启动结束后阻尼从 0% 线性过渡到 100%：α = min(1.0, (S-10)/window)，freeze_factor = 1.0 - 0.5×α。Session 10: α=0→无压制。Session 15+: α=1→全额阻尼。`src/personalize.rs`。
+
 ### 缓存
 
 18. **后台预编译 FSIR 缓存失效策略缺失** — 安全规则更新后本地缓存仍用旧参数。FSIR 需携带规则版本号+Registry 哈希。FIXME: FSIR meta 字段扩展。
@@ -88,9 +90,11 @@
 
 ---
 
-## P2 — 代码质量 / 可维护性（1/1）
+## P2 — 代码质量 / 可维护性（2/2）
 
 25. **log.rs 全局日志级别使用 Relaxed 内存顺序** — 多线程环境下可能出现"设置了日志级别但部分线程仍用旧级别"的情况，概率极低影响极小——当前单线程 CLI 不触发。需将 `store` 改为 `Release`、`load` 改为 `Acquire`。FIXME: v0.4（daemon 模式引入前必须修）。
+
+29. **PbmDimension HashMap 可换固定数组** — 4 枚举值用 SipHasher + 每帧 new/clone 开销。可换 `[f64; 4]` 或 enum_map 零堆分配，单帧压微秒级。当前 1ms/帧 + Rust 单线程不构成瓶颈——v0.4 设备上线评估。FIXME: v0.4。
 
 ~~25. **无日志系统**~~ ✅ — `A_info!`/`A_warn!`/`A_error!` 宏，时间戳+ANSI颜色。KubePivot用P，Anim用A。
 
@@ -143,6 +147,7 @@
 - ✅ P1 #26 damping_gradients=None 降级——PbmState.previous_frozen + Damping Hold（2026-06-10）
 - ✅ P1 #27 点缀冻结逐原子维度——is_frozen(atom_dimension(&acc.atom))（2026-06-10）
 - ✅ P1 #28 主旋律冻结自身维度——is_frozen(atom_dimension(&fsir.mix.main))（2026-06-10）
+- ✅ P1 #29 冷启动阻尼淡入窗——cold_start_window + freeze_factor α 线性过渡（2026-06-10）
 
 ---
 
@@ -172,6 +177,13 @@ feeling <基本感受包名> {
 ## 编辑记录
 
 ```
+2026-06-10  v0.1.21 点缀比例帽语义修正 + 冷启动阻尼淡入窗 + P2微优化
+            - #3 fix: 点缀比例帽冻结态改为先卡帽再斩断——阻尼在 cap 内真正生效
+            - P1 #29 闭合：冷启动阻尼淡入窗——cold_start_window + freeze_factor α 线性过渡
+            - P2 #29 新增：PbmDimension HashMap 可换固定数组 (v0.4 评估)
+            - P1: 8/20 → 7/20。P2: 1/1 → 2/2。
+            - make dev: fmt ✅ | clippy ✅ 0 warnings | test ✅ 99 passed | build ✅
+
 2026-06-10  v0.1.20 豆包 review #2 闭合——阻尼冻结维度三漏洞全部 fix
             - P1 #26 闭合——PbmState 新增 previous_frozen 字段。None→Damping Hold。
             - P1 #27 闭合——点缀冻结逐原子查自身维度，PSIR damped 字段逐原子粒度正确。

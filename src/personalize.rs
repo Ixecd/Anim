@@ -80,6 +80,9 @@ pub struct PbmState<'a> {
     /// 上一帧的冻结状态——当 damping_gradients=None 时使用 (Damping Hold)。
     /// None = 无历史状态（首帧或长时间无信号→安全降级为零阻尼）。
     pub previous_frozen: Option<&'a HashMap<PbmDimension, StepState>>,
+    /// 冷启动后阻尼淡入窗长度（Session 数）。10 + window 后全额阻尼。
+    /// 0 = 无窗口（立即全额阻尼）。默认 5。
+    pub cold_start_window: u32,
     pub session_label: SessionLabel,
     pub coeffs: PbmColdStartCoefficients,
     pub user_cap: u32,
@@ -123,6 +126,26 @@ pub fn personalize(
                 .unwrap_or(false)
     };
 
+    // ── 2b. 冷启动阻尼淡入窗（P1 #29） ─────────────────────────
+    // v0.4: 冷启动结束后（Session 10+），阻尼从 0% 线性过渡到 100%。
+    //   α = min(1.0, (session_count - 10) / window)
+    //   damping_reduction = 0.5 × α
+    //   freeze_factor = 1.0 - damping_reduction (1.0 → 0.5)
+    let damping_window_alpha = if pbm.cold_start_window > 0 {
+        let s = session_count.saturating_sub(10);
+        let w = pbm.cold_start_window as f64;
+        (s as f64 / w).min(1.0)
+    } else {
+        1.0
+    };
+    let freeze_factor = |is_damped: bool| -> f64 {
+        if is_damped {
+            1.0 - 0.5 * damping_window_alpha
+        } else {
+            1.0
+        }
+    };
+
     // ── 3. 四维偏移——按原子主维度选择系数 ──────────────────────
     let atom_dimension = |atom_name: &str| -> PbmDimension {
         registry
@@ -156,11 +179,7 @@ pub fn personalize(
         let damped = is_frozen(accent_dim);
         // v0.3: 从 Registry 读取每原子独立比例帽，fallback 0.30
         let ratio_cap = registry.max_ratio(&acc.atom).unwrap_or(0.30);
-        let applied_ratio = if damped {
-            (acc.ratio / 2.0).min(ratio_cap)
-        } else {
-            acc.ratio.min(ratio_cap)
-        };
+        let applied_ratio = (acc.ratio.min(ratio_cap)) * freeze_factor(damped);
         accents.push(PersonalizedAccent {
             atom: acc.atom.clone(),
             original_ratio: acc.ratio,
@@ -315,6 +334,7 @@ mod tests {
             guard: &ColdStartGuard::default(),
             damping_gradients: None,
             previous_frozen: None,
+            cold_start_window: 5,
             session_label: SessionLabel::ColdStart,
             coeffs: PbmColdStartCoefficients::default(),
             user_cap: 100,
