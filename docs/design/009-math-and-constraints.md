@@ -160,6 +160,40 @@ v0.4 需传入各维度瞬时梯度 + 历史步长。（FORGET P1 #25）
 - `predictor_enabled()`: `!is_cold_start()`
 - `complete_session()`: `session_count += 1`
 
+### 7.1 冷启动阻尼淡入窗（v0.4）
+
+**位置**：`src/personalize.rs` — `damping_window_alpha` + `freeze_factor`
+
+冷启动结束后（Session 10 起），阻尼从 0% 线性过渡到 100%。避免 Session 9→10 首次触发阻尼时的断崖效应。
+
+**参数**：
+
+| 参数 | 默认值 | 含义 |
+|------|--------|------|
+| W (cold_start_window) | 5 | 淡入窗口长度（Session 数） |
+| S_crit | 10 | 冷启动阈值（ColdStartGuard.threshold） |
+
+**公式**：
+
+```
+α = min(1.0, (S - S_crit) / W)          // 过渡因子，Session 10→α=0, Session 15+→α=1
+freeze_factor = 1.0 - 0.5 × α           // 阻尼因子，1.0→0.5
+applied_ratio = (original.min(ratio_cap)) × freeze_factor
+```
+
+**Session 演算**：
+
+```
+S=10  α=0.0  freeze_factor=1.00   →  零压制（无断崖）
+S=11  α=0.2  freeze_factor=0.90   →  轻试探
+S=12  α=0.4  freeze_factor=0.80   →  缓进
+S=13  α=0.6  freeze_factor=0.70   →  爬升
+S=14  α=0.8  freeze_factor=0.60   →  接近全力
+S=15+ α=1.0  freeze_factor=0.50   →  全额阻尼（过渡窗关闭）
+```
+
+**边界条件**：`cold_start_window = 0` → α 固定为 1.0 → 无窗口——首帧全额阻尼。`cold_start = true` → `is_frozen()` 永远返回 false——公式不触发。
+
 ---
 
 ## 八、OiSmoothing 衰减曲线
@@ -186,12 +220,14 @@ v0.4 需传入各维度瞬时梯度 + 历史步长。（FORGET P1 #25）
 | Core | 0.30（通用默认）/ Registry.max_ratio() | `default_accent_cap()` |
 | Sandbox | 0.30 | `rule.rs :: SANDBOX_ACCENT_MAX` |
 
-**Damping 态调整**：
+**Damping 态调整**（v0.4 修正——先卡帽再斩断）：
 
 ```
 非冻结：applied = original.min(ratio_cap)
-冻结态：applied = (original / 2.0).min(ratio_cap)
+冻结态：applied = (original.min(ratio_cap)) × freeze_factor   // freeze_factor ∈ [1.0, 0.5]
 ```
+
+**修正说明**：旧版 `(original / 2.0).min(ratio_cap)` 先斩断再卡帽——原始值存在"溢出缓冲垫"时阻尼被对冲失效（0.8/2.0=0.4→min(0.3)=0.3，满额输出）。新版先卡帽再乘冻结因子——阻尼在 cap 内真正生效（0.8→min(0.3)→×0.5=0.15）。
 
 **后续扩展**：从 `Registry::max_ratio()` 读取每原子独立帽。
 
@@ -231,6 +267,7 @@ v0.4 需传入各维度瞬时梯度 + 历史步长。（FORGET P1 #25）
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| v0.4 | 2026-06-10 | §九点缀比例帽语义修正——先卡帽再乘冻结因子，阻尼在cap内真正生效。§七冷启动阻尼淡入窗——α=min(1,(S-10)/5)线性过渡，避免Session9→10断崖。 |
 | v0.3 | 2026-06-09 | 完整重写：sigmoidal + 强度缩放 + OiSmoothing + SessionLabel × DataConfidence + 约束速查 + Trauma |
 | v0.2 | 2026-06-09 | 从 009-pbm-math.md 拆分，覆盖 sigmoidal、冷启动、阻尼、点缀帽。迁移至 archived. |
 | v0.1 | 2026-06-09 | 初始——仅 sigmoidal、冷启动系数、阻尼规则、点缀帽 |
