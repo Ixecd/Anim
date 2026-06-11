@@ -243,6 +243,7 @@ S=15+ α=1.0  freeze_factor=0.50   →  全额阻尼（过渡窗关闭）
 | abrupt_stop 形状强度 | `≤ 20` | `rule.rs` |
 | 沙箱原子作点缀 | `ratio ≤ 0.30` | `rule.rs` |
 | 沙箱原子作主旋律 | 禁止 | `rule.rs` |
+| 低锚点置信度硬上限 | `low_anchor_cap(user_cap, R)` — R < 0.3 → `cap = min(20, user_cap)` | `safety.rs :: low_anchor_cap()` |
 | 强度等比缩放 | `ratio = user_cap / source_max` | `safety.rs :: scale_intensity()` |
 | 强度区间合法性 | `max ≥ min` | `ast.rs :: Intensity::validate()` |
 
@@ -257,9 +258,10 @@ S=15+ α=1.0  freeze_factor=0.50   →  全额阻尼（过渡窗关闭）
 | trauma v1 | 禁（安全类外全禁） | 允许，上限不变 | 不受影响 |
 | trauma v2 | 禁 | 配比减半 | 同 v1 |
 | trauma v3 | 禁 | 全禁 | 全禁 |
-| 未成年人 | 强度 ≤ 20 | 亲密维度强制隔离 | 20 |
+| 低锚点置信度用户 | strength cap ≤ 20（`anchor_confidence R < 0.3`） | 20 |
+| 普通用户 | 按个人基线动态 cap | 按 R 分段 |
 
-**当前（v0.3）**：`personalize.rs` 中 `trauma_rerouted` 硬编码为 `false`。`safety::check()` 是 no-op。
+**当前（v0.4）**：`personalize.rs` 中 `trauma_rerouted` 硬编码为 `false`。`safety::check()` 是 no-op。`safety::low_anchor_cap()` 已落地——锚点置信度 R<0.3→cap 20 硬线（不是年龄——是锚在里还是在外）。
 
 ---
 
@@ -267,7 +269,7 @@ S=15+ α=1.0  freeze_factor=0.50   →  全额阻尼（过渡窗关闭）
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
-| v0.4 | 2026-06-10 | §九点缀比例帽语义修正——先卡帽再乘冻结因子，阻尼在cap内真正生效。§七冷启动阻尼淡入窗——α=min(1,(S-10)/5)线性过渡，避免Session9→10断崖。 |
+| v0.4 | 2026-06-10 | §九点缀比例帽语义修正+freeze_factor。§七冷启动阻尼淡入窗。§十低锚点置信度硬上限 low_anchor_cap(R<0.3→cap 20)。§十一创伤表更新——"未成年"→锚点置信度。|
 | v0.3 | 2026-06-09 | 完整重写：sigmoidal + 强度缩放 + OiSmoothing + SessionLabel × DataConfidence + 约束速查 + Trauma |
 | v0.2 | 2026-06-09 | 从 009-pbm-math.md 拆分，覆盖 sigmoidal、冷启动、阻尼、点缀帽。迁移至 archived. |
 | v0.1 | 2026-06-09 | 初始——仅 sigmoidal、冷启动系数、阻尼规则、点缀帽 |
