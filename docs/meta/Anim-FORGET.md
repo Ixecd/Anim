@@ -12,7 +12,7 @@
 
 ### 安全体系
 
-1. **三层安全防线不全** — rule.rs 已实现基础 3 条（全局强度上限 100、abrupt_stop≤20、沙箱限制）。guard.rs（Pass 4）已实现 OiSmoothing 衰减曲线，不再是空桩。safety.rs（Pass 3）仍为空桩——无创伤分型交叉判定、无未成年标记。FIXME: v0.3。
+1. **三层安全防线不全** — rule.rs 已实现基础 3 条。guard.rs 已实现 OiSmoothing。safety.rs 已新增 `low_anchor_cap`（锚点置信度 R < 0.3 → cap 20 硬线）——不是年龄——是锚在里还是在外。创伤分型交叉判定仍为空桩。未成年标记已替换为锚点置信度（由 Feelings-Core PBM 提供，Anim 侧只做硬上限）。FIXME: v0.3 续行（创伤分型交叉判定）。
 
 2. **Session 中用户状态突变安全盲区** — PSIR 只在启动时校验一次。运行中 cap 从 45 降到 30 但旧参数继续输出。需 10Hz 轻量安全看门狗。FIXME: ADR 009。
 
@@ -183,6 +183,7 @@
 - ✅ P1 #27 点缀冻结逐原子维度——is_frozen(atom_dimension(&acc.atom))（2026-06-10）
 - ✅ P1 #28 主旋律冻结自身维度——is_frozen(atom_dimension(&fsir.mix.main))（2026-06-10）
 - ✅ P1 #29 冷启动阻尼淡入窗——cold_start_window + freeze_factor α 线性过渡（2026-06-10）
+- ✅ P0 #1 low_anchor_cap——锚点置信度 R < 0.3 → max 20 硬线。不是未成年——是锚在里面还是外面。见 Feelings adulthood-as-anchor.md（2026-06-10）
 
 ---
 
@@ -212,6 +213,12 @@ feeling <基本感受包名> {
 ## 编辑记录
 
 ```
+2026-06-10  v0.1.25 P0 #1 low_anchor_cap——锚点置信度 R<0.3→cap20 硬线
+            - safety.rs: low_anchor_cap(user_cap, anchor_confidence: Option<f64>)→R<0.3→min(20,cap)
+            - 103 tests (+4 for boundary/None/normal/low)，make dev 全绿
+            - 标签从"未成年"更换为"锚点置信度"——不是年龄——是锚在里还是在外
+            - 咬合 Feelings docs/society/adulthood-as-anchor.md
+
 2026-06-10  v0.1.24 P0 #11 + #12——脱敏与动态基线cap
             - P0 #11 补充：超量恢复——不能天天大重量。恢复帧是信号节律的一部分。
               Anim 管线需支持"每 N 帧高强度后强制插入 M 帧低强度/静默"的节律模板。
