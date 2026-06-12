@@ -126,9 +126,12 @@ impl Registry {
     }
 
     /// Registry 的 SHA-256 哈希——用于 FSIR 缓存失效。
+    /// v0.4: 先按名称排序再计算哈希——消除原子顺序对哈希的影响。
     pub fn hash(&self) -> String {
         let mut hasher = Sha256::new();
-        for atom in &self.atoms {
+        let mut sorted: Vec<&AtomEntry> = self.atoms.iter().collect();
+        sorted.sort_by(|a, b| a.name.cmp(&b.name));
+        for atom in sorted {
             hasher.update(atom.name.as_bytes());
             hasher.update(format!("{:?}", atom.class).as_bytes());
             hasher.update(atom.max_ratio.to_be_bytes());
@@ -142,6 +145,9 @@ impl Registry {
 
     pub fn atom_names(&self) -> impl Iterator<Item = &str> {
         self.atoms.iter().map(|e| e.name.as_str())
+    }
+    pub fn shape_names(&self) -> impl Iterator<Item = &'static str> {
+        SHAPES.iter().copied()
     }
 }
 

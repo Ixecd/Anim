@@ -38,8 +38,8 @@ impl<'a> TypeChecker<'a> {
             }
         }
 
-        // shape
-        self.lookup_name(&source.shape.name, super::registry::shape_names(), "shape")?;
+        // shape — v0.4: 走 Registry 实例方法，和 atom 校验对称
+        self.lookup_name(&source.shape.name, self.registry.shape_names(), "shape")?;
 
         // 强度区间——parser 已校验 max >= min，rule.rs 校验全局上限 100
         if source.intensity.max == 0 && source.intensity.min == 0 {

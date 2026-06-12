@@ -91,7 +91,7 @@
 
 ---
 
-## P1 — 功能受限（6/20）
+## P1 — 功能受限（4/20）
 
 ### 交织管线
 
@@ -117,11 +117,11 @@
 
 ~~21. **科学计数法浮点字面量不支持**~~ ✅ — lexer.rs `number()` 分支增加 `e`/`E` + 可选 `+`/`-` + 指数数字解析。1e-5/2.5E3/1e+2 全部识别为 Float。`1e`/`2.5e+` 等缺指数数字→词法错误。`src/lexer.rs`。
 
-22. **Registry 哈希依赖原子顺序** — 两个语义完全相同的 Registry（原子相同但顺序不同）会生成不同哈希，导致不必要的 FSIR 缓存失效。需先按名称排序再计算哈希。FIXME: v0.3。
+~~22. **Registry 哈希依赖原子顺序**~~ ✅ — 先按名称排序再计算 SHA-256。两个语义完全相同的 Registry（原子顺序不同）现在生成相同哈希。`src/registry.rs`。
 
 ~~23. **Pass 6 基线偏移硬编码情绪维度**~~ ✅ — AtomEntry新增dimension:PbmDimension字段。8原子全标注。外部JSON支持serde(default)。四维系数全部打通。
 
-24. **Shape 校验不对称——原子走 Registry 实例，Shape 走静态函数** — `typeck.rs` 里感受原子用 `registry.check_atom()` 实例方法（支持外部 JSON 动态加载），但 shape 校验用的 `shape_names()` 是模块级静态函数。未来扩展自定义 shape 时不对称。需将 `shape_names` 收拢到 Registry 实例中管理。FIXME: v0.3。
+~~24. **Shape 校验不对称——原子走 Registry 实例，Shape 走静态函数**~~ ✅ — Registry 新增 `shape_names()` 实例方法。`typeck.rs` 改为 `self.registry.shape_names()` 调用——与原子校验对称。`src/registry.rs` + `src/typeck.rs`。
 
 ~~25. **DampingMatrix 在 Pass 6 中被架空**~~ ✅ — damping_gradients:Option(None=关闭)。四维系数打通。点缀帽从Registry驱动。v0.4传入实测梯度启用动态阻尼。
 
@@ -206,6 +206,8 @@
 - ✅ P1 #28 主旋律冻结自身维度——is_frozen(atom_dimension(&fsir.mix.main))（2026-06-10）
 - ✅ P1 #29 冷启动阻尼淡入窗——cold_start_window + freeze_factor α 线性过渡（2026-06-10）
 - ✅ P1 #21 科学计数法浮点字面量——lexer `number()` 支持 e/E + 可选 +/-（2026-06-12）
+- ✅ P1 #22 Registry 哈希排序——先按名称排序再 SHA-256（2026-06-12）
+- ✅ P1 #24 Shape 校验对称——shape_names() 收拢到 Registry 实例方法（2026-06-12）
 - ✅ P0 #1 low_anchor_cap——锚点置信度 R < 0.3 → max 20 硬线。不是未成年——是锚在里面还是外面。见 Feelings adulthood-as-anchor.md（2026-06-10）
 
 ---
@@ -236,6 +238,11 @@ feeling <基本感受包名> {
 ## 编辑记录
 
 ```
+2026-06-12  v0.1.28 P1 #22 + #24 —— Registry 哈希排序 + Shape 校验对称
+            - P1 #22 闭合：hash() 先按名称排序再 SHA-256——两个语义完全相同但顺序不同的 Registry 现在生成相同哈希
+            - P1 #24 闭合：Registry 新增 shape_names() 实例方法，typeck 改为 self.registry.shape_names()
+            - P1: 6/20 → 4/20
+
 2026-06-12  v0.1.27 P1 #21 科学计数法浮点字面量——lexer number() 支持 e/E + 可选 +/-
             - 108 tests (+5 新增: 1e-5/2.5E3/1e+2/1e-err/2.5e+-err)，make dev 全绿
             - P1: 7/20 → 6/20
