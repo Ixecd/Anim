@@ -172,7 +172,10 @@ impl Lexer {
 
         let int_part = self.read_while(|ch| ch.is_ascii_digit());
 
-        // 遇到小数点 → 浮点数
+        // 有小数部分吗？
+        let mut is_float = false;
+        let mut literal = int_part.clone();
+
         if self.peek() == '.' {
             // 小数点后必须有数字。"3." 不是合法浮点——词法错误。
             let has_frac = self.peek_next().is_some_and(|c| c.is_ascii_digit());
@@ -202,8 +205,38 @@ impl Lexer {
 
             self.advance(); // 吞掉 '.'
             let frac_part = self.read_while(|ch| ch.is_ascii_digit());
+            literal.push('.');
+            literal.push_str(&frac_part);
+            is_float = true;
+        }
 
-            let literal = format!("{}.{}", int_part, frac_part);
+        // v0.4: 科学计数法——可选 e/E + 可选 +/- + 至少一个指数数字。
+        //      如 1e-5、2.5E3、1e+2。强制返回 Float——科学计数法永远是浮点数。
+        if self.peek() == 'e' || self.peek() == 'E' {
+            is_float = true;
+            self.advance(); // 吞掉 'e' 或 'E'
+            literal.push('e');
+
+            if self.peek() == '+' || self.peek() == '-' {
+                literal.push(self.peek());
+                self.advance();
+            }
+
+            let exp_digits = self.read_while(|ch| ch.is_ascii_digit());
+            if exp_digits.is_empty() {
+                // "1e" / "2.5e+" 之后没有指数数字。
+                oi!(
+                    LexError,
+                    line = line,
+                    col = col,
+                    msg = "scientific notation requires at least one exponent digit after 'e'"
+                        .to_string()
+                )
+            }
+            literal.push_str(&exp_digits);
+        }
+
+        if is_float {
             return Ok(Token {
                 kind: TokenKind::Float,
                 line,
@@ -341,6 +374,47 @@ mod tests {
         assert_eq!(tokens[1].literal, "45");
         assert_eq!(tokens[2].kind, TokenKind::Float);
         assert_eq!(tokens[2].literal, "0.3");
+    }
+
+    #[test]
+    fn tokenize_scientific_notation_float() {
+        // 1e-5 → Float
+        let mut lexer = Lexer::new("1e-5");
+        let tokens = lexer.tokenize().unwrap();
+        assert_eq!(tokens[0].kind, TokenKind::Float);
+        assert_eq!(tokens[0].literal, "1e-5");
+    }
+
+    #[test]
+    fn tokenize_scientific_notation_upper() {
+        // 2.5E3 → Float
+        let mut lexer = Lexer::new("2.5E3");
+        let tokens = lexer.tokenize().unwrap();
+        assert_eq!(tokens[0].kind, TokenKind::Float);
+        assert_eq!(tokens[0].literal, "2.5e3");
+    }
+
+    #[test]
+    fn tokenize_scientific_notation_plus() {
+        // 1e+2 → Float
+        let mut lexer = Lexer::new("1e+2");
+        let tokens = lexer.tokenize().unwrap();
+        assert_eq!(tokens[0].kind, TokenKind::Float);
+        assert_eq!(tokens[0].literal, "1e+2");
+    }
+
+    #[test]
+    fn tokenize_scientific_notation_no_suffix_is_error() {
+        // "1e" 无指数数字 → 词法错误
+        let mut lexer = Lexer::new("1e");
+        assert!(lexer.tokenize().is_err());
+    }
+
+    #[test]
+    fn tokenize_scientific_notation_sign_no_suffix_is_error() {
+        // "2.5e+" 无指数数字 → 词法错误
+        let mut lexer = Lexer::new("2.5e+");
+        assert!(lexer.tokenize().is_err());
     }
 
     #[test]
