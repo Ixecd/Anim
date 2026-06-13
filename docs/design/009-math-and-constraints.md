@@ -120,6 +120,14 @@ scaled_max = user_cap
 **当前限制（v0.3）**：`apply()` 是静态映射表，不接收实时梯度输入。
 v0.4 需传入各维度瞬时梯度 + 历史步长。（FORGET P1 #25）
 
+**对 011/012 的影响（v0.3 现实）**：
+DampingMatrix 是 012 里 DeadBand 和方向切换保护的前置条件——
+如果跨维度冻结规则是假的——梯度检测不生效——
+那么从激活切安抚时——应该被阻尼冻结的维度仍在自由输出——
+DeadBand 期间这些未冻结的信号仍在冲击受体——
+方向切换保护的完整性当前不成立。
+不是 DeadBand 设计错了——是它的前置阻尼还没实现。
+
 ---
 
 ## 五、SessionLabel → PbmUpdateStrategy 映射
@@ -194,6 +202,13 @@ S=15+ α=1.0  freeze_factor=0.50   →  全额阻尼（过渡窗关闭）
 
 **边界条件**：`cold_start_window = 0` → α 固定为 1.0 → 无窗口——首帧全额阻尼。`cold_start = true` → `is_frozen()` 永远返回 false——公式不触发。
 
+**v0.3 现实**：冷启动阻尼淡入窗完全未实现——属于 v0.4 规划。
+v0.3 无此保护——Session 9→10 首次触发阻尼时——断崖效应完全暴露——
+用户在第 9 次 Session 感受不到任何阻尼——第 10 次突然全额压制——
+感受断层——"为什么昨天还好好的——今天突然全变了"——
+系统对此无解释——无过渡——无预警。
+在阻尼淡入窗落地之前——Session 9→10 的断崖是冷启动期最脆弱的时刻。
+
 ---
 
 ## 八、OiSmoothing 衰减曲线
@@ -262,6 +277,48 @@ S=15+ α=1.0  freeze_factor=0.50   →  全额阻尼（过渡窗关闭）
 | 普通用户 | 按个人基线动态 cap | 按 R 分段 |
 
 **当前（v0.4）**：`personalize.rs` 中 `trauma_rerouted` 硬编码为 `false`。`safety::check()` 是 no-op。`safety::low_anchor_cap()` 已落地——锚点置信度 R<0.3→cap 20 硬线（不是年龄——是锚在里还是在外）。
+
+**对 011/012 的依赖链影响**：
+011 的 NeuroEnergyTracker、012 的 P0 硬抢占/主动麻痹/带外快照覆写——
+全部依赖 Trauma 路径能正确重定向这个前提。
+011 写道——"Trauma v3: LeakRate→~0, CriticalThreshold→极低"。
+012 写道——"主动麻痹是 Core 的沙箱指令——trauma v3 的神经电暴——Feelings 在信号层提前把门关了"。
+这些协议的触发条件——全部建在 `trauma_rerouted = true` 之上。
+当前这个前提 hardcoded false——等于 011 和 012 的 trauma 级防御全部挂在空中。
+不是协议设计错了——是协议在等执行层追上。
+
+---
+---
+## 十二、实现态诚实清单——纸面和代码之间的距离
+
+```
+下面每一项都不是设计缺陷。是"当前代码还没跟上来"的真实状态。
+不假装已经实现了——不在文档里用将来时当现在时。
+
+[ ] DampingMatrix          v0.3 apply() 是静态映射——不接收实时梯度。
+                            012 的 DeadBand/方向切换依赖此为前提——当前前提空缺。
+                            → v0.4 计划接入。
+
+[ ] 冷启动阻尼淡入窗        v0.3 无此保护——Session 9→10 断崖完全暴露。
+                            用户在 Session 10 突然遭遇全额阻尼——无过渡无预警。
+                            → v0.4 计划接入。冷启动前 10 个 Session damping 完全关闭。
+
+[ ] Trauma 路径重定向      hardcoded false——011/012 的全部 trauma v3 防御挂空。
+                            Trauma v3 用户的 LeakRate→~0、主动麻痹、P0 抢占——
+                            这些协议在纸面上完整——在代码里等这一行从 false 变成条件分支。
+                            → v0.4 计划——从 PBM 档案读取 trauma_tier。
+
+[ ] low_anchor_cap          safety.rs 有 low_anchor_cap(20)——
+                            personalize.rs 当前未调用——低锚用户的 cap=20 硬线在 pass 层未闭合。
+                            → 接入点明确——personalize() 强度上限校验前加一行。
+
+[ ] PBM 宿主                pbm.rs 当前在 Anim 的 src/ 下——由 Anim 进程直接管理。
+                            011/012 的"本地闭环""数据不离设备"——
+                            全跑在 Anim 进程里——Anim 替 Core 扛着 PBM 的所有重活。
+                            Core 零代码——不是架构矛盾——是 Core 还没出生。
+```
+
+不是羞愧地承认——是诚实地标注——让读代码的人知道哪些是设计——哪些是"还没实现"。
 
 ---
 

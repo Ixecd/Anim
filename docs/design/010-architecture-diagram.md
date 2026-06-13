@@ -18,6 +18,10 @@ Pass 0b  Parser ──→ AST (FeelingSource)
 Pass 1  TypeCheck ──→ Registry.lookup() ─ 感受原子存在/配比帽
 Pass 2  StaticSafety (rule.rs) ─ 静态规则——不读用户档案
 Pass 3  UserStateSafety (safety.rs · v0.3 stub) ─ 用户安全——创伤/cap/未成年
+         │
+         ├─ Trauma 重定向 ── 当前 hardcoded false ── 011/012 的 trauma v3 协议依赖此节点
+         │   一旦激活: 维度锁定 | LeakRate→~0 | CriticalThreshold→极低 | P0 抢占就绪
+         │
 Pass 4  RuntimeGuard (guard.rs) ─ OiSmoothing 衰减曲线——oi 帧拒绝不硬截断
 Pass 5  FSIRGen (fsir.rs) ──→ FsirDoc (JSON + Postcard)
            │
@@ -62,6 +66,8 @@ src/
 ├── 交织层（Pass 5-6）
 │   ├── fsir.rs         → FSIR 生成 · 依赖 ast
 │   ├── pbm.rs          → PBM 状态 · 独立模块——SessionLabel/DataConfidence/ColdStartGuard/DampingMatrix
+│   │                       当前属于 Anim——但长期归属是 Feelings-Core。
+│   │                       011/012 的"PBM 从来不离设备"——当前 Anim 就是 PBM 的宿主进程。
 │   ├── personalize.rs  → FSIR × PBM → PSIR · 依赖 fsir + pbm + registry + error
 │   └── psir.rs         → PSIR 类型定义 · 零逻辑
 │
@@ -99,6 +105,8 @@ personalize.rs
   ├── 强度上限二次校验
   ├── OiSmoothing 衰减曲线 pass-through
   ├── Trauma 路径重定向 ≡ 未实现（hardcoded false）
+  ├── low_anchor_cap ≡ safety.rs 已有 low_anchor_cap(20)——
+  │   但 personalize.rs 当前未调用——低锚用户 cap=20 的硬线在 pass 层面未闭合
   └── 输出
 PsirDoc (JSON + Postcard)
 ```
@@ -117,8 +125,13 @@ Pass 7-8: 零代码              设备感知交织               设备驱动
                                
 边界：
   · Anim 只输出 FSIR/PSIR 数据
-  · Feelings-Core = ani 的后半段（Pass 6-8 的完整实现 + PBM 持久化 + Session 管理）
-    当前 Core 零代码——v0.3 的范围仍在 Anim 内运行 personalize()
+  · Feelings-Core = Pass 6-8 的完整实现 + PBM 持久化 + Session 管理。
+    当前 Core 零代码——v0.3 的 Pass 6（personalize）、PBM 状态、Session 计数、
+    冷启动判定——全部由 Anim 的 pbm.rs + personalize.rs 硬干。
+    Anim 在做 Core 的活——不是架构设计——是 Core 还没出生时的临时代偿。
+    011/012 里"PBM 从来不离设备""本地闭环自适应"——
+    当前全跑在 Anim 的进程里——设备里的 Anim 就是 PBM 的临时宿主。
+    这不是矛盾——这是"Core 还没写——Anim 替它扛着"。
   · Feelings-OS = ESIR 帧级别的硬件执行
   · 时钟同步 → Feelings-OS timerd + busd。不在 Anim。
   · Jitter Buffer → Feelings-OS。不在 Anim。
