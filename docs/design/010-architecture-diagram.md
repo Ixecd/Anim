@@ -65,7 +65,7 @@ src/
 │
 ├── 交织层（Pass 5-6）
 │   ├── fsir.rs         → FSIR 生成 · 依赖 ast
-│   ├── pbm.rs          → PBM 状态 · 独立模块——SessionLabel/DataConfidence/ColdStartGuard/DampingMatrix
+│   ├── pbm.rs          → PBM 状态 · 独立模块——SessionLabel/DataConfidence/ColdStartGuard/DampingMatrix/DampingState/TraumaTier
 │   │                       当前属于 Anim——但长期归属是 Feelings-Core。
 │   │                       011/012 的"PBM 从来不离设备"——当前 Anim 就是 PBM 的宿主进程。
 │   ├── personalize.rs  → FSIR × PBM → PSIR · 依赖 fsir + pbm + registry + error
@@ -98,7 +98,8 @@ FSIR JSON  ← Pass 0-5 前端+安全+交织 → FSIR 产出
 personalize.rs
   ├── FsirDoc 读入
   ├── ColdStartGuard 冷启动判定
-  ├── DampingMatrix::apply() ≡ 阻尼（v0.3: None = 阻尼关闭）
+  ├── DampingMatrix::apply() —— DampingState 提供实时步长 + 梯度计算
+               v0.4: DampingState 只在冷启动后启用——冷启动期阻尼全关
   ├── 四维系数——Registry 查 AtomEntry.dimension → visceral/emotional/tactile/auditory
   ├── 点缀帽—— Registry.max_ratio() 每原子独立帽
   ├── Sigmoids 强度缩放——compression factor × baseline_coeff

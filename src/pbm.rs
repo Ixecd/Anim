@@ -304,6 +304,103 @@ impl DampingMatrix {
     }
 }
 
+// ── 阻尼状态——实时梯度计算的运行时持有者 ──────────────────
+
+/// 阻尼状态——持有四维步长乘数和上一帧 PBM 快照。
+///
+/// 冷启动期后（Session 10+），Anim 每帧用此状态计算真实梯度——
+/// 不再使用硬编码 `default_steps` [1.0; 4]。
+///
+/// # 各维度初始步长乘数
+///
+/// 反映 PBM 在当前维度的收敛速度。越快 → 梯度阈值越灵敏 → 更容易触发阻尼。
+///
+/// | 维度      | 初始步长 | 理由                                            |
+/// |-----------|---------|------------------------------------------------|
+/// | Visceral  | 0.35    | 内脏基线漂移慢——心率/HRV 受自主神经持续调节          |
+/// | Emotional | 0.50    | 情绪变化快——皮电/杏仁核响应是秒级的                 |
+/// | Tactile   | 0.45    | 触觉中等——CT 纤维适应性介于内脏和情绪之间            |
+/// | Auditory  | 0.50    | 听觉中等偏快——骨传导通路对声压变化响应迅速            |
+///
+/// 步长乘数随 Session 置信度动态调整——不硬编码。
+///
+/// # 梯度计算
+///
+/// `gradient = |当前帧 PBM 偏移 − 上一帧 PBM 偏移|`。
+/// 梯度 > `threshold × 步长乘数` → 触发跨维度冻结。
+///
+/// # 生命周期
+///
+/// 由 Core 在 Session 启动时创建并维护。Anim 每帧只读。
+/// 步长乘数的更新（`update`）由 Anim 在帧完成后调用——
+/// 将 Core 的下行 PBM 值写入快照，并按置信度微调步长。
+#[derive(Debug, Clone)]
+pub struct DampingState {
+    /// 四维步长乘数——[Visceral, Emotional, Tactile, Auditory]。
+    step_multipliers: [f64; 4],
+
+    /// 上一帧 PBM 偏移快照——用于计算本帧梯度。
+    /// None = 首帧或无历史数据——梯度不可计算。
+    last_pbm_snapshot: Option<[f64; 4]>,
+}
+
+impl Default for DampingState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl DampingState {
+    /// 以设计估值步长乘数创建新的阻尼状态。
+    pub fn new() -> Self {
+        DampingState {
+            step_multipliers: [0.35, 0.50, 0.45, 0.50],
+            last_pbm_snapshot: None,
+        }
+    }
+
+    /// 当前步长——以 [`DampingMatrix::apply`] 要求的格式返回。
+    pub fn current_steps(&self) -> [(PbmDimension, f64); 4] {
+        [
+            (PbmDimension::Visceral, self.step_multipliers[0]),
+            (PbmDimension::Emotional, self.step_multipliers[1]),
+            (PbmDimension::Tactile, self.step_multipliers[2]),
+            (PbmDimension::Auditory, self.step_multipliers[3]),
+        ]
+    }
+
+    /// 基于当前 PBM 偏移值和上一帧快照计算四维梯度。
+    ///
+    /// `current`: 当前帧四个维度的 PBM 偏移——`[Visceral, Emotional, Tactile, Auditory]`。
+    ///
+    /// 返回 None = 无历史数据（首帧）——梯度不可计算——调用方应降级为 Damping Hold。
+    pub fn compute_gradients(&self, current: &[f64; 4]) -> Option<[(PbmDimension, f64); 4]> {
+        let prev = self.last_pbm_snapshot.as_ref()?;
+        Some([
+            (PbmDimension::Visceral, (current[0] - prev[0]).abs()),
+            (PbmDimension::Emotional, (current[1] - prev[1]).abs()),
+            (PbmDimension::Tactile, (current[2] - prev[2]).abs()),
+            (PbmDimension::Auditory, (current[3] - prev[3]).abs()),
+        ])
+    }
+
+    /// 更新快照和步长乘数——本帧完成后调用。
+    ///
+    /// 将当前 PBM 偏移值写入快照（作为下一帧的"上一帧"），
+    /// 并按本帧置信度微调步长乘数——EMA 平滑——防止单帧抖动。
+    ///
+    /// `step_factor` = 步长乘数（来自 DataConfidence——High=1.0, Low=0.15, Contaminated=0.0）。
+    /// 这里取置信度对应的步长作为目标，按 EMA(0.9) 缓慢靠拢。
+    pub fn update(&mut self, current: &[f64; 4], confidence: DataConfidence) {
+        self.last_pbm_snapshot = Some(*current);
+        let target = confidence.step_multiplier();
+        for i in 0..4 {
+            let s = &mut self.step_multipliers[i];
+            *s = (*s * 0.9 + 0.1 * target).clamp(0.05, 1.0);
+        }
+    }
+}
+
 // ── 单元测试 ────────────────────────────────────────────────
 
 #[cfg(test)]
@@ -500,5 +597,73 @@ mod tests {
         let guard2: ColdStartGuard = serde_json::from_str(&json).unwrap();
         assert_eq!(guard.session_count, guard2.session_count);
         assert_eq!(guard.threshold, guard2.threshold);
+    }
+
+    // DampingState
+
+    #[test]
+    fn damping_state_new_has_no_snapshot() {
+        let ds = DampingState::new();
+        assert!(ds.last_pbm_snapshot.is_none());
+        assert!(ds.compute_gradients(&[0.1, 0.2, 0.3, 0.4]).is_none());
+    }
+
+    #[test]
+    fn damping_state_computes_gradients() {
+        let mut ds = DampingState::new();
+        // 首帧：更新快照
+        ds.update(&[0.10, 0.20, 0.10, 0.05], DataConfidence::High);
+        assert!(ds.last_pbm_snapshot.is_some());
+
+        // 第二帧：计算梯度
+        let grads = ds.compute_gradients(&[0.15, 0.25, 0.10, 0.08]).unwrap();
+        // Visceral: |0.15-0.10| = 0.05
+        assert!((grads[0].1 - 0.05).abs() < 1e-10);
+        // Emotional: |0.25-0.20| = 0.05
+        assert!((grads[1].1 - 0.05).abs() < 1e-10);
+        // Tactile: |0.10-0.10| = 0.0
+        assert!((grads[2].1 - 0.0).abs() < 1e-10);
+        // Auditory: |0.08-0.05| = 0.03
+        assert!((grads[3].1 - 0.03).abs() < 1e-10);
+    }
+
+    #[test]
+    fn damping_state_current_steps_returns_initial_multipliers() {
+        let ds = DampingState::new();
+        let steps = ds.current_steps();
+        assert_eq!(steps[0], (PbmDimension::Visceral, 0.35));
+        assert_eq!(steps[1], (PbmDimension::Emotional, 0.50));
+        assert_eq!(steps[2], (PbmDimension::Tactile, 0.45));
+        assert_eq!(steps[3], (PbmDimension::Auditory, 0.50));
+    }
+
+    #[test]
+    fn damping_state_update_adjusts_multipliers() {
+        let mut ds = DampingState::new();
+        // 初始
+        assert!((ds.step_multipliers[1] - 0.50).abs() < 1e-10);
+
+        // Low 置信度 → target=0.15 → EMA: 0.50×0.9 + 0.15×0.1 = 0.465
+        ds.update(&[0.1, 0.2, 0.3, 0.4], DataConfidence::Low);
+        let expected = 0.50 * 0.9 + 0.15 * 0.1;
+        assert!((ds.step_multipliers[1] - expected).abs() < 1e-10);
+
+        // High 置信度 → target=1.0 → EMA: expected×0.9 + 1.0×0.1
+        ds.update(&[0.1, 0.2, 0.3, 0.4], DataConfidence::High);
+        let expected2 = expected * 0.9 + 1.0 * 0.1;
+        assert!((ds.step_multipliers[1] - expected2).abs() < 1e-10);
+    }
+
+    #[test]
+    fn damping_state_step_multipliers_clamped() {
+        let mut ds = DampingState::new();
+        // 连续 Low → multiplier → 0.05 floor
+        for _ in 0..100 {
+            ds.update(&[0.0, 0.0, 0.0, 0.0], DataConfidence::Low);
+        }
+        for m in &ds.step_multipliers {
+            assert!(*m >= 0.05);
+            assert!(*m <= 1.0);
+        }
     }
 }

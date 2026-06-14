@@ -291,9 +291,9 @@ v0.3 无此保护时——Session 9→10 断崖完全暴露。现已修复——
 下面每一项都不是设计缺陷。是"当前代码还没跟上来"的真实状态。
 不假装已经实现了——不在文档里用将来时当现在时。
 
-[ ] DampingMatrix          v0.3 apply() 是静态映射——不接收实时梯度。
-                            012 的 DeadBand/方向切换依赖此为前提——当前前提空缺。
-                            → v0.4 计划接入。
+[x] DampingMatrix          已接入——DampingState 结构体（pbm.rs）+ PbmState 梯度管道铺通（personalize.rs）。
+                            冷启动期——阻尼由 freeze_factor 完全关闭。冷启动后——DampingState 提供实时步长 + 梯度计算。
+                            → 待 Core 提供真实 PBM 偏移值流入 DampingState.update()。
 
 [x] 冷启动阻尼淡入窗        v0.4 已实现——personalize.rs L129-147。
                             damping_window_alpha + freeze_factor——Session 10→15 线性过渡。

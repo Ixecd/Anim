@@ -2,7 +2,7 @@
 
 use crate::error::AnimiError;
 use crate::fsir::FsirDoc;
-use crate::pbm::{ColdStartGuard, DampingMatrix, PbmDimension, SessionLabel, StepState};
+use crate::pbm::{ColdStartGuard, DampingMatrix, DampingState, PbmDimension, SessionLabel, StepState};
 use crate::psir::{
     PersonalizedAccent, PersonalizedFeeling, PsirDecayStep, PsirDoc, PsirFeelingInput,
     PsirIntensityInput, PsirMetaInput, PsirSmoothing,
@@ -100,6 +100,18 @@ pub struct PbmState<'a> {
     /// R < 0.3 → cap 硬上限 20（low_anchor_cap 保护）。
     /// None = 无数据——不触发低锚保护（向后兼容 v0.3）。
     pub anchor_confidence: Option<f64>,
+
+    // ── v0.4: 阻尼实时梯度 ──
+    //
+    /// 阻尼状态——持有四维步长乘数和上一帧 PBM 快照。
+    /// 冷启动期后——Anim 用此状态计算真实梯度——不再使用硬编码 1.0。
+    /// None = 冷启动期——阻尼由 freeze_factor 完全关闭。
+    pub damping_state: Option<&'a DampingState>,
+
+    /// 当前帧的四维 PBM 偏移值——[Visceral, Emotional, Tactile, Auditory]。
+    /// 用于 DampingState 的梯度计算。
+    /// None = 无实时 PBM 数据（离线编译或冷启动）——降级为 Damping Hold。
+    pub current_pbm_values: Option<&'a [f64; 4]>,
 }
 
 // ── 主函数：personalize ──────────────────────────────────────
@@ -122,19 +134,36 @@ pub fn personalize(
     let effective_cap = crate::safety::low_anchor_cap(pbm.user_cap, pbm.anchor_confidence);
 
     // ── 2. 阻尼矩阵判定 ──────────────────────────────────────
-    // v0.4: damping_gradients=None → Damping Hold（保持上一帧冻结状态）。
-    //      previous_frozen=None → 安全降级为 HashMap::new()（零冻结）。
+    // v0.4: 步长来源——DampingState → 硬编码降级。
+    //       梯度来源——(1) 外部传感器注入 (2) DampingState 实时计算 (3) Damping Hold。
+    //       冷启动期——阻尼由 is_frozen 的 cold_start 门控完全关闭。
+
+    fn default_steps() -> [(PbmDimension, f64); 4] {
+        [
+            (PbmDimension::Visceral, 1.0),
+            (PbmDimension::Emotional, 1.0),
+            (PbmDimension::Tactile, 1.0),
+            (PbmDimension::Auditory, 1.0),
+        ]
+    }
+
+    let current_steps = pbm
+        .damping_state
+        .map(|ds| ds.current_steps())
+        .unwrap_or_else(default_steps);
+
     let frozen: HashMap<PbmDimension, StepState> = match pbm.damping_gradients {
-        Some(gradients) => {
-            let default_steps = [
-                (PbmDimension::Visceral, 1.0),
-                (PbmDimension::Emotional, 1.0),
-                (PbmDimension::Tactile, 1.0),
-                (PbmDimension::Auditory, 1.0),
-            ];
-            DampingMatrix::apply(gradients, &default_steps)
-        }
-        None => pbm.previous_frozen.cloned().unwrap_or_default(),
+        // 优先级一：外部注入梯度（传感器直通）
+        Some(gradients) => DampingMatrix::apply(gradients, &current_steps),
+
+        // 优先级二：DampingState 实时计算 → 降级 Damping Hold
+        None => match (pbm.damping_state, pbm.current_pbm_values) {
+            (Some(ds), Some(vals)) => match ds.compute_gradients(vals) {
+                Some(gradients) => DampingMatrix::apply(&gradients, &current_steps),
+                None => pbm.previous_frozen.cloned().unwrap_or_default(),
+            },
+            _ => pbm.previous_frozen.cloned().unwrap_or_default(),
+        },
     };
     let is_frozen = |dim: PbmDimension| -> bool {
         !cold_start
@@ -227,7 +256,7 @@ pub fn personalize(
     // ── 7. 创伤路径重定向 ─────── v0.4: Core PBM 驱动 ──────
     // 从 Core 下行的 trauma_tier 推导是否激活创伤安全路径。
     // None = 普通用户——不触发重定向。
-    // 分级语义由 Core PBM 在下行时已完整解析——Anim 只读不判断。
+    // 具体分级（V1/V2/V3）下沉到 PSIR——由 Pass 7-8 按分级差异化执行。
     let trauma_rerouted = pbm.trauma_tier.is_some();
 
     // ── 8. 平滑过渡（pass-through）────────────────────
@@ -260,6 +289,7 @@ pub fn personalize(
             smoothing,
             cold_start,
             trauma_rerouted,
+            trauma_tier: pbm.trauma_tier,
             pbm_updated_at: pbm.pbm_updated_at.to_string(),
             session_count,
         },
@@ -362,11 +392,14 @@ mod tests {
             pbm_updated_at: "2026-06-09T10:00:00Z",
             trauma_tier: None,
             anchor_confidence: None,
+            damping_state: None,
+            current_pbm_values: None,
         };
         let psir = personalize(&fsir, &registry, &pbm).expect("personalize failed");
         assert_eq!(psir.name, "calm");
         assert!(psir.cold_start);
         assert!(!psir.trauma_rerouted);
+        assert!(psir.trauma_tier.is_none());
         assert_eq!(psir.main.atom, "calm_meditative");
         assert!((psir.main.baseline_offset - 0.40).abs() < 0.001); // emotional
         assert!(!psir.main.damped); // cold_start → 不冻结
