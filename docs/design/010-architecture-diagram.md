@@ -19,7 +19,7 @@ Pass 1  TypeCheck ──→ Registry.lookup() ─ 感受原子存在/配比帽
 Pass 2  StaticSafety (rule.rs) ─ 静态规则——不读用户档案
 Pass 3  UserStateSafety (safety.rs · v0.3 stub) ─ 用户安全——创伤/cap/未成年
          │
-         ├─ Trauma 重定向 ── 当前 hardcoded false ── 011/012 的 trauma v3 协议依赖此节点
+         ├─ Trauma 重定向 ── pbm::TraumaTier 驱动 ── 011/012 的 trauma v3 协议管道已铺好
          │   一旦激活: 维度锁定 | LeakRate→~0 | CriticalThreshold→极低 | P0 抢占就绪
          │
 Pass 4  RuntimeGuard (guard.rs) ─ OiSmoothing 衰减曲线——oi 帧拒绝不硬截断
@@ -104,9 +104,12 @@ personalize.rs
   ├── Sigmoids 强度缩放——compression factor × baseline_coeff
   ├── 强度上限二次校验
   ├── OiSmoothing 衰减曲线 pass-through
-  ├── Trauma 路径重定向 ≡ 未实现（hardcoded false）
-  ├── low_anchor_cap ≡ safety.rs 已有 low_anchor_cap(20)——
-  │   但 personalize.rs 当前未调用——低锚用户 cap=20 的硬线在 pass 层面未闭合
+  ├── Trauma 路径重定向 ≡ pbm.rs TraumaTier（V1/V2/V3）→ personalize.rs 已接入——
+  │   trauma_rerouted = pbm.trauma_tier.is_some()。
+  │   v0.4 待 Core 提供真实 trauma_tier——当前默认 None（不触发）
+  ├── low_anchor_cap ≡ safety.rs 已实现——personalize.rs 入口已接入——
+  │   effective_cap = low_anchor_cap(user_cap, anchor_confidence)——
+  │   PbmState.anchor_confidence: Option<f64>——None = 向后兼容 v0.3
   └── 输出
 PsirDoc (JSON + Postcard)
 ```

@@ -87,6 +87,20 @@ pub struct PbmState<'a> {
     pub coeffs: PbmColdStartCoefficients,
     pub user_cap: u32,
     pub pbm_updated_at: &'a str,
+
+    // ── v0.4: Core 下行的运行时决策字段 ──
+    //
+    // 当前由 Anim 在 Session 启动时从 PBM 档案（或默认值）读取——
+    // 长期由 Feelings-Core 在设备本地提供。
+
+    /// 创伤分级——来自 Core PBM 的用户档案。
+    /// None = 普通用户——无创伤路径重定向。
+    pub trauma_tier: Option<crate::pbm::TraumaTier>,
+
+    /// 锚点置信度 R (0.0~1.0)——来自 Core PBM。
+    /// R < 0.3 → cap 硬上限 20（low_anchor_cap 保护）。
+    /// None = 无数据——不触发低锚保护（向后兼容 v0.3）。
+    pub anchor_confidence: Option<f64>,
 }
 
 // ── 主函数：personalize ──────────────────────────────────────
@@ -102,6 +116,11 @@ pub fn personalize(
     // ── 1. 冷启动判定 ──────────────────────────────────────
     let cold_start = pbm.guard.is_cold_start();
     let session_count = pbm.guard.session_count;
+
+    // ── 1a. 低锚点置信度 cap 硬上限（v0.4 P1 #28） ────────────
+    // 从 Core PBM 的 anchor_confidence (R) 判定是否需要 low_anchor_cap 保护。
+    // R < 0.3 → effective_cap = min(20, user_cap)。不是惩罚——是"你还没准备好——我先替你守着"。
+    let effective_cap = crate::safety::low_anchor_cap(pbm.user_cap, pbm.anchor_confidence);
 
     // ── 2. 阻尼矩阵判定 ──────────────────────────────────────
     // v0.4: damping_gradients=None → Damping Hold（保持上一帧冻结状态）。
@@ -190,24 +209,27 @@ pub fn personalize(
     }
 
     // ── 7. 强度 sigmoidal 缩放 ─────────────────────────────
-    let applied_min = sigmoidal_scale(fsir.intensity.min, baseline_coeff, pbm.user_cap);
-    let applied_max = sigmoidal_scale(fsir.intensity.max, baseline_coeff, pbm.user_cap);
+    let applied_min = sigmoidal_scale(fsir.intensity.min, baseline_coeff, effective_cap);
+    let applied_max = sigmoidal_scale(fsir.intensity.max, baseline_coeff, effective_cap);
 
     // 强度上限二次校验
-    if applied_max > pbm.user_cap {
+    if applied_max > effective_cap {
         return Err(AnimiError::UserStateSafetyError {
             file_name: String::new(),
-            cap: format!("{}", pbm.user_cap),
+            cap: format!("{}", effective_cap),
             atom_name: fsir.name.clone(),
             reason: format!(
                 "个人校准后强度 {} 超过用户上限 {}（FSIR 强度范围 {}-{}）",
-                applied_max, pbm.user_cap, fsir.intensity.min, fsir.intensity.max,
+                applied_max, effective_cap, fsir.intensity.min, fsir.intensity.max,
             ),
         });
     }
 
-    // ── 7. 创伤路径重定向 ─────── v0.3 暂时不实现 ──────
-    let trauma_rerouted = false;
+    // ── 7. 创伤路径重定向 ─────── v0.4: Core PBM 驱动 ──────
+    // 从 Core 下行的 trauma_tier 推导是否激活创伤安全路径。
+    // None = 普通用户——不触发重定向。
+    // 分级语义由 Core PBM 在下行时已完整解析——Anim 只读不判断。
+    let trauma_rerouted = pbm.trauma_tier.is_some();
 
     // ── 8. 平滑过渡（pass-through）────────────────────
     let smoothing = fsir.smoothing.as_ref().map(|s| PsirSmoothing {
@@ -233,7 +255,7 @@ pub fn personalize(
             original_max: fsir.intensity.max,
             applied_min,
             applied_max,
-            cap: pbm.user_cap,
+            cap: effective_cap,
         },
         PsirMetaInput {
             smoothing,
@@ -339,6 +361,8 @@ mod tests {
             coeffs: PbmColdStartCoefficients::default(),
             user_cap: 100,
             pbm_updated_at: "2026-06-09T10:00:00Z",
+            trauma_tier: None,
+            anchor_confidence: None,
         };
         let psir = personalize(&fsir, &registry, &pbm).expect("personalize failed");
         assert_eq!(psir.name, "calm");

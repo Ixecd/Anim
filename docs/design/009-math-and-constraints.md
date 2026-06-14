@@ -202,12 +202,8 @@ S=15+ α=1.0  freeze_factor=0.50   →  全额阻尼（过渡窗关闭）
 
 **边界条件**：`cold_start_window = 0` → α 固定为 1.0 → 无窗口——首帧全额阻尼。`cold_start = true` → `is_frozen()` 永远返回 false——公式不触发。
 
-**v0.3 现实**：冷启动阻尼淡入窗完全未实现——属于 v0.4 规划。
-v0.3 无此保护——Session 9→10 首次触发阻尼时——断崖效应完全暴露——
-用户在第 9 次 Session 感受不到任何阻尼——第 10 次突然全额压制——
-感受断层——"为什么昨天还好好的——今天突然全变了"——
-系统对此无解释——无过渡——无预警。
-在阻尼淡入窗落地之前——Session 9→10 的断崖是冷启动期最脆弱的时刻。
+**v0.4 现实**：冷启动阻尼淡入窗已实现（`personalize.rs` L129-147——`damping_window_alpha` + `freeze_factor`）。
+v0.3 无此保护时——Session 9→10 断崖完全暴露。现已修复——Session 10 起 5 个 Session 内阻尼从 0% 线性过渡到 100%。
 
 ---
 
@@ -299,18 +295,17 @@ v0.3 无此保护——Session 9→10 首次触发阻尼时——断崖效应完
                             012 的 DeadBand/方向切换依赖此为前提——当前前提空缺。
                             → v0.4 计划接入。
 
-[ ] 冷启动阻尼淡入窗        v0.3 无此保护——Session 9→10 断崖完全暴露。
-                            用户在 Session 10 突然遭遇全额阻尼——无过渡无预警。
-                            → v0.4 计划接入。冷启动前 10 个 Session damping 完全关闭。
+[x] 冷启动阻尼淡入窗        v0.4 已实现——personalize.rs L129-147。
+                            damping_window_alpha + freeze_factor——Session 10→15 线性过渡。
 
-[ ] Trauma 路径重定向      hardcoded false——011/012 的全部 trauma v3 防御挂空。
-                            Trauma v3 用户的 LeakRate→~0、主动麻痹、P0 抢占——
-                            这些协议在纸面上完整——在代码里等这一行从 false 变成条件分支。
-                            → v0.4 计划——从 PBM 档案读取 trauma_tier。
+[x] Trauma 路径重定向      已接入——pbm.rs TraumaTier 枚举（V1/V2/V3）→
+                            personalize.rs trauma_rerouted = pbm.trauma_tier.is_some()。
+                            v0.4 待 Core 提供真实 trauma_tier 分级——当前默认 None（不触发）。
+                            011/012 的 trauma v3 防御已从'空中楼阁'变为'管道已铺好——等数据'。
 
-[ ] low_anchor_cap          safety.rs 有 low_anchor_cap(20)——
-                            personalize.rs 当前未调用——低锚用户的 cap=20 硬线在 pass 层未闭合。
-                            → 接入点明确——personalize() 强度上限校验前加一行。
+[x] low_anchor_cap          safety.rs 已实现 + personalize.rs 已接入——
+                            effective_cap = low_anchor_cap(user_cap, anchor_confidence)。
+                            PbmState.anchor_confidence: Option<f64>——None=不触发（向后兼容 v0.3）。
 
 [ ] PBM 宿主                pbm.rs 当前在 Anim 的 src/ 下——由 Anim 进程直接管理。
                             011/012 的"本地闭环""数据不离设备"——

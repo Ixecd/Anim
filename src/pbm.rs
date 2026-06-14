@@ -158,6 +158,25 @@ pub enum PbmDimension {
     Auditory,
 }
 
+/// 创伤分级——来自 `trauma-protocol.md`，ADR 009 §十一。
+///
+/// Feelings-Core PBM 在 Session 启动时从用户档案读取并下发给 Anim。
+/// Anim 不判断——不诊断——不存档。只执行分级的安全约束。
+///
+/// 分级：
+///   - V1：禁主不禁点缀（安全类原子除外）——强度上限不受影响
+///   - V2：禁主 + 点缀配比减半 + 强度上限同等缩减
+///   - V3：全禁 + LeakRate→~0 + CriticalThreshold→极低 + P0 抢占就绪
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum TraumaTier {
+    /// 创伤一级——禁主不禁点。
+    V1,
+    /// 创伤二级——禁主 + 点缀配比减半。
+    V2,
+    /// 创伤三级——全禁。激活主动麻痹 + P0 抢占的物理前提。
+    V3,
+}
+
 /// 单个维度的步长状态。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum StepState {
