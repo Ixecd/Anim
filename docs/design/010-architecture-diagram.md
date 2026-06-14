@@ -17,9 +17,9 @@ Pass 0b  Parser ──→ AST (FeelingSource)
            │
 Pass 1  TypeCheck ──→ Registry.lookup() ─ 感受原子存在/配比帽
 Pass 2  StaticSafety (rule.rs) ─ 静态规则——不读用户档案
-Pass 3  UserStateSafety (safety.rs · v0.3 stub) ─ 用户安全——创伤/cap/未成年
+Pass 3  UserStateSafety (safety.rs · v0.3 stub) ─ 用户安全——防御层级/cap/锚点置信度
          │
-         ├─ Trauma 重定向 ── pbm::TraumaTier 驱动 ── 011/012 的 trauma v3 协议管道已铺好
+         ├─ 防御激活 ── pbm::DefenceLevel 驱动 ── 011/012 的 D3 级协议管道已铺好
          │   一旦激活: 维度锁定 | LeakRate→~0 | CriticalThreshold→极低 | P0 抢占就绪
          │
 Pass 4  RuntimeGuard (guard.rs) ─ OiSmoothing 衰减曲线——oi 帧拒绝不硬截断
@@ -65,7 +65,7 @@ src/
 │
 ├── 交织层（Pass 5-6）
 │   ├── fsir.rs         → FSIR 生成 · 依赖 ast
-│   ├── pbm.rs          → PBM 状态 · 独立模块——SessionLabel/DataConfidence/ColdStartGuard/DampingMatrix/DampingState/TraumaTier
+│   ├── pbm.rs          → PBM 状态 · 独立模块——SessionLabel/DataConfidence/ColdStartGuard/DampingMatrix/DampingState/DefenceLevel
 │   │                       当前属于 Anim——但长期归属是 Feelings-Core。
 │   │                       011/012 的"PBM 从来不离设备"——当前 Anim 就是 PBM 的宿主进程。
 │   ├── personalize.rs  → FSIR × PBM → PSIR · 依赖 fsir + pbm + registry + error
@@ -105,9 +105,9 @@ personalize.rs
   ├── Sigmoids 强度缩放——compression factor × baseline_coeff
   ├── 强度上限二次校验
   ├── OiSmoothing 衰减曲线 pass-through
-  ├── Trauma 路径重定向 ≡ pbm.rs TraumaTier（V1/V2/V3）→ personalize.rs 已接入——
-  │   trauma_rerouted = pbm.trauma_tier.is_some()。
-  │   v0.4 待 Core 提供真实 trauma_tier——当前默认 None（不触发）
+  ├── 防御激活判定 ≡ pbm.rs DefenceLevel（D1/D2/D3）→ personalize.rs 已接入——
+  │   defence_activated = pbm.defence_level.is_some()。
+  │   v0.4 待 Core 提供真实 defence_level——当前默认 None（不触发）
   ├── low_anchor_cap ≡ safety.rs 已实现——personalize.rs 入口已接入——
   │   effective_cap = low_anchor_cap(user_cap, anchor_confidence)——
   │   PbmState.anchor_confidence: Option<f64>——None = 向后兼容 v0.3

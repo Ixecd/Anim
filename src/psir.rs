@@ -1,7 +1,7 @@
 // src/psir.rs — PSIR 类型定义
 
+use crate::pbm::DefenceLevel;
 use serde::{Deserialize, Serialize};
-use crate::pbm::TraumaTier;
 
 // ── PsirDoc ──────────────────────────────────────────────────
 
@@ -40,11 +40,11 @@ pub struct PsirDoc {
     pub cold_start: bool,
 
     /// 创伤路径重定向——本帧是否触发了创伤安全路径。
-    pub trauma_rerouted: bool,
+    pub defence_activated: bool,
 
-    /// 创伤分级——具体分级（V1/V2/V3）供下游 Pass 7-8 差异化执行。
-    /// None = 普通用户，无创伤保护。
-    pub trauma_tier: Option<TraumaTier>,
+    /// 防御激活层级——D1/D2/D3——供下游 Pass 7-8 按防御需求差异化执行。
+    /// None = 无防御激活——等控器当前不需要信号缩放保护。
+    pub defence_level: Option<DefenceLevel>,
 
     /// PBM 更新戳记——记录本次个性化使用的 PBM 版本/状态。
     pub pbm_stamp: PsirPbmStamp,
@@ -169,8 +169,8 @@ pub struct PsirIntensityInput {
 pub struct PsirMetaInput {
     pub smoothing: Option<PsirSmoothing>,
     pub cold_start: bool,
-    pub trauma_rerouted: bool,
-    pub trauma_tier: Option<TraumaTier>,
+    pub defence_activated: bool,
+    pub defence_level: Option<DefenceLevel>,
     pub pbm_updated_at: String,
     pub session_count: u32,
 }
@@ -198,8 +198,8 @@ impl PsirDoc {
             },
             smoothing: meta.smoothing,
             cold_start: meta.cold_start,
-            trauma_rerouted: meta.trauma_rerouted,
-            trauma_tier: meta.trauma_tier,
+            defence_activated: meta.defence_activated,
+            defence_level: meta.defence_level,
             pbm_stamp: PsirPbmStamp {
                 pbm_updated_at: meta.pbm_updated_at,
                 session_count: meta.session_count,

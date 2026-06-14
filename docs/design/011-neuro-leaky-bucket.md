@@ -313,7 +313,7 @@ tracker.intake_and_verify(psir.intensity.applied_max, dim, &profile)?;
 
 safety::check 当前是纯函数（无状态）——tracker 独立注入管线——不修改 check 的签名。v0.4 的实现上 tracker 作为 PbmState 的新增字段传入 personalize。
 
-Pass 3b 的漏桶在 Pass 6（个人化）之后执行——此时 tracker 收到的 intensity 是经过 sigmoidal_scale 和 user_cap 二次校验后的最终签发强度——不是源码原始强度。对于 Trauma 路径（trauma v2 配比减少/维度锁定/强度上限降低）——漏桶必须在触发重定向时即时切换内部状态机——LeakRate 调至 ~0，CriticalThreshold 降至极低——和 ADR 012 的 Profile 参数矩阵同构。
+Pass 3b 的漏桶在 Pass 6（个人化）之后执行——此时 tracker 收到的 intensity 是经过 sigmoidal_scale 和 user_cap 二次校验后的最终签发强度——不是源码原始强度。对于 DefenceLevel D2 配比减少/维度锁定/强度上限降低）——漏桶必须在触发重定向时即时切换内部状态机——LeakRate 调至 ~0，CriticalThreshold 降至极低——和 ADR 012 的 Profile 参数矩阵同构。
 
 熔断后注入 Pass 7 保护帧时——在 Feelings-OS busd 的硬实时 ISR 中——使用原子 CAS 无锁注入——不阻塞任何现有帧的完成——直接在总线下一拍替换输出帧——不是"等这一帧跑完再切"——是"下一拍——已经是保护帧了"。
 

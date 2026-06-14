@@ -2,7 +2,9 @@
 
 use crate::error::AnimiError;
 use crate::fsir::FsirDoc;
-use crate::pbm::{ColdStartGuard, DampingMatrix, DampingState, PbmDimension, SessionLabel, StepState};
+use crate::pbm::{
+    ColdStartGuard, DampingMatrix, DampingState, PbmDimension, SessionLabel, StepState,
+};
 use crate::psir::{
     PersonalizedAccent, PersonalizedFeeling, PsirDecayStep, PsirDoc, PsirFeelingInput,
     PsirIntensityInput, PsirMetaInput, PsirSmoothing,
@@ -92,9 +94,11 @@ pub struct PbmState<'a> {
     //
     // 当前由 Anim 在 Session 启动时从 PBM 档案（或默认值）读取——
     // 长期由 Feelings-Core 在设备本地提供。
-    /// 创伤分级——来自 Core PBM 的用户档案。
-    /// None = 普通用户——无创伤路径重定向。
-    pub trauma_tier: Option<crate::pbm::TraumaTier>,
+    /// 防御激活层级——来自 PBM 内部状态机。
+    /// None = 普通用户——无防御激活。
+    /// D1/D2/D3 = 等控器检测到对应层级的防御需求——
+    ///   非叙事驱动——只由等控器 VSA 相变触发。
+    pub defence_level: Option<crate::pbm::DefenceLevel>,
 
     /// 锚点置信度 R (0.0~1.0)——来自 Core PBM。
     /// R < 0.3 → cap 硬上限 20（low_anchor_cap 保护）。
@@ -253,11 +257,11 @@ pub fn personalize(
         });
     }
 
-    // ── 7. 创伤路径重定向 ─────── v0.4: Core PBM 驱动 ──────
-    // 从 Core 下行的 trauma_tier 推导是否激活创伤安全路径。
-    // None = 普通用户——不触发重定向。
-    // 具体分级（V1/V2/V3）下沉到 PSIR——由 Pass 7-8 按分级差异化执行。
-    let trauma_rerouted = pbm.trauma_tier.is_some();
+    // ── 7. 防御激活判定 ─────── v0.4: PBM 状态机驱动 ──────
+    // 从 PBM 的 defence_level 推导是否激活防御缩放路径。
+    // None = 等控器当前不需要防御缩放。
+    // D1/D2/D3 = 对应层级的信号安全约束。
+    let defence_activated = pbm.defence_level.is_some();
 
     // ── 8. 平滑过渡（pass-through）────────────────────
     let smoothing = fsir.smoothing.as_ref().map(|s| PsirSmoothing {
@@ -288,8 +292,8 @@ pub fn personalize(
         PsirMetaInput {
             smoothing,
             cold_start,
-            trauma_rerouted,
-            trauma_tier: pbm.trauma_tier,
+            defence_activated,
+            defence_level: pbm.defence_level,
             pbm_updated_at: pbm.pbm_updated_at.to_string(),
             session_count,
         },
@@ -390,7 +394,7 @@ mod tests {
             coeffs: PbmColdStartCoefficients::default(),
             user_cap: 100,
             pbm_updated_at: "2026-06-09T10:00:00Z",
-            trauma_tier: None,
+            defence_level: None,
             anchor_confidence: None,
             damping_state: None,
             current_pbm_values: None,
@@ -398,8 +402,8 @@ mod tests {
         let psir = personalize(&fsir, &registry, &pbm).expect("personalize failed");
         assert_eq!(psir.name, "calm");
         assert!(psir.cold_start);
-        assert!(!psir.trauma_rerouted);
-        assert!(psir.trauma_tier.is_none());
+        assert!(!psir.defence_activated);
+        assert!(psir.defence_level.is_none());
         assert_eq!(psir.main.atom, "calm_meditative");
         assert!((psir.main.baseline_offset - 0.40).abs() < 0.001); // emotional
         assert!(!psir.main.damped); // cold_start → 不冻结

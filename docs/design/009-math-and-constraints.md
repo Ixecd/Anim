@@ -260,28 +260,27 @@ v0.3 无此保护时——Session 9→10 断崖完全暴露。现已修复——
 
 ---
 
-## 十一、Trauma 路径重定向（v0.3 未实现）
+## 十一、防御激活层级（v0.4 已接入——DefenceLevel）
 
-**来源**：`docs/safety/trauma-protocol.md`，ADR 003 §6.1。
+**来源**：`docs/safety/trauma-protocol.md`，ADR 003 §6.1。已从叙事标签"创伤分级"重构为信号驱动的"防御激活层级"——触发条件来自 VSA PBM 相变标记，不是用户自述的任何叙事标签。
 
-| 分级 | 主旋律 | 点缀 | 强度上限 |
+| 层级 | 主旋律 | 点缀 | 强度上限 |
 |------|--------|------|---------|
-| trauma v1 | 禁（安全类外全禁） | 允许，上限不变 | 不受影响 |
-| trauma v2 | 禁 | 配比减半 | 同 v1 |
-| trauma v3 | 禁 | 全禁 | 全禁 |
+| D1 | 禁（安全类外全禁） | 允许，上限不变 | 不受影响 |
+| D2 | 禁 | 配比减半 | 同 D1 |
+| D3 | 禁 | 全禁 | 全禁 |
 | 低锚点置信度用户 | strength cap ≤ 20（`anchor_confidence R < 0.3`） | 20 |
 | 普通用户 | 按个人基线动态 cap | 按 R 分段 |
 
-**当前（v0.4）**：`personalize.rs` 中 `trauma_rerouted` 硬编码为 `false`。`safety::check()` 是 no-op。`safety::low_anchor_cap()` 已落地——锚点置信度 R<0.3→cap 20 硬线（不是年龄——是锚在里还是在外）。
+**当前（v0.4）**：`pbm.rs` 已定义 `DefenceLevel` 枚举（D1/D2/D3）。`personalize.rs` 中 `defence_activated = pbm.defence_level.is_some()`——不再是 hardcoded false。`psir.rs` 中 `PsirDoc.defence_level` 下沉到下游 Pass 7-8。D1/D2/D3 的具体行为（强度缩放、点缀配比、主旋律禁用）在 Pass 7-8 实现时按层级差异化执行——当前管道已铺好——等 Core 提供真实 defence_level。
 
-**对 011/012 的依赖链影响**：
+**叙事污染检测（v0.4 计划）**：在 defence_activated 之前——需增加轻量判——若当前信号呈叙事化特征（重复自我指涉、高抽象归因、跨 Session 叙事一致性）→ 权重冻结——不放大防御层级。这切断了"我声称创伤→我要更高保护"的自我实现循环。DefenceLevel 的写入权仅在 PBM 内部状态机——外部输入（含用户显式反馈）只影响强度——不可直接写入层级。
+
+**对 011/012 的依赖关系**：
 011 的 NeuroEnergyTracker、012 的 P0 硬抢占/主动麻痹/带外快照覆写——
-全部依赖 Trauma 路径能正确重定向这个前提。
-011 写道——"Trauma v3: LeakRate→~0, CriticalThreshold→极低"。
-012 写道——"主动麻痹是 Core 的沙箱指令——trauma v3 的神经电暴——Feelings 在信号层提前把门关了"。
-这些协议的触发条件——全部建在 `trauma_rerouted = true` 之上。
-当前这个前提 hardcoded false——等于 011 和 012 的 trauma 级防御全部挂在空中。
-不是协议设计错了——是协议在等执行层追上。
+在 D3 激活时触发对应的极限防御——LeakRate→~0、CriticalThreshold→极低。
+管道已铺好——等 Core 提供真实 defence_level 下行。
+
 
 ---
 ---
@@ -298,10 +297,10 @@ v0.3 无此保护时——Session 9→10 断崖完全暴露。现已修复——
 [x] 冷启动阻尼淡入窗        v0.4 已实现——personalize.rs L129-147。
                             damping_window_alpha + freeze_factor——Session 10→15 线性过渡。
 
-[x] Trauma 路径重定向      已接入——pbm.rs TraumaTier 枚举（V1/V2/V3）→
-                            personalize.rs trauma_rerouted = pbm.trauma_tier.is_some()。
-                            v0.4 待 Core 提供真实 trauma_tier 分级——当前默认 None（不触发）。
-                            011/012 的 trauma v3 防御已从'空中楼阁'变为'管道已铺好——等数据'。
+[x] 防御激活层级          已接入——pbm.rs DefenceLevel 枚举（D1/D2/D3）→
+                            personalize.rs defence_activated = pbm.defence_level.is_some()。
+                            v0.4 待 Core 提供真实 defence_level——当前默认 None（不触发）。
+                            011/012 的 D3 防御已从'空中楼阁'变为'管道已铺好——等数据'。
 
 [x] low_anchor_cap          safety.rs 已实现 + personalize.rs 已接入——
                             effective_cap = low_anchor_cap(user_cap, anchor_confidence)。
@@ -321,7 +320,7 @@ v0.3 无此保护时——Session 9→10 断崖完全暴露。现已修复——
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
-| v0.4 | 2026-06-10 | §九点缀比例帽语义修正+freeze_factor。§七冷启动阻尼淡入窗。§十低锚点置信度硬上限 low_anchor_cap(R<0.3→cap 20)。§十一创伤表更新——"未成年"→锚点置信度。|
+| v0.4 | 2026-06-10 | §九点缀比例帽语义修正+freeze_factor。§七冷启动阻尼淡入窗。§十低锚点置信度硬上限 low_anchor_cap(R<0.3→cap 20)。§十一创伤表更新——"创伤分级"→防御激活层级 DefenceLevel（D1/D2/D3）。|
 | v0.3 | 2026-06-09 | 完整重写：sigmoidal + 强度缩放 + OiSmoothing + SessionLabel × DataConfidence + 约束速查 + Trauma |
 | v0.2 | 2026-06-09 | 从 009-pbm-math.md 拆分，覆盖 sigmoidal、冷启动、阻尼、点缀帽。迁移至 archived. |
 | v0.1 | 2026-06-09 | 初始——仅 sigmoidal、冷启动系数、阻尼规则、点缀帽 |
