@@ -92,7 +92,6 @@ pub struct PbmState<'a> {
     //
     // 当前由 Anim 在 Session 启动时从 PBM 档案（或默认值）读取——
     // 长期由 Feelings-Core 在设备本地提供。
-
     /// 创伤分级——来自 Core PBM 的用户档案。
     /// None = 普通用户——无创伤路径重定向。
     pub trauma_tier: Option<crate::pbm::TraumaTier>,
