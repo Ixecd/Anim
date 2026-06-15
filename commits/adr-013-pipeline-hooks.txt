@@ -1,0 +1,10 @@
+docs: ADR 013 — Pipeline + Hook 架构设计
+
+- 动机：personalize() 签名膨胀、main.rs 硬编码、测试隔离困难、钩子逻辑散落
+- 决策：核心流转 + 可插拔钩子——reactor 模型。管线只做数据流转不可变，每个安全/检测机制 = PipelineHook
+- PipelineStage 六阶段：AfterParse / AfterTypeCheck / AfterIntensityScale / AfterPersonalize / OnSessionStart / OnSessionEnd
+- 已有机制 Hook 化映射：rule→static_safety, low_anchor_cap, leaky_bucket_intake, monotony, cross_dim_coupling, cold_start, oi_smoothing
+- HookContext + PipelineHook trait 定义——全部静态组合，零虚函数
+- YAML 配置 hooks 段——每个 hook 独立 enabled 开关
+- Pass 2 (rule) / Pass 4 (guard) 降为 hook——Pass 编号保留不跳号
+- 实现推迟到 v1.2——当前 137 测试全绿，先稳定再重构
