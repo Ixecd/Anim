@@ -92,7 +92,7 @@ PipelineStage:
 
 ---
 
-## PipelineHook trait（定义而不实现——v1.2 代码落地）
+## PipelineHook trait
 
 ```rust
 /// 管线钩子——在 PipelineStage 注入点被调用。
@@ -266,14 +266,14 @@ Pass 2 (rule) 和 Pass 4 (guard) 从独立的 Pass 降为 hook。Pass 编号 2 �
 
 ---
 
-## 时机——v1.2 实现
+## 实现 — v1.2 已落地（2026-06-15）
 
-013 是纯设计文档——不包含代码。实现推迟到 v1.2，原因：
-- 当前 137 测试全部通过，重构 Hook 架构会改动每一层的测试
-- 011+012 代码刚落地——先稳定，再重构
-- Pass 7/8 还在 v0.3 的待办列表中——等管线走通 ESIR 之后，再在更完整的骨架基础上做 Hook 重构，避免二次重构
-
----
+- `src/pipeline.rs` — `PipelineStage` 六阶段 / `Ctx` / `PipelineHook` trait / `Pipeline` + 7 个 hook 全部实现
+  · `static_safety` / `low_anchor_cap` / `oi_smoothing` / `leaky_bucket_intake` / `monotony` / `cross_dim_coupling` / `cold_start`
+- `main.rs` 管线改用 Pipeline — `Pipeline::build(&config)` + `run_stage(AfterTypeCheck)` / `run_stage(AfterIntensityScale)`
+- `configs/default.yaml` hooks 段 — 每个 hook 独立 `enabled` 开关
+- `AnimConfig` 新增 `hooks: HooksConfig` 字段
+- 全部静态组合，零 `dyn` 开销。137 测试全绿。
 
 ## 和已有文档的咬合
 
