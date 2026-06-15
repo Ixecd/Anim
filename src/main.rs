@@ -156,7 +156,7 @@ fn main() {
 
     // ── Pipeline + Hook 架构 —— ADR 013 ──
     let pipeline = animi::pipeline::Pipeline::build(&config);
-    let mut ctx = animi::pipeline::HookContext::new(&config, user_cap);
+    let mut ctx = animi::pipeline::Ctx::new(&config, user_cap);
     ctx.ast = Some(&ast);
     ctx.registry = Some(&registry);
 

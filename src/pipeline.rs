@@ -30,13 +30,13 @@ pub enum PipelineStage {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// HookContext
+// Ctx
 // ═══════════════════════════════════════════════════════════════
 
 /// Hook 上下文——只读管线数据 + 有状态 hook 的内部可变性。
 ///
 /// 每个阶段只暴露该阶段已就绪的数据。
-pub struct HookContext<'a> {
+pub struct Ctx<'a> {
     pub stage: PipelineStage,
 
     // —— 只读管线数据（随阶段逐步就绪）——
@@ -62,9 +62,9 @@ pub struct HookContext<'a> {
     pub psir_output: RefCell<Option<PsirDoc>>,
 }
 
-impl<'a> HookContext<'a> {
+impl<'a> Ctx<'a> {
     pub fn new(config: &'a AnimConfig, user_cap: u32) -> Self {
-        HookContext {
+        Ctx {
             stage: PipelineStage::AfterParse,
             ast: None,
             fsir: None,
@@ -90,7 +90,7 @@ impl<'a> HookContext<'a> {
 pub trait PipelineHook {
     fn name(&self) -> &str;
     fn stage(&self) -> PipelineStage;
-    fn run(&self, ctx: &HookContext) -> Result<(), AnimiError>;
+    fn run(&self, ctx: &Ctx) -> Result<(), AnimiError>;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -139,7 +139,7 @@ impl Pipeline {
     pub fn run_stage(
         &self,
         stage: PipelineStage,
-        ctx: &HookContext,
+        ctx: &Ctx,
     ) -> Result<(), AnimiError> {
         for hook in &self.hooks {
             if hook.stage() == stage {
@@ -154,7 +154,7 @@ impl Pipeline {
     pub fn invoke_all(
         &self,
         stages: &[PipelineStage],
-        ctx: &HookContext,
+        ctx: &Ctx,
     ) -> Result<(), AnimiError> {
         for &stage in stages {
             self.run_stage(stage, ctx)?;
@@ -186,7 +186,7 @@ struct StaticSafetyHook;
 impl PipelineHook for StaticSafetyHook {
     fn name(&self) -> &str { "static_safety" }
     fn stage(&self) -> PipelineStage { PipelineStage::AfterTypeCheck }
-    fn run(&self, ctx: &HookContext) -> Result<(), AnimiError> {
+    fn run(&self, ctx: &Ctx) -> Result<(), AnimiError> {
         let ast = ctx.ast.expect("static_safety: AST must be set");
         let reg = ctx.registry.expect("static_safety: registry must be set");
         crate::rule::check(ast, reg, ctx.config)
@@ -199,7 +199,7 @@ struct LowAnchorCapHook;
 impl PipelineHook for LowAnchorCapHook {
     fn name(&self) -> &str { "low_anchor_cap" }
     fn stage(&self) -> PipelineStage { PipelineStage::AfterIntensityScale }
-    fn run(&self, _ctx: &HookContext) -> Result<(), AnimiError> {
+    fn run(&self, _ctx: &Ctx) -> Result<(), AnimiError> {
         // low_anchor_cap 在 safety::check_with_scale / personalize 中已经生效。
         // 这里是钩子占位——实际逻辑在强度缩放路径中。
         Ok(())
@@ -212,7 +212,7 @@ struct OiSmoothingHook;
 impl PipelineHook for OiSmoothingHook {
     fn name(&self) -> &str { "oi_smoothing" }
     fn stage(&self) -> PipelineStage { PipelineStage::AfterIntensityScale }
-    fn run(&self, ctx: &HookContext) -> Result<(), AnimiError> {
+    fn run(&self, ctx: &Ctx) -> Result<(), AnimiError> {
         let ast = ctx.ast.expect("oi_smoothing: AST must be set");
         let smoothing = crate::guard::inject(ast, ctx.config)?;
         *ctx.smoothing_output.borrow_mut() = Some(smoothing);
@@ -226,7 +226,7 @@ struct LeakyBucketIntakeHook;
 impl PipelineHook for LeakyBucketIntakeHook {
     fn name(&self) -> &str { "leaky_bucket_intake" }
     fn stage(&self) -> PipelineStage { PipelineStage::AfterIntensityScale }
-    fn run(&self, ctx: &HookContext) -> Result<(), AnimiError> {
+    fn run(&self, ctx: &Ctx) -> Result<(), AnimiError> {
         // 离线 CLI 模式——无 tracker 状态——跳过。
         // 在线 Session 模式——tracker 由 main.rs 在 Session 启动时注入 ctx.tracker。
         if let Some(ref mut t) = *ctx.tracker.borrow_mut() {
@@ -252,7 +252,7 @@ struct MonotonyHook;
 impl PipelineHook for MonotonyHook {
     fn name(&self) -> &str { "monotony" }
     fn stage(&self) -> PipelineStage { PipelineStage::AfterPersonalize }
-    fn run(&self, _ctx: &HookContext) -> Result<(), AnimiError> {
+    fn run(&self, _ctx: &Ctx) -> Result<(), AnimiError> {
         // 离线 CLI 模式——无跨帧状态——跳过。
         // 在线 Session 模式——由 personalize() 内部的 monotony 检测处理。
         Ok(())
@@ -265,7 +265,7 @@ struct CrossDimCouplingHook;
 impl PipelineHook for CrossDimCouplingHook {
     fn name(&self) -> &str { "cross_dim_coupling" }
     fn stage(&self) -> PipelineStage { PipelineStage::AfterPersonalize }
-    fn run(&self, ctx: &HookContext) -> Result<(), AnimiError> {
+    fn run(&self, ctx: &Ctx) -> Result<(), AnimiError> {
         if let Some(ref t) = *ctx.tracker.borrow() {
             t.verify_cross_dimension(&UserSafetyProfile::standard())?;
         }
@@ -279,7 +279,7 @@ struct ColdStartHook;
 impl PipelineHook for ColdStartHook {
     fn name(&self) -> &str { "cold_start" }
     fn stage(&self) -> PipelineStage { PipelineStage::OnSessionStart }
-    fn run(&self, _ctx: &HookContext) -> Result<(), AnimiError> {
+    fn run(&self, _ctx: &Ctx) -> Result<(), AnimiError> {
         // 离线 CLI 模式——无 Session 概念——跳过。
         // 在线 Session 模式——由 personalize() 内部的 ColdStartGuard 处理。
         Ok(())
