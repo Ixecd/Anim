@@ -276,9 +276,40 @@ v0.3 无此保护时——Session 9→10 断崖完全暴露。现已修复——
 
 **叙事污染检测（v0.4 计划）**：在 defence_activated 之前——需增加轻量判——若当前信号呈叙事化特征（重复自我指涉、高抽象归因、跨 Session 叙事一致性）→ 权重冻结——不放大防御层级。这切断了"我声称创伤→我要更高保护"的自我实现循环。DefenceLevel 的写入权仅在 PBM 内部状态机——外部输入（含用户显式反馈）只影响强度——不可直接写入层级。
 
+**DefenceLevel 的 push back 分发——Anim 只传，不执行**。
+
+Anim 的职责——在 PbmState 和 PsirDoc 中携带 `defence_level`——到此为止。真正的防御执行——分三层——全在 Anim 之外。
+
+```
+               Anim                              Feelings-Core                           Feelings-OS
+               ────                              ─────────────                           ──────────
+Pass 6         defence_level = D1/D2/D3          读 PsirDoc.defence_level                —
+               写入 PsirDoc                       → NeuroEnergyTracker 参数切换            —
+                                                  → 强度调度器 N/M 配比调整               —
+                                                  → 实时置信度门控收紧                    —
+                                                  → 带外 P0 中断发送（D3）                —
+                                                                                          busd 执行 P0 抢占
+                                                                                          主动麻痹硬件门控（D3）
+
+D1 — 基础防御     Anim: --                     Core: LeakRate 不变                      OS: --
+                  (禁主不禁点由 Pass 3 rule       CriticalThreshold 不变
+                   执行——不经过 DefenceLevel)
+                  
+D2 — 增强防御     Anim: --                     Core: LeakRate 下调 50%                   OS: --
+                                               CriticalThreshold 降至标准 60%
+                                               强度调度器 N/M 调整为 1:3（恢复优先）
+
+D3 — 极限防御     Anim: --                     Core: LeakRate→~0（几乎不泄漏）          OS: P0 抢占 ISR 激活
+                                               CriticalThreshold→极低（标准 20%）         主动麻痹硬件门控解锁
+                                               N/M 配比→全恢复（0:N）                    主动麻痹沙箱指令——非用户可调用
+                                               带外 P0 中断发送——快照覆写                 
+```
+
+Anim 不判断、不诊断、不存档。只执行分级的安全约束。DefenceLevel 是一枚令牌——Anim 生成——Core 和 OS 按令牌等级执行——彼此不越权。
+
 **对 011/012 的依赖关系**：
-011 的 NeuroEnergyTracker、012 的 P0 硬抢占/主动麻痹/带外快照覆写——
-在 D3 激活时触发对应的极限防御——LeakRate→~0、CriticalThreshold→极低。
+011 的 NeuroEnergyTracker 参数矩阵——LeakRate、CriticalThreshold——在 D2/D3 激活时由 Core 自动切换。
+012 的 P0 硬抢占/主动麻痹——在 D3 激活时由 OS 总线驱动层执行。
 管道已铺好——等 Core 提供真实 defence_level 下行。
 
 
