@@ -88,7 +88,7 @@ PipelineStage:
   OnSessionEnd        Session 结束时——PBM 持久化
 ```
 
-每个阶段有自己的 `HookContext` 子集——只暴露该阶段能访问的数据。不允许跨阶段偷看未就绪的 IR。
+每个阶段有自己的 `Ctx` 子集——只暴露该阶段能访问的数据。不允许跨阶段偷看未就绪的 IR。
 
 ---
 
@@ -97,7 +97,7 @@ PipelineStage:
 ```rust
 /// 管线钩子——在 PipelineStage 注入点被调用。
 ///
-/// Hook 不拥有状态——有状态 hook（如漏桶）通过 HookContext 的内部可变性访问。
+/// Hook 不拥有状态——有状态 hook（如漏桶）通过 Ctx 的内部可变性访问。
 /// Hook 列表在 Session 启动时从 config 一次性构建，运行期不变。
 pub trait PipelineHook {
     /// hook 名称——对应 YAML config.hooks.<name>。
@@ -107,17 +107,17 @@ pub trait PipelineHook {
     fn stage(&self) -> PipelineStage;
 
     /// 执行 hook。ctx 提供该阶段可读写的全部数据。
-    fn run(&self, ctx: &HookContext) -> Result<(), AnimiError>;
+    fn run(&self, ctx: &Ctx) -> Result<(), AnimiError>;
 }
 ```
 
-## HookContext
+## Ctx
 
 ```rust
 /// Hook 上下文——只读管线数据 + 有状态 hook 的内部可变性。
 ///
 /// 每个阶段只暴露该阶段已就绪的数据。例如 AfterParse 阶段 ctx.ast 存在但 ctx.fsir 不存在。
-pub struct HookContext<'a> {
+pub struct Ctx<'a> {
     pub stage: PipelineStage,
 
     // 只读管线数据（随阶段逐步就绪）
@@ -129,7 +129,7 @@ pub struct HookContext<'a> {
     pub config: &'a AnimConfig,
 
     // 有状态 hook 通过 RefCell 实现内部可变性
-    // ——不污染 HookContext 的只读语义，不影响其他 hook。
+    // ——不污染 Ctx 的只读语义，不影响其他 hook。
     pub tracker: RefCell<Option<NeuroEnergyTracker>>,
 
     // 脱敏检测跨帧状态
@@ -199,7 +199,7 @@ let smoothing = die(animi::guard::inject(&ast, &config));
 重构后：
 ```rust
 let pipeline = animi::pipeline::Pipeline::build(&config)?;
-let ctx = HookContext::new(&ast, &config);
+let ctx = Ctx::new(&ast, &config);
 pipeline.run_stage(PipelineStage::AfterTypeCheck, &ctx)?;
 // build() 内部从 config.hooks 读取启用列表，按 stage 分组
 // run_stage() 遍历该 stage 的所有已启用 hook 并顺序执行
