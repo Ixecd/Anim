@@ -1,0 +1,11 @@
+docs: FORGET 刷新——v0.1.31 ADR 011+012+013 落地
+
+- 扫描日期 → 2026-06-15，模块 17→19，测试 99→137，ADR 10→13
+- P0: 8/12 → 11/12（#10/#11/#12 闭合）
+  · #10 NeuroEnergyTracker 四维漏桶 + 非线性 + 不应期 + 跨维度 + 全局桶
+  · #11 脱敏检测 + RhythmTemplate 桩 + steady 例外
+  · #12 dynamic cap 配置化
+- #1/#2/#3/#4 术语修正："创伤分型"→"DefenceLevel 判定"——等控器 VSA 相变驱动，不来自叙事标签
+- 新增"已完成"条目：NeuroEnergyTracker、脱敏、YAML config、ADR 013 Pileline/Hook、SafetyBreach、PsirDoc.degraded、RhythmTemplate
+- 编辑记录追加 v0.1.31
+- D02 设计决策追加 ADR 013 Pipeline+Hook 架构
