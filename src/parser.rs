@@ -5,7 +5,7 @@
 // 不检查类型。不检查安全。只检查"能不能按语法读出来"。
 
 use crate::ast::*;
-use crate::error::AnimiError;
+use crate::error::{AnimiError, Severity};
 use crate::lexer::{Token, TokenKind};
 use crate::oi;
 
@@ -103,21 +103,21 @@ impl Parser {
         }
 
         // 三个字段必须都存在
-        let mix = mix.ok_or_else(|| AnimiError::ParseError {
+        let mix = mix.ok_or_else(|| AnimiError::ParseError { severity: Severity::Deny,
             file_name: crate::error::current_file(),
             line: 0,
             col: 0,
             expected: "mix block".to_string(),
             found: "missing".to_string(),
         })?;
-        let shape = shape.ok_or_else(|| AnimiError::ParseError {
+        let shape = shape.ok_or_else(|| AnimiError::ParseError { severity: Severity::Deny,
             file_name: crate::error::current_file(),
             line: 0,
             col: 0,
             expected: "shape field".to_string(),
             found: "missing".to_string(),
         })?;
-        let intensity = intensity.ok_or_else(|| AnimiError::ParseError {
+        let intensity = intensity.ok_or_else(|| AnimiError::ParseError { severity: Severity::Deny,
             file_name: crate::error::current_file(),
             line: 0,
             col: 0,
@@ -250,7 +250,7 @@ impl Parser {
         self.expect(TokenKind::RBracket, "]")?;
 
         let intensity = Intensity { min, max };
-        intensity.validate().map_err(|msg| AnimiError::ParseError {
+        intensity.validate().map_err(|msg| AnimiError::ParseError { severity: Severity::Deny,
             file_name: crate::error::current_file(),
             line: bracket_line,
             col: bracket_col,

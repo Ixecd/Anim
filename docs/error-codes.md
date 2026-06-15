@@ -4,9 +4,7 @@
 
 | 错误变体 | 说明 |
 | -------- | ---- |
-| `LexError` | 词法错误——源码里有交织器不认识的字符。 |
-| `ParseError` | 语法错误——token 流不符合 .anim 语法。 |
-| `TypeCheckError` | 类型检查错误——感受原子不存在、强度越界等。 |
-| `StaticSafetyError` | 静态安全错误——Pass 2（rule.rs）。对任何人的硬规则。 |
-| `UserStateSafetyError` | 用户安全错误——Pass 3（safety.rs）。对这个人的拒绝。 |
-| `InternalError` | 交织器内部错误——不是用户源码的问题。 |
+| `StaticSafetyError` | 静态安全——对任何人的硬规则（Pass 2 / rule.rs）。 |
+| `UserStateSafetyError` | 用户安全——对这个人的拒绝（Pass 3 / safety.rs）。 |
+| `SafetyBreach` | 时域能量累积熔断——ADR 011 Neuro-Leaky Bucket。 |
+| `InternalError` | 交织器内部错误。 |

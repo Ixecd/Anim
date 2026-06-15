@@ -11,7 +11,7 @@
 
 use crate::ast::*;
 use crate::config::AnimConfig;
-use crate::error::AnimiError;
+use crate::error::{AnimiError, Severity};
 use serde::{Deserialize, Serialize};
 
 // ── OiSmoothing —— oi 帧缺失平滑过渡 ──────────────────────────
@@ -159,7 +159,7 @@ pub fn smoothing_for_intensity(min: u32, max: u32, config: &AnimConfig) -> OiSmo
 pub fn inject(source: &FeelingSource, config: &AnimConfig) -> Result<OiSmoothing, AnimiError> {
     // 强度 ≤ 0 拒绝——没有信号需要平滑过渡
     if source.intensity.max == 0 && source.intensity.min == 0 {
-        return Err(AnimiError::StaticSafetyError {
+        return Err(AnimiError::StaticSafetyError { severity: Severity::Deny,
             file_name: crate::error::current_file(),
             rule: "oi 帧平滑".into(),
             detail: "强度为零——不需要平滑过渡。这种源码不应到达 Pass 4。".into(),
@@ -171,7 +171,7 @@ pub fn inject(source: &FeelingSource, config: &AnimConfig) -> Result<OiSmoothing
     // 验证策略有效性
     smoothing
         .validate()
-        .map_err(|msg| AnimiError::InternalError {
+        .map_err(|msg| AnimiError::InternalError { severity: Severity::Deny,
             file_name: crate::error::current_file(),
             msg: format!("OiSmoothing 验证失败: {}", msg),
         })?;

@@ -11,9 +11,10 @@ use std::fs;
 use std::process;
 
 use animi::error::AnimiError;
+use animi::error::Severity;
 use animi::log::A;
 
-/// 错误处理辅助——Ok 则返回值，Err 则打印并退出。
+/// 硬错误——Deny 级别，直接退出。
 fn die<T>(r: Result<T, AnimiError>) -> T {
     match r {
         Ok(v) => v,
@@ -21,6 +22,33 @@ fn die<T>(r: Result<T, AnimiError>) -> T {
             A.error(format_args!("{}", e));
             process::exit(1);
         }
+    }
+}
+
+/// 软错误——按 severity + flags 分发。Warn 打印继续，Note 静默吞掉。
+/// 返回 None 表示被吞掉了，调用方应继续。
+fn die_soft(r: Result<(), AnimiError>, strict: bool, verbose: bool) {
+    match r {
+        Ok(()) => {}
+        Err(e) => match e.severity() {
+            Severity::Deny => {
+                A.error(format_args!("{}", e));
+                process::exit(1);
+            }
+            Severity::Warn => {
+                if strict {
+                    A.error(format_args!("{} (--strict)", e));
+                    process::exit(1);
+                } else {
+                    A.warn(format_args!("{}", e));
+                }
+            }
+            Severity::Note => {
+                if verbose {
+                    A.debug(format_args!("{}", e));
+                }
+            }
+        },
     }
 }
 
@@ -53,10 +81,12 @@ fn main() {
         return;
     }
 
-    // 解析可选参数：--cap <N>、--config <path> 和 <registry.json>
+    // 解析可选参数：--cap <N>、--config <path>、--strict、--verbose 和 <registry.json>
     let mut user_cap: u32 = 100;
     let mut config_path: Option<String> = None;
     let mut reg_path: Option<&String> = None;
+    let mut strict = false;
+    let mut verbose = false;
     let mut i = 2;
     while i < args.len() {
         if args[i] == "--cap" && i + 1 < args.len() {
@@ -90,6 +120,12 @@ fn main() {
             };
             animi::log::set_log_level(lvl);
             i += 2;
+        } else if args[i] == "--strict" {
+            strict = true;
+            i += 1;
+        } else if args[i] == "--verbose" {
+            verbose = true;
+            i += 1;
         } else if reg_path.is_none() {
             reg_path = Some(&args[i]);
             i += 1;
@@ -160,15 +196,15 @@ fn main() {
     ctx.ast = Some(&ast);
     ctx.registry = Some(&registry);
 
-    // AfterTypeCheck —— static_safety hook
-    die(pipeline.run_stage(animi::pipeline::PipelineStage::AfterTypeCheck, &ctx));
+    // AfterTypeCheck —— static_safety hook（可 Warn）
+    die_soft(pipeline.run_stage(animi::pipeline::PipelineStage::AfterTypeCheck, &ctx), strict, verbose);
 
-    // Pass 3——用户安全检查 + 强度缩放
+    // Pass 3——用户安全检查 + 强度缩放（硬线——Deny）
     let scaled = die(animi::safety::check_with_scale(&ast, user_cap, &config));
     *ctx.scaled_intensity.borrow_mut() = Some(scaled.clone());
 
-    // AfterIntensityScale —— oi_smoothing / leaky_bucket_intake hooks
-    die(pipeline.run_stage(animi::pipeline::PipelineStage::AfterIntensityScale, &ctx));
+    // AfterIntensityScale —— oi_smoothing / leaky_bucket hook（可 Warn/Note）
+    die_soft(pipeline.run_stage(animi::pipeline::PipelineStage::AfterIntensityScale, &ctx), strict, verbose);
 
     // 从 ctx 读取 oi_smoothing 产出
     let smoothing = ctx.smoothing_output.borrow().clone()

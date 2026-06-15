@@ -1,6 +1,6 @@
 // src/personalize.rs — Pass 6：FSIR × PBM → PSIR
 
-use crate::error::AnimiError;
+use crate::error::{AnimiError, Severity};
 use crate::fsir::FsirDoc;
 use crate::pbm::{
     ColdStartGuard, DampingMatrix, DampingState, PbmDimension, SessionLabel, StepState,
@@ -283,7 +283,7 @@ pub fn personalize(
 
     // 强度上限二次校验
     if applied_max > effective_cap {
-        return Err(AnimiError::UserStateSafetyError {
+        return Err(AnimiError::UserStateSafetyError { severity: Severity::Deny,
             file_name: String::new(),
             cap: format!("{}", effective_cap),
             atom_name: fsir.name.clone(),

@@ -16,7 +16,7 @@
 
 use crate::ast::*;
 use crate::config::AnimConfig;
-use crate::error::AnimiError;
+use crate::error::{AnimiError, Severity};
 use crate::pbm::{DefenceLevel, PbmDimension};
 
 // ── Pass 3 公共 API ──────────────────────────────────────────
@@ -337,7 +337,7 @@ impl NeuroEnergyTracker {
         }
 
         if self.cumulative_energy[idx] > threshold {
-            return Err(AnimiError::SafetyBreach {
+            return Err(AnimiError::SafetyBreach { severity: Severity::Deny,
                 file_name: crate::error::current_file(),
                 dimension: dim,
                 current_energy: self.cumulative_energy[idx],
@@ -359,7 +359,7 @@ impl NeuroEnergyTracker {
                 }
                 let effective = profile.critical_thresholds[j] * (1.0 - coupling);
                 if energies[j] > effective {
-                    return Err(AnimiError::SafetyBreach {
+                    return Err(AnimiError::SafetyBreach { severity: Severity::Deny,
                         file_name: crate::error::current_file(),
                         dimension: DIM_ORDER[j],
                         current_energy: energies[j],
@@ -378,7 +378,7 @@ impl NeuroEnergyTracker {
             profile.critical_thresholds.iter().sum::<f64>() * self.global_beta;
 
         if energy_global > global_threshold {
-            return Err(AnimiError::SafetyBreach {
+            return Err(AnimiError::SafetyBreach { severity: Severity::Deny,
                 file_name: crate::error::current_file(),
                 dimension: PbmDimension::Emotional,
                 current_energy: energy_global,

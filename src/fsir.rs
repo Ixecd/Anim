@@ -5,7 +5,7 @@
 // 同一份 .anim → 同一份 FSIR → 不同的人上 PSIR 不同。
 
 use crate::ast::*;
-use crate::error::AnimiError;
+use crate::error::{AnimiError, Severity};
 use serde::{Deserialize, Serialize};
 
 // ── oi 帧平滑过渡（FSIR 自有类型，不依赖 guard 模块）────────────
@@ -174,7 +174,7 @@ impl FsirDoc {
 
     /// 序列化为 JSON 字符串。
     pub fn to_json(&self) -> Result<String, AnimiError> {
-        serde_json::to_string_pretty(self).map_err(|e| AnimiError::InternalError {
+        serde_json::to_string_pretty(self).map_err(|e| AnimiError::InternalError { severity: Severity::Deny,
             file_name: crate::error::current_file(),
             msg: format!("FSIR JSON 序列化失败: {}", e),
         })
@@ -182,7 +182,7 @@ impl FsirDoc {
 
     /// 从 JSON 字符串反序列化。
     pub fn from_json(json: &str) -> Result<Self, AnimiError> {
-        serde_json::from_str(json).map_err(|e| AnimiError::InternalError {
+        serde_json::from_str(json).map_err(|e| AnimiError::InternalError { severity: Severity::Deny,
             file_name: crate::error::current_file(),
             msg: format!("FSIR JSON 反序列化失败: {}", e),
         })
@@ -198,7 +198,7 @@ impl FsirDoc {
     /// Go Server 端需要一个 Postcard encoder 来生成相同的字节流。
     /// Postcard wire format 规范简单（~2 页），适合手写 Go 端。
     pub fn to_binary(&self) -> Result<Vec<u8>, AnimiError> {
-        postcard::to_allocvec(self).map_err(|e| AnimiError::InternalError {
+        postcard::to_allocvec(self).map_err(|e| AnimiError::InternalError { severity: Severity::Deny,
             file_name: crate::error::current_file(),
             msg: format!("FSIR 二进制序列化失败: {}", e),
         })
@@ -208,7 +208,7 @@ impl FsirDoc {
     ///
     /// Feelings-OS 裸机环境可用——Postcard 不依赖 std，不依赖 alloc 之外的任何东西。
     pub fn from_binary(bytes: &[u8]) -> Result<Self, AnimiError> {
-        postcard::from_bytes(bytes).map_err(|e| AnimiError::InternalError {
+        postcard::from_bytes(bytes).map_err(|e| AnimiError::InternalError { severity: Severity::Deny,
             file_name: crate::error::current_file(),
             msg: format!("FSIR 二进制反序列化失败: {}", e),
         })

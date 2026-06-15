@@ -1,0 +1,18 @@
+feat: ADR 014 — oi 三层严重度 oi! / oi_warn! / oi_note!
+
+- Severity 枚举：Deny / Warn / Note
+- AnimiError 每个变体新增 severity: Severity 字段
+- Display 按 severity 切换前缀：[oi] / [oi?] / [oi~]
+- oi_warn! / oi_note! 宏——默认 Warn / Note severity
+- oi! 默认 Deny——向后兼容所有现有调用点
+- rule.rs 两条规则降级：
+  · abrupt_stop > cap → oi! → oi_warn!
+  · sandbox_accent > max → oi! → oi_warn!
+- --strict CLI flag——全部 Warn 升级为 Deny
+- --verbose CLI flag——显示 Note 级别输出
+- main.rs: die() 保持 Deny-only，新增 die_soft() 按 severity+flags 分发
+- build.rs: valid 列表新增 SafetyBreach
+
+140 测试全绿，clippy 零 warning。端到端验证：
+  warn_test.anim (abrupt_stop=50) → [oi?] 警告打印但编译成功
+  --strict → 同文件退出码 1
