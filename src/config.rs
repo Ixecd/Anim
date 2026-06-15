@@ -24,6 +24,7 @@ pub struct AnimConfig {
     pub pbm_coefficients: PbmCoefficientsConfig,
     pub oi_smoothing: OiSmoothingConfig,
     pub caps: CapsConfig,
+    pub hooks: HooksConfig,
 }
 
 impl AnimConfig {
@@ -267,6 +268,43 @@ impl Default for CapsConfig {
             low_anchor_cap: 20,
         }
     }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Hook 开关 —— ADR 013 Pipeline + Hook 架构
+// ═══════════════════════════════════════════════════════════════
+
+/// 单个 hook 的开关配置。
+#[derive(Debug, Clone, Deserialize)]
+pub struct HookSwitch {
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+}
+
+fn default_true() -> bool { true }
+
+impl Default for HookSwitch {
+    fn default() -> Self { HookSwitch { enabled: true } }
+}
+
+/// 所有 hook 的启用/禁开关。
+#[derive(Debug, Clone, Deserialize, Default)]
+#[serde(default)]
+pub struct HooksConfig {
+    #[serde(default)]
+    pub static_safety: HookSwitch,
+    #[serde(default)]
+    pub low_anchor_cap: HookSwitch,
+    #[serde(default)]
+    pub leaky_bucket_intake: HookSwitch,
+    #[serde(default)]
+    pub monotony: HookSwitch,
+    #[serde(default)]
+    pub cross_dim_coupling: HookSwitch,
+    #[serde(default)]
+    pub cold_start: HookSwitch,
+    #[serde(default)]
+    pub oi_smoothing: HookSwitch,
 }
 
 #[cfg(test)]

@@ -77,3 +77,14 @@ caps:
   accent_ratio_fallback: 0.30
   low_anchor_boundary: 0.3
   low_anchor_cap: 20
+
+# ── Pipeline Hook 开关 —— ADR 013 ─────────────────────────
+# 每个 hook 独立控制启用/禁用。测试时可只开一个。
+hooks:
+  static_safety:       { enabled: true }
+  low_anchor_cap:      { enabled: true }
+  leaky_bucket_intake: { enabled: true }
+  monotony:            { enabled: true }
+  cross_dim_coupling:  { enabled: true }
+  cold_start:          { enabled: true }
+  oi_smoothing:        { enabled: true }

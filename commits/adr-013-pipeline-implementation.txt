@@ -1,0 +1,18 @@
+feat: ADR 013 Pipeline + Hook 架构落地
+
+- src/pipeline.rs（11KB）—— PipelineStage / HookContext / PipelineHook / Pipeline
+  · 七种 hook 全部实现：static_safety / low_anchor_cap / oi_smoothing /
+    leaky_bucket_intake / monotony / cross_dim_coupling / cold_start
+  · HookContext 通过 RefCell 实现有状态 hook 的内部可变性
+  · Pipeline::build() 从 config.hooks 读取启用列表
+  · 全部静态组合——编译期确定 hook 调用链
+- main.rs 管线改用 Pipeline
+  · rule::check → pipeline.run_stage(AfterTypeCheck)
+  · guard::inject → pipeline.run_stage(AfterIntensityScale)
+  · oi_smoothing 产出从 ctx.smoothing_output 读取
+- AnimConfig 新增 hooks: HooksConfig 字段
+  · HookSwitch { enabled: bool } —— 测试时可单独开关
+- configs/default.yaml 新增 hooks 段
+- lib.rs 注册 pipeline 模块
+
+137 测试全绿，clippy 零 warning，smoke test 通过。

@@ -11,6 +11,7 @@ pub mod oi;
 pub mod parser;
 pub mod pbm;
 pub mod personalize;
+pub mod pipeline;
 pub mod psir;
 pub mod registry;
 pub mod rule;
