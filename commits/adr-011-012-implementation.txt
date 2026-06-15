@@ -1,0 +1,32 @@
+feat: ADR 011+012 全线落地 + YAML 配置系统
+
+Anim 第三波——时域安全从设计定稿到完整实现。
+
+- ADR 011 Neuro-Leaky Bucket 完整实现（safety.rs）
+  · NeuroEnergyTracker——四维独立漏桶
+  · 非线性泄漏 LeakRate(E)=baseline×(1+γ×E) 防 PWM 攻击
+  · 时钟挂起防护 max_dt=100ms
+  · 绝对不应期保护窗——能量>90%阈值→禁止累加 500 帧
+  · 跨维度耦合 σ=0.3 + 全局总耦合能耗漏桶 α=0.3/β=0.9
+  · effective_leak_rate——能量越高漏越快
+- ADR 012 信号节律与脱敏检测（personalize.rs）
+  · 信号变异度检测——连续 500 帧 δ<2→degraded=true
+  · shape=steady 例外桩——冥想不误伤
+  · RhythmTemplate 类型定义——N 帧高强度+M 帧恢复（Core 零代码，不下发）
+  · user_cap 外部注入已满足——low_anchor_cap 硬下限 20
+- AnimiError 新增 SafetyBreach 变体（dimension/current_energy/threshold）
+- PsirDoc 新增 degraded 字段
+- PbmState 新增 5 字段（safety_profile/previous_intensities/monotony_counters/rhythm_template/config）
+- personaliz() 新增 tracker 参数——漏桶在 PSIR 生成后 return Ok 前执行
+
+YAML 配置系统——所有硬编码提取到 configs/default.yaml（60 参数 9 段）
+  · src/config.rs——AnimConfig + 9 子结构体——全部 serde(default) 部分覆盖
+  · CLI 新增 --config <path>——不传则 AnimConfig::default()
+  · rule/safety/guard/personalize 全部从 config 取值——不再有硬编码常量
+  · 不做热更新——Anim 是 CLI 工具——生产参数由 Core PBM 快照注入
+
+UserSafetyProfile 六种 Profile 参数矩阵（Standard/LowAnchor/D1/D2/D3）
+  · from_config_profile() 从 YAML 读——low_anchor()/from_defence_level() 委托给 default config
+  · safety.rs 合并——profile.rs + tracker.rs → 平铺进 safety.rs——项目保持平铺风格
+
+137 测试全绿，clippy 零 warning。9 个依赖（新增 serde_yaml），零 unsafe。

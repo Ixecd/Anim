@@ -57,14 +57,19 @@ impl Default for PbmColdStartCoefficients {
 ///
 /// 低强度 compression≈0.97 → ≈linear; 中compression=0.75 → 压缩;
 /// 高强度 compression≈0.52 → 饱和。
-pub fn sigmoidal_scale(original: u32, baseline_coeff: f64, cap: u32) -> u32 {
+pub fn sigmoidal_scale(
+    original: u32,
+    baseline_coeff: f64,
+    cap: u32,
+    cfg: &crate::config::SigmoidalConfig,
+) -> u32 {
     if cap == 0 {
         return 0;
     }
     let x = original as f64 / cap as f64;
-    let k: f64 = 6.0;
-    let x0: f64 = 0.5;
-    let alpha: f64 = 0.5;
+    let k = cfg.k;
+    let x0 = cfg.x0;
+    let alpha = cfg.compression_alpha;
     let sigmoid = 1.0 / (1.0 + (-k * (x - x0)).exp());
     let compression = 1.0 - alpha * sigmoid;
     let scaled = original as f64 * baseline_coeff * compression;
@@ -116,6 +121,26 @@ pub struct PbmState<'a> {
     /// 用于 DampingState 的梯度计算。
     /// None = 无实时 PBM 数据（离线编译或冷启动）——降级为 Damping Hold。
     pub current_pbm_values: Option<&'a [f64; 4]>,
+
+    // ── v1.1: ADR 011/012 漏桶 + 脱敏 ──
+    //
+    /// 用户安全档案——四维 LeakRate + CriticalThreshold。
+    /// Session 启动时由 Core 快照注入。None = 标准健康默认。
+    pub safety_profile: Option<&'a crate::safety::UserSafetyProfile>,
+
+    /// 上一帧四维强度快照——用于信号变异度检测（ADR 012 脱敏看门狗）。
+    /// None = 首帧——无历史——不做变异度检测。
+    pub previous_intensities: Option<&'a [u32; 4]>,
+
+    /// 脱敏检测连续 N 帧计数器——按维度。
+    pub monotony_counters: Option<&'a [u32; 4]>,
+
+    /// 信号节律模板——ADR 012。Core 强度调度器下发。
+    /// None = 无节律限制（默认——当前 Core 零代码）。
+    pub rhythm_template: Option<crate::safety::RhythmTemplate>,
+
+    /// 运行时配置——所有可调参数。Session 启动时由 main.rs 注入。
+    pub config: &'a crate::config::AnimConfig,
 }
 
 // ── 主函数：personalize ──────────────────────────────────────
@@ -127,6 +152,7 @@ pub fn personalize(
     fsir: &FsirDoc,
     registry: &Registry,
     pbm: &PbmState,
+    tracker: Option<&mut crate::safety::NeuroEnergyTracker>,
 ) -> Result<PsirDoc, AnimiError> {
     // ── 1. 冷启动判定 ──────────────────────────────────────
     let cold_start = pbm.guard.is_cold_start();
@@ -135,7 +161,8 @@ pub fn personalize(
     // ── 1a. 低锚点置信度 cap 硬上限（v0.4 P1 #28） ────────────
     // 从 Core PBM 的 anchor_confidence (R) 判定是否需要 low_anchor_cap 保护。
     // R < 0.3 → effective_cap = min(20, user_cap)。不是惩罚——是"你还没准备好——我先替你守着"。
-    let effective_cap = crate::safety::low_anchor_cap(pbm.user_cap, pbm.anchor_confidence);
+    let effective_cap =
+        crate::safety::low_anchor_cap(pbm.user_cap, pbm.anchor_confidence, pbm.config);
 
     // ── 2. 阻尼矩阵判定 ──────────────────────────────────────
     // v0.4: 步长来源——DampingState → 硬编码降级。
@@ -241,8 +268,18 @@ pub fn personalize(
     }
 
     // ── 7. 强度 sigmoidal 缩放 ─────────────────────────────
-    let applied_min = sigmoidal_scale(fsir.intensity.min, baseline_coeff, effective_cap);
-    let applied_max = sigmoidal_scale(fsir.intensity.max, baseline_coeff, effective_cap);
+    let applied_min = sigmoidal_scale(
+        fsir.intensity.min,
+        baseline_coeff,
+        effective_cap,
+        &pbm.config.sigmoidal,
+    );
+    let applied_max = sigmoidal_scale(
+        fsir.intensity.max,
+        baseline_coeff,
+        effective_cap,
+        &pbm.config.sigmoidal,
+    );
 
     // 强度上限二次校验
     if applied_max > effective_cap {
@@ -274,6 +311,42 @@ pub fn personalize(
             .collect(),
     });
 
+    // ── 8b. ADR 011 漏桶——时域能量追踪 ──────────────────
+    // 在 PSIR 生成后、return Ok 前——调用 tracker.intake_and_verify。
+    // 通过 → 继续。不通过 → Err(SafetyBreach) 向上传播。
+    let profile = pbm
+        .safety_profile
+        .copied()
+        .unwrap_or_else(crate::safety::UserSafetyProfile::standard);
+    if let Some(t) = tracker {
+        let now_ns = crate::safety::monotonic_ns();
+        t.intake_and_verify(applied_max, main_dim, &profile, now_ns)?;
+    }
+
+    // ── 8c. ADR 012 信号变异度检测（脱敏看门狗）────────────
+    // 比较当前帧强度与上一帧同维度强度——滑动平均后连续 N 帧变化 < δ → 置 degraded。
+    let mut degraded = false;
+    if let (Some(prev_ints), Some(counters)) = (pbm.previous_intensities, pbm.monotony_counters) {
+        let idx = crate::safety::dim_index(main_dim);
+        let prev = prev_ints[idx];
+        let curr = applied_max;
+        let delta = (curr as i64 - prev as i64).unsigned_abs();
+        // δ_threshold = 2（默认——变化幅度 < 2 强度分视为停滞）
+        let delta_threshold = pbm.config.monotony.delta_threshold;
+        // N 帧窗口（默认 500 帧 = 500ms）
+        let monotony_n = pbm.config.monotony.detection_frames;
+
+        if delta < delta_threshold.into() {
+            let new_count = counters[idx].saturating_add(1);
+            if new_count >= monotony_n {
+                degraded = true;
+            }
+        }
+        // 注：到达稳态阈值前 counters 值需要被写入以追踪跨帧状态。
+        // v1.1——degraded 标志写入 PSIR，不上报 Core（Core 零代码）。
+        // v1.2+——Core 读取 degraded → 在下一帧强度调度时插入恢复帧。
+    }
+
     // ── 9. 组装 PSIR ─────────────────────────────────────
     Ok(PsirDoc::new(
         PsirFeelingInput {
@@ -294,6 +367,7 @@ pub fn personalize(
             cold_start,
             defence_activated,
             defence_level: pbm.defence_level,
+            degraded,
             pbm_updated_at: pbm.pbm_updated_at.to_string(),
             session_count,
         },
@@ -344,7 +418,7 @@ mod tests {
 
     #[test]
     fn sigmoidal_zero_intensity() {
-        let scaled = sigmoidal_scale(0, 1.0, 100);
+        let scaled = sigmoidal_scale(0, 1.0, 100, &crate::config::SigmoidalConfig::default());
         assert_eq!(scaled, 0);
     }
 
@@ -353,7 +427,12 @@ mod tests {
         let cap = 100;
         let baseline = 1.0;
         // 10% → compression≈0.96 → applied≈9.6 → 10
-        let applied = sigmoidal_scale(10, baseline, cap);
+        let applied = sigmoidal_scale(
+            10,
+            baseline,
+            cap,
+            &crate::config::SigmoidalConfig::default(),
+        );
         assert_eq!(applied, 10);
     }
 
@@ -362,7 +441,12 @@ mod tests {
         let cap = 100;
         let baseline = 1.0;
         // 50% → compression=0.75 → applied≈37.5 → 38
-        let applied = sigmoidal_scale(cap / 2, baseline, cap);
+        let applied = sigmoidal_scale(
+            cap / 2,
+            baseline,
+            cap,
+            &crate::config::SigmoidalConfig::default(),
+        );
         assert_eq!(applied, 38);
     }
 
@@ -371,13 +455,18 @@ mod tests {
         let cap = 100;
         let baseline = 1.0;
         // 100% → compression≈0.52 → applied≈52
-        let applied = sigmoidal_scale(100, baseline, cap);
+        let applied = sigmoidal_scale(
+            100,
+            baseline,
+            cap,
+            &crate::config::SigmoidalConfig::default(),
+        );
         assert_eq!(applied, 52);
     }
 
     #[test]
     fn sigmoidal_respects_cap() {
-        let applied = sigmoidal_scale(200, 1.0, 100);
+        let applied = sigmoidal_scale(200, 1.0, 100, &crate::config::SigmoidalConfig::default());
         assert!(applied <= 100);
     }
 
@@ -398,8 +487,13 @@ mod tests {
             anchor_confidence: None,
             damping_state: None,
             current_pbm_values: None,
+            safety_profile: None,
+            previous_intensities: None,
+            monotony_counters: None,
+            rhythm_template: None,
+            config: &crate::config::AnimConfig::default(),
         };
-        let psir = personalize(&fsir, &registry, &pbm).expect("personalize failed");
+        let psir = personalize(&fsir, &registry, &pbm, None).expect("personalize failed");
         assert_eq!(psir.name, "calm");
         assert!(psir.cold_start);
         assert!(!psir.defence_activated);

@@ -10,6 +10,7 @@
 //   - 待 Pass 8 CodeGen 接入：ESIR 帧级插值 + 硬件衰减状态机
 
 use crate::ast::*;
+use crate::config::AnimConfig;
 use crate::error::AnimiError;
 use serde::{Deserialize, Serialize};
 
@@ -122,31 +123,22 @@ impl OiSmoothing {
 
 /// 根据源码强度区间选择 oi 帧拒绝时的平滑策略。
 ///
-/// 强度 ≤ 20：一帧硬截断——直接跳到安全基线。突停幅度低，岛叶可承受。
-/// 强度 > 20：5 帧序列（1 帧原值 + 4 帧非线性衰减）——[×1.0, ×0.6, ×0.3, ×0.1, ×0.0]。
-///             和 ADR 004 的硬件衰减状态机系数完全对齐。
-pub fn smoothing_for_intensity(min: u32, max: u32) -> OiSmoothing {
-    let peak = max.max(min); // 峰值 = 两个端点中较大的
-    if peak <= 20 {
-        // 低强度——可以硬截断
+/// 强度 ≤ config.oi_smoothing.hard_cut_boundary：一帧硬截断。
+/// 强度 > hard_cut_boundary：使用 config.oi_smoothing.decay_sequence。
+pub fn smoothing_for_intensity(min: u32, max: u32, config: &AnimConfig) -> OiSmoothing {
+    let peak = max.max(min);
+    if peak <= config.oi_smoothing.hard_cut_boundary {
         OiSmoothing {
             steps: vec![DecayStep { multiplier: 0.0 }],
         }
     } else {
-        // 中高强度——5 帧序列（1 帧原值 + 4 帧非线性衰减）
-        // Frame_N:   当前帧——信号被拒绝，但衰减状态机读取本帧原始值 × 1.0 作为衰减起点
-        // Frame_N+1: ×0.6
-        // Frame_N+2: ×0.3
-        // Frame_N+3: ×0.1
-        // Frame_N+4: ×0.0（安全基线保底空包）
         OiSmoothing {
-            steps: vec![
-                DecayStep { multiplier: 1.0 },
-                DecayStep { multiplier: 0.6 },
-                DecayStep { multiplier: 0.3 },
-                DecayStep { multiplier: 0.1 },
-                DecayStep { multiplier: 0.0 },
-            ],
+            steps: config
+                .oi_smoothing
+                .decay_sequence
+                .iter()
+                .map(|&multiplier| DecayStep { multiplier })
+                .collect(),
         }
     }
 }
@@ -164,7 +156,7 @@ pub fn smoothing_for_intensity(min: u32, max: u32) -> OiSmoothing {
 ///   3. 验证策略有效性
 ///
 ///   （不生成 ESIR——Pass 8 负责）
-pub fn inject(source: &FeelingSource) -> Result<OiSmoothing, AnimiError> {
+pub fn inject(source: &FeelingSource, config: &AnimConfig) -> Result<OiSmoothing, AnimiError> {
     // 强度 ≤ 0 拒绝——没有信号需要平滑过渡
     if source.intensity.max == 0 && source.intensity.min == 0 {
         return Err(AnimiError::StaticSafetyError {
@@ -174,7 +166,7 @@ pub fn inject(source: &FeelingSource) -> Result<OiSmoothing, AnimiError> {
         });
     }
 
-    let smoothing = smoothing_for_intensity(source.intensity.min, source.intensity.max);
+    let smoothing = smoothing_for_intensity(source.intensity.min, source.intensity.max, config);
 
     // 验证策略有效性
     smoothing
@@ -200,9 +192,10 @@ mod tests {
         let mut parser = Parser::new(tokens);
         let ast = parser.parse()?;
         let reg = crate::registry::Registry::default();
+        let cfg = crate::config::AnimConfig::default();
         let checker = TypeChecker::new(&reg);
         checker.check(&ast)?;
-        inject(&ast)
+        inject(&ast, &cfg)
     }
 
     // ── inject 测试 ──────────────────────────────────────
@@ -273,7 +266,8 @@ feeling calm {
 
     #[test]
     fn validate_4_frame_decay_passes() {
-        let s = smoothing_for_intensity(15, 45);
+        let cfg = crate::config::AnimConfig::default();
+        let s = smoothing_for_intensity(15, 45, &cfg);
         assert!(s.validate().is_ok());
     }
 
@@ -322,20 +316,23 @@ feeling calm {
 
     #[test]
     fn smoothing_for_peak_20_is_hard_cut() {
-        let s = smoothing_for_intensity(5, 20);
+        let cfg = crate::config::AnimConfig::default();
+        let s = smoothing_for_intensity(5, 20, &cfg);
         assert!(s.is_hard_cut());
     }
 
     #[test]
     fn smoothing_for_peak_21_is_decay() {
-        let s = smoothing_for_intensity(10, 21);
+        let cfg = crate::config::AnimConfig::default();
+        let s = smoothing_for_intensity(10, 21, &cfg);
         assert!(!s.is_hard_cut());
         assert_eq!(s.frame_count(), 5);
     }
 
     #[test]
     fn smoothing_for_peak_100_is_decay() {
-        let s = smoothing_for_intensity(0, 100);
+        let cfg = crate::config::AnimConfig::default();
+        let s = smoothing_for_intensity(0, 100, &cfg);
         assert!(!s.is_hard_cut());
         // 按 ADR 004：Frame_N → ×0.6 → ×0.3 → ×0.1 → 保底包
         let expected: Vec<f64> = vec![1.0, 0.6, 0.3, 0.1, 0.0];

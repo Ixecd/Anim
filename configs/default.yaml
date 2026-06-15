@@ -1,0 +1,79 @@
+# Anim 交织器运行时参数
+# 所有值均为 ADR 011/012 设计估值——第一纪元真实生理数据积累后重新标定。
+# 用法：animi <file.anim> --config configs/default.yaml
+
+# ── 六种用户安全 Profile 参数矩阵 ──────────────────────────
+# 索引：[Visceral, Emotional, Tactile, Auditory]
+profiles:
+  standard:
+    leak_rates: [2.0, 2.0, 2.0, 2.0]
+    critical_thresholds: [600, 600, 600, 600]
+  low_anchor:
+    leak_rates: [1.0, 1.0, 1.0, 1.0]
+    critical_thresholds: [120, 120, 120, 120]
+  defence_d1:
+    leak_rates: [1.8, 1.8, 1.8, 1.8]
+    critical_thresholds: [400, 400, 400, 400]
+  defence_d2:
+    leak_rates: [1.0, 1.0, 1.0, 1.0]
+    critical_thresholds: [200, 200, 200, 200]
+  defence_d3:
+    leak_rates: [0.05, 0.05, 0.05, 0.05]
+    critical_thresholds: [30, 30, 30, 30]
+
+# ── NeuroEnergyTracker 默认参数 ──────────────────────────────
+leaky_bucket:
+  max_dt_seconds: 0.1
+  nonlinear_gamma: 1.0
+  refractory_frames: 500
+  sigma: 0.3
+  global_alpha: 0.3
+  global_beta: 0.9
+
+# ── 脱敏检测 ─────────────────────────────────────────────────
+monotony:
+  delta_threshold: 2       # 变化幅度 < 2 强度分视为停滞
+  detection_frames: 500    # 连续 N 帧停滞 → degraded
+  steady_frames_multiplier: 3  # shape=steady 时拉长检测窗口 = 500×3
+
+# ── sigmoidal 强度缩放 ──────────────────────────────────────
+sigmoidal:
+  k: 6.0
+  x0: 0.5
+  compression_alpha: 0.5
+
+# ── 跨维度阻尼矩阵 ──────────────────────────────────────────
+damping:
+  gradient_thresholds:
+    visceral: 1.5
+    emotional: 2.0
+    tactile: 3.0
+    auditory: 2.0
+  initial_multipliers: [0.35, 0.50, 0.45, 0.50]
+  ema_alpha: 0.9
+  cold_start_transition_window: 5
+
+# ── 冷启动 ──────────────────────────────────────────────────
+cold_start:
+  sessions_threshold: 10
+
+# ── PBM 四维冷启动基线偏移系数 ─────────────────────────────
+pbm_coefficients:
+  visceral: 0.75
+  emotional: 0.40
+  tactile: 0.80
+  auditory: 0.85
+
+# ── oi 帧平滑过渡 ───────────────────────────────────────────
+oi_smoothing:
+  hard_cut_boundary: 20
+  decay_sequence: [1.0, 0.6, 0.3, 0.1, 0.0]
+
+# ── 全局上限 ────────────────────────────────────────────────
+caps:
+  global_intensity: 100
+  abrupt_stop_max: 20
+  sandbox_accent_max: 0.3
+  accent_ratio_fallback: 0.30
+  low_anchor_boundary: 0.3
+  low_anchor_cap: 20

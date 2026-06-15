@@ -68,6 +68,18 @@ pub enum AnimiError {
         reason: String,
     },
 
+    /// 时域能量累积熔断——ADR 011 Neuro-Leaky Bucket。
+    /// 持续合法帧的累积能量超过生理耐受阈值——强制保护。
+    SafetyBreach {
+        file_name: String,
+        /// 触发熔断的维度。
+        dimension: crate::pbm::PbmDimension,
+        /// 当前累积能量。
+        current_energy: f64,
+        /// 该维度的临界阈值。
+        threshold: f64,
+    },
+
     /// 交织器内部错误——不是用户源码的问题。
     InternalError { file_name: String, msg: String },
 }
@@ -80,6 +92,7 @@ impl fmt::Display for AnimiError {
             AnimiError::TypeCheckError { file_name, .. } => file_name,
             AnimiError::StaticSafetyError { file_name, .. } => file_name,
             AnimiError::UserStateSafetyError { file_name, .. } => file_name,
+            AnimiError::SafetyBreach { file_name, .. } => file_name,
             AnimiError::InternalError { file_name, .. } => file_name,
         };
 
@@ -118,6 +131,18 @@ impl fmt::Display for AnimiError {
                     f,
                     "[oi] 用户安全({}) ({}): {}——{}",
                     cap, file, atom_name, reason
+                )
+            }
+            AnimiError::SafetyBreach {
+                dimension,
+                current_energy,
+                threshold,
+                ..
+            } => {
+                write!(
+                    f,
+                    "[oi] 时域能量熔断 ({}): 维度 {:?} 累积能量 {:.1} 超过临界阈值 {:.1}——触发强制保护帧",
+                    file, dimension, current_energy, threshold
                 )
             }
             AnimiError::InternalError { msg, .. } => {

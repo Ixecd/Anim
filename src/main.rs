@@ -53,8 +53,9 @@ fn main() {
         return;
     }
 
-    // 解析可选参数：--cap <N> 和 <registry.json>
+    // 解析可选参数：--cap <N>、--config <path> 和 <registry.json>
     let mut user_cap: u32 = 100;
+    let mut config_path: Option<String> = None;
     let mut reg_path: Option<&String> = None;
     let mut i = 2;
     while i < args.len() {
@@ -69,6 +70,9 @@ fn main() {
                     100
                 }
             };
+            i += 2;
+        } else if args[i] == "--config" && i + 1 < args.len() {
+            config_path = Some(args[i + 1].clone());
             i += 2;
         } else if args[i] == "--log-level" && i + 1 < args.len() {
             let lvl = match args[i + 1].to_lowercase().as_str() {
@@ -114,6 +118,22 @@ fn main() {
         animi::registry::Registry::default()
     };
 
+    // Config——外部 YAML 或默认值
+    let config = if let Some(ref cfg_path) = config_path {
+        match animi::config::AnimConfig::load(cfg_path) {
+            Ok(c) => {
+                A.info(format_args!("✅ 加载外部 Config: {}", cfg_path));
+                c
+            }
+            Err(e) => {
+                A.warn(format_args!("⚠️ 加载 Config 失败: {}，使用默认值", e));
+                animi::config::AnimConfig::default()
+            }
+        }
+    } else {
+        animi::config::AnimConfig::default()
+    };
+
     // 设置当前文件名——oi! 宏自动从中读取
     animi::error::CURRENT_FILE.with(|f| *f.borrow_mut() = path.clone());
 
@@ -134,12 +154,12 @@ fn main() {
     let checker = animi::typeck::TypeChecker::new(&registry);
     die(checker.check(&ast));
 
-    die(animi::rule::check(&ast, &registry));
+    die(animi::rule::check(&ast, &registry, &config));
 
     // Pass 3——用户安全检查 + 强度缩放（user_cap 从 --cap 参数或取默认值 100）
-    let scaled = die(animi::safety::check_with_scale(&ast, user_cap));
+    let scaled = die(animi::safety::check_with_scale(&ast, user_cap, &config));
 
-    let smoothing = die(animi::guard::inject(&ast));
+    let smoothing = die(animi::guard::inject(&ast, &config));
     A.info(format_args!(
         "oi 帧平滑: {} 帧 {}ms 衰减{}",
         smoothing.frame_count(),

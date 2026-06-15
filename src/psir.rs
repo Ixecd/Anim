@@ -46,6 +46,10 @@ pub struct PsirDoc {
     /// None = 无防御激活——等控器当前不需要信号缩放保护。
     pub defence_level: Option<DefenceLevel>,
 
+    /// 脱敏降级标志——ADR 012 信号变异度检测。
+    /// true = 本帧同维度强度连续多帧停滞——下游强度调度器应插入恢复帧。
+    pub degraded: bool,
+
     /// PBM 更新戳记——记录本次个性化使用的 PBM 版本/状态。
     pub pbm_stamp: PsirPbmStamp,
 }
@@ -171,6 +175,8 @@ pub struct PsirMetaInput {
     pub cold_start: bool,
     pub defence_activated: bool,
     pub defence_level: Option<DefenceLevel>,
+    /// 脱敏降级标志——ADR 012 信号变异度检测。
+    pub degraded: bool,
     pub pbm_updated_at: String,
     pub session_count: u32,
 }
@@ -200,6 +206,7 @@ impl PsirDoc {
             cold_start: meta.cold_start,
             defence_activated: meta.defence_activated,
             defence_level: meta.defence_level,
+            degraded: meta.degraded,
             pbm_stamp: PsirPbmStamp {
                 pbm_updated_at: meta.pbm_updated_at,
                 session_count: meta.session_count,
