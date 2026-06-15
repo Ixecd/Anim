@@ -225,18 +225,7 @@ pub struct NeuroEnergyTracker {
 
 impl Default for NeuroEnergyTracker {
     fn default() -> Self {
-        NeuroEnergyTracker {
-            cumulative_energy: [0.0; 4],
-            last_tick_ns: None,
-            max_dt: 0.100,
-            nonlinear_gamma: 1.0,
-            refractory_active: [false; 4],
-            refractory_counter: [0; 4],
-            refractory_frames: 500,
-            sigma: 0.3,
-            global_alpha: 0.3,
-            global_beta: 0.9,
-        }
+        Self::from_config(&crate::config::LeakyBucketConfig::default())
     }
 }
 
@@ -245,11 +234,24 @@ impl NeuroEnergyTracker {
         Self::default()
     }
 
-    pub fn with_max_dt(max_dt_seconds: f64) -> Self {
+    /// 从 LeakyBucketConfig 构造——所有参数从 YAML config 读取。
+    pub fn from_config(cfg: &crate::config::LeakyBucketConfig) -> Self {
         NeuroEnergyTracker {
-            max_dt: max_dt_seconds,
-            ..Self::default()
+            cumulative_energy: [0.0; 4],
+            last_tick_ns: None,
+            max_dt: cfg.max_dt_seconds,
+            nonlinear_gamma: cfg.nonlinear_gamma,
+            refractory_active: [false; 4],
+            refractory_counter: [0; 4],
+            refractory_frames: cfg.refractory_frames,
+            sigma: cfg.sigma,
+            global_alpha: cfg.global_alpha,
+            global_beta: cfg.global_beta,
         }
+    }
+
+    pub fn with_max_dt(max_dt_seconds: f64) -> Self {
+        NeuroEnergyTracker { max_dt: max_dt_seconds, ..Self::default() }
     }
 
     #[cfg(test)]

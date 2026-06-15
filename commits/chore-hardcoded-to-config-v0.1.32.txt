@@ -1,0 +1,17 @@
+chore: 硬编码数字全量回填 config + ADR 014 oi 三层严重度
+
+- NeuroEnergyTracker::from_config(&LeakyBucketConfig)
+  · max_dt/nonlinear_gamma/refractory_frames/sigma/global_alpha/global_beta 全部从 YAML 读取
+- ColdStartGuard::from_config(&ColdStartConfig)
+  · sessions_threshold 从 config.cold_start 读取
+- DampingState::from_config(&DampingConfig)
+  · initial_multipliers + ema_alpha 从 config.damping 读取
+- DampingMatrix::gradient_threshold + apply 全部接收 &DampingConfig
+- DataConfidence::step_multiplier(&DataConfidenceConfig)
+  · high_step/low_step/contaminated_step/step_floor/step_ceiling 全部可调
+- configs/default.yaml 新增 data_confidence 段（5 参数）
+- ADR 014: oi!/oi_warn!/oi_note! + Severity Deny/Warn/Note + --strict/--verbose
+- rule.rs: abrupt_stop + sandbox_accent 从 oi! 降为 oi_warn!
+- FORGET 追加 v0.1.32 编辑记录
+
+140 测试全绿，clippy 零 warning。

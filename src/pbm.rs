@@ -64,16 +64,12 @@ impl SessionLabel {
 }
 
 impl DataConfidence {
-    /// 置信度 → PBM 步长乘数。
-    ///
-    /// High   = ×1.0（全步长）
-    /// Low    = ×0.15（因子三降级——ADR 007 §7.6）
-    /// Contaminated = ×0.0（冻结——不更新基线）
-    pub fn step_multiplier(&self) -> f64 {
+    /// 置信度 → PBM 步长乘数——从 DataConfidenceConfig 读取。
+    pub fn step_multiplier(&self, cfg: &crate::config::DataConfidenceConfig) -> f64 {
         match self {
-            DataConfidence::High => 1.0,
-            DataConfidence::Low => 0.15,
-            DataConfidence::Contaminated => 0.0,
+            DataConfidence::High => cfg.high_step,
+            DataConfidence::Low => cfg.low_step,
+            DataConfidence::Contaminated => cfg.contaminated_step,
         }
     }
 }
@@ -105,14 +101,16 @@ pub struct ColdStartGuard {
 
 impl Default for ColdStartGuard {
     fn default() -> Self {
-        ColdStartGuard {
-            session_count: 0,
-            threshold: 10,
-        }
+        Self::from_config(&crate::config::ColdStartConfig::default())
     }
 }
 
 impl ColdStartGuard {
+    /// 从 ColdStartConfig 构造。
+    pub fn from_config(cfg: &crate::config::ColdStartConfig) -> Self {
+        ColdStartGuard { session_count: 0, threshold: cfg.sessions_threshold }
+    }
+
     /// 本次 Session 是否处于冷启动期。
     pub fn is_cold_start(&self) -> bool {
         self.session_count < self.threshold
@@ -214,13 +212,13 @@ pub enum StepState {
 pub struct DampingMatrix;
 
 impl DampingMatrix {
-    /// 梯度阈值——梯度超过 threshold × 当前步长 → 触发跨维度冻结。
-    pub fn gradient_threshold(dim: PbmDimension) -> f64 {
+    /// 梯度阈值——从 DampingConfig 读取。
+    pub fn gradient_threshold(dim: PbmDimension, cfg: &crate::config::DampingConfig) -> f64 {
         match dim {
-            PbmDimension::Emotional => 2.0,
-            PbmDimension::Visceral => 1.5,
-            PbmDimension::Tactile => 3.0,
-            PbmDimension::Auditory => 2.0,
+            PbmDimension::Emotional => cfg.gradient_thresholds.emotional,
+            PbmDimension::Visceral => cfg.gradient_thresholds.visceral,
+            PbmDimension::Tactile => cfg.gradient_thresholds.tactile,
+            PbmDimension::Auditory => cfg.gradient_thresholds.auditory,
         }
     }
 
@@ -277,6 +275,7 @@ impl DampingMatrix {
     pub fn apply(
         gradients: &[(PbmDimension, f64); 4],
         current_steps: &[(PbmDimension, f64); 4],
+        cfg: &crate::config::DampingConfig,
     ) -> HashMap<PbmDimension, StepState> {
         let step_map = |dim: PbmDimension| -> f64 {
             current_steps
@@ -294,7 +293,7 @@ impl DampingMatrix {
 
         // 检查哪些维度触发了阻尼
         for (dim, grad) in gradients.iter() {
-            let threshold = Self::gradient_threshold(*dim) * step_map(*dim);
+            let threshold = Self::gradient_threshold(*dim, cfg) * step_map(*dim);
             if *grad > threshold {
                 // 此维度触发了阻尼——冻结所有受影响的维度
                 for (target_dim, _) in gradients.iter() {
@@ -356,12 +355,14 @@ impl Default for DampingState {
 }
 
 impl DampingState {
+    /// 从 DampingConfig 创建——初始步长从 YAML config 读取。
+    pub fn from_config(cfg: &crate::config::DampingConfig) -> Self {
+        DampingState { step_multipliers: cfg.initial_multipliers, last_pbm_snapshot: None }
+    }
+
     /// 以设计估值步长乘数创建新的阻尼状态。
     pub fn new() -> Self {
-        DampingState {
-            step_multipliers: [0.35, 0.50, 0.45, 0.50],
-            last_pbm_snapshot: None,
-        }
+        Self::from_config(&crate::config::DampingConfig::default())
     }
 
     /// 当前步长——以 [`DampingMatrix::apply`] 要求的格式返回。
@@ -396,12 +397,15 @@ impl DampingState {
     ///
     /// `step_factor` = 步长乘数（来自 DataConfidence——High=1.0, Low=0.15, Contaminated=0.0）。
     /// 这里取置信度对应的步长作为目标，按 EMA(0.9) 缓慢靠拢。
-    pub fn update(&mut self, current: &[f64; 4], confidence: DataConfidence) {
+    pub fn update(&mut self, current: &[f64; 4], confidence: DataConfidence, data_cfg: &crate::config::DataConfidenceConfig, damping_cfg: &crate::config::DampingConfig) {
         self.last_pbm_snapshot = Some(*current);
-        let target = confidence.step_multiplier();
+        let target = confidence.step_multiplier(data_cfg);
+        let ema = damping_cfg.ema_alpha;
+        let floor = data_cfg.step_floor;
+        let ceiling = data_cfg.step_ceiling;
         for i in 0..4 {
             let s = &mut self.step_multipliers[i];
-            *s = (*s * 0.9 + 0.1 * target).clamp(0.05, 1.0);
+            *s = (*s * ema + (1.0 - ema) * target).clamp(floor, ceiling);
         }
     }
 }
@@ -432,9 +436,9 @@ mod tests {
 
     #[test]
     fn data_confidence_multipliers() {
-        assert!((DataConfidence::High.step_multiplier() - 1.0).abs() < 1e-10);
-        assert!((DataConfidence::Low.step_multiplier() - 0.15).abs() < 1e-10);
-        assert!((DataConfidence::Contaminated.step_multiplier() - 0.0).abs() < 1e-10);
+        assert!((DataConfidence::High.step_multiplier(&crate::config::DataConfidenceConfig::default()) - 1.0).abs() < 1e-10);
+        assert!((DataConfidence::Low.step_multiplier(&crate::config::DataConfidenceConfig::default()) - 0.15).abs() < 1e-10);
+        assert!((DataConfidence::Contaminated.step_multiplier(&crate::config::DataConfidenceConfig::default()) - 0.0).abs() < 1e-10);
     }
 
     // ColdStartGuard
@@ -553,7 +557,7 @@ mod tests {
             (PbmDimension::Tactile, 0.5),
             (PbmDimension::Auditory, 0.5),
         ];
-        let states = DampingMatrix::apply(&gradients, &steps);
+        let states = DampingMatrix::apply(&gradients, &steps, &crate::config::DampingConfig::default());
         for (_, s) in &states {
             assert_eq!(*s, StepState::Active);
         }
@@ -573,7 +577,7 @@ mod tests {
             (PbmDimension::Tactile, 0.5),
             (PbmDimension::Auditory, 0.5),
         ];
-        let states = DampingMatrix::apply(&gradients, &steps);
+        let states = DampingMatrix::apply(&gradients, &steps, &crate::config::DampingConfig::default());
         // Visceral 应被 Emotional 冻结
         assert_eq!(
             states[&PbmDimension::Visceral],
@@ -617,7 +621,7 @@ mod tests {
     fn damping_state_computes_gradients() {
         let mut ds = DampingState::new();
         // 首帧：更新快照
-        ds.update(&[0.10, 0.20, 0.10, 0.05], DataConfidence::High);
+        ds.update(&[0.10, 0.20, 0.10, 0.05], DataConfidence::High, &crate::config::DataConfidenceConfig::default(), &crate::config::DampingConfig::default());
         assert!(ds.last_pbm_snapshot.is_some());
 
         // 第二帧：计算梯度
@@ -649,12 +653,12 @@ mod tests {
         assert!((ds.step_multipliers[1] - 0.50).abs() < 1e-10);
 
         // Low 置信度 → target=0.15 → EMA: 0.50×0.9 + 0.15×0.1 = 0.465
-        ds.update(&[0.1, 0.2, 0.3, 0.4], DataConfidence::Low);
+        ds.update(&[0.1, 0.2, 0.3, 0.4], DataConfidence::Low, &crate::config::DataConfidenceConfig::default(), &crate::config::DampingConfig::default());
         let expected = 0.50 * 0.9 + 0.15 * 0.1;
         assert!((ds.step_multipliers[1] - expected).abs() < 1e-10);
 
         // High 置信度 → target=1.0 → EMA: expected×0.9 + 1.0×0.1
-        ds.update(&[0.1, 0.2, 0.3, 0.4], DataConfidence::High);
+        ds.update(&[0.1, 0.2, 0.3, 0.4], DataConfidence::High, &crate::config::DataConfidenceConfig::default(), &crate::config::DampingConfig::default());
         let expected2 = expected * 0.9 + 1.0 * 0.1;
         assert!((ds.step_multipliers[1] - expected2).abs() < 1e-10);
     }
@@ -664,7 +668,7 @@ mod tests {
         let mut ds = DampingState::new();
         // 连续 Low → multiplier → 0.05 floor
         for _ in 0..100 {
-            ds.update(&[0.0, 0.0, 0.0, 0.0], DataConfidence::Low);
+            ds.update(&[0.0, 0.0, 0.0, 0.0], DataConfidence::Low, &crate::config::DataConfidenceConfig::default(), &crate::config::DampingConfig::default());
         }
         for m in &ds.step_multipliers {
             assert!(*m >= 0.05);

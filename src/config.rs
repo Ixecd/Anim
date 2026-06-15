@@ -24,6 +24,7 @@ pub struct AnimConfig {
     pub pbm_coefficients: PbmCoefficientsConfig,
     pub oi_smoothing: OiSmoothingConfig,
     pub caps: CapsConfig,
+    pub data_confidence: DataConfidenceConfig,
     pub hooks: HooksConfig,
 }
 
@@ -106,6 +107,29 @@ impl Default for LeakyBucketConfig {
             sigma: 0.3,
             global_alpha: 0.3,
             global_beta: 0.9,
+        }
+    }
+}
+
+/// DataConfidence 步长乘数——PBM 更新控制。
+#[derive(Debug, Clone, Deserialize)]
+#[serde(default)]
+pub struct DataConfidenceConfig {
+    pub high_step: f64,
+    pub low_step: f64,
+    pub contaminated_step: f64,
+    pub step_floor: f64,
+    pub step_ceiling: f64,
+}
+
+impl Default for DataConfidenceConfig {
+    fn default() -> Self {
+        DataConfidenceConfig {
+            high_step: 1.0,
+            low_step: 0.15,
+            contaminated_step: 0.0,
+            step_floor: 0.05,
+            step_ceiling: 1.0,
         }
     }
 }

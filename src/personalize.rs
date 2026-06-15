@@ -185,12 +185,12 @@ pub fn personalize(
 
     let frozen: HashMap<PbmDimension, StepState> = match pbm.damping_gradients {
         // 优先级一：外部注入梯度（传感器直通）
-        Some(gradients) => DampingMatrix::apply(gradients, &current_steps),
+        Some(gradients) => DampingMatrix::apply(gradients, &current_steps, &pbm.config.damping),
 
         // 优先级二：DampingState 实时计算 → 降级 Damping Hold
         None => match (pbm.damping_state, pbm.current_pbm_values) {
             (Some(ds), Some(vals)) => match ds.compute_gradients(vals) {
-                Some(gradients) => DampingMatrix::apply(&gradients, &current_steps),
+                Some(gradients) => DampingMatrix::apply(&gradients, &current_steps, &pbm.config.damping),
                 None => pbm.previous_frozen.cloned().unwrap_or_default(),
             },
             _ => pbm.previous_frozen.cloned().unwrap_or_default(),

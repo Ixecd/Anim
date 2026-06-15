@@ -169,6 +169,15 @@ feeling <基本感受包名> {
 ## 编辑记录
 
 ```
+2026-06-15  v0.1.32 硬编码数字全量回填 config + ADR 014 oi 三层严重度
+            - NeuroEnergyTracker::from_config(&LeakyBucketConfig)
+            - ColdStartGuard::from_config(&ColdStartConfig)
+            - DampingState/DampingMatrix 全部从 DampingConfig 读取梯度阈值+初始步长+EMA
+            - DataConfidence::step_multiplier 从 DataConfidenceConfig 读取
+            - configs/default.yaml 新增 data_confidence 段（high_step/low_step/contaminated_step/step_floor/step_ceiling)
+            - ADR 014: oi!/oi_warn!/oi_note! + Severity Deny/Warn/Note + --strict/--verbose
+            - rule.rs: abrupt_stop + sandbox_accent 从 oi! 降为 oi_warn!
+
 2026-06-15  v0.1.31 ADR 011+012 全线落地 + YAML 配置系统 + ADR 013 Pipeline/Hook 架构
             - P0 #10/#11/#12 闭合：NeuroEnergyTracker + 脱敏检测 + dynamic cap 配置化
             - YAML config 系统：configs/default.yaml（60 参数）+ src/config.rs + --config CLI

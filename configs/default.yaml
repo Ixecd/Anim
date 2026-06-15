@@ -78,6 +78,14 @@ caps:
   low_anchor_boundary: 0.3
   low_anchor_cap: 20
 
+# ── DataConfidence 步长乘数 ── PBM 更新控制 ──────────────
+data_confidence:
+  high_step: 1.0
+  low_step: 0.15
+  contaminated_step: 0.0
+  step_floor: 0.05
+  step_ceiling: 1.0
+
 # ── Pipeline Hook 开关 —— ADR 013 ─────────────────────────
 # 每个 hook 独立控制启用/禁用。测试时可只开一个。
 hooks:
