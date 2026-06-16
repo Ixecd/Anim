@@ -172,6 +172,46 @@ impl FsirDoc {
         }
     }
 
+    /// 离线 CLI 模式——用 FSIR 生成一个简单的 PSIR 桩（没有 PBM 校准）。
+    /// 仅用于 Pass 7/Pass 8 离线调试。Session 模式下走真实 personalize()。
+    pub fn to_psir_stub(&self) -> crate::psir::PsirDoc {
+        use crate::psir::{
+            PersonalizedFeeling, PsirDoc, PsirIntensity,
+            PsirPbmStamp, PsirShape,
+        };
+        PsirDoc {
+            name: self.name.clone(),
+            main: PersonalizedFeeling {
+                atom: self.mix.main.clone(),
+                baseline_offset: 1.0,
+                damped: false,
+            },
+            accents: vec![],
+            shape: PsirShape { name: self.shape.name.clone() },
+            intensity: PsirIntensity {
+                original_min: self.intensity.min,
+                original_max: self.intensity.max,
+                applied_min: self.intensity.min,
+                applied_max: self.intensity.max,
+                cap: 100,
+            },
+            smoothing: self.smoothing.as_ref().map(|s| crate::psir::PsirSmoothing {
+                steps: s.steps.iter().map(|step| crate::psir::PsirDecayStep {
+                    multiplier: step.multiplier,
+                }).collect(),
+            }),
+            cold_start: false,
+            defence_activated: false,
+            defence_level: None,
+            degraded: false,
+            pbm_stamp: PsirPbmStamp {
+                pbm_updated_at: "offline".into(),
+                session_count: 0,
+                cold_start: false,
+            },
+        }
+    }
+
     /// 序列化为 JSON 字符串。
     pub fn to_json(&self) -> Result<String, AnimiError> {
         serde_json::to_string_pretty(self).map_err(|e| AnimiError::InternalError { severity: Severity::Deny,

@@ -1,0 +1,17 @@
+feat: Pass 7 DeviceMap + Pass 8 CodeGen — FSIR → ESIR 全链路闭合
+
+- ADR 015 设计文档定稿
+- src/dsir.rs — DeviceId/DeviceSet/DeviceAssignment/DsirDoc 类型定义
+- src/device_map.rs — Pass 7: PSIR × DeviceSet → DSIR
+  · ear 硬线——缺失拒绝编译。wrist/neck/temple v0.4+ 降级。
+- src/esir.rs — EsirFrame (16B 固定宽度) + EsirDoc 类型定义
+- src/codegen.rs — Pass 8: DSIR → ESIR 帧序列生成
+  · 6 种 shape 展开：gradual_rise_fall/sharp_peak/steady/slow_decay/wave/abrupt_stop
+  · 首帧+尾帧嵌入安全校验标记 (flags bit0)
+  · tail 段嵌入恢复帧标记 (flags bit1)
+  · Postcard 二进制序列化
+- fsir.rs: FsirDoc::to_psir_stub() — 离线 CLI 模式 PSIR 桩
+- main.rs: Pass 7 + Pass 8 接入——输出 .dsir.json + .esir
+- lib.rs: 注册 4 新模块 (dsir/esir/device_map/codegen)
+
+152 测试全绿，clippy 零 warning。端到端: calm.anim → 90 帧 .esir。

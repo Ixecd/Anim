@@ -1,8 +1,12 @@
 // src/lib.rs — animi 交织器库入口
 
 pub mod ast;
+pub mod codegen;
 pub mod config;
+pub mod device_map;
+pub mod dsir;
 pub mod error;
+pub mod esir;
 pub mod fsir;
 pub mod guard;
 pub mod lexer;

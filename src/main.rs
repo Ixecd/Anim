@@ -243,4 +243,26 @@ fn main() {
     }
 
     A.info(format_args!("✅ {} → {}", path, out_path));
+
+    // ── Pass 7: DeviceMap — PSIR × DeviceSet → DSIR ──
+    let psir = doc.to_psir_stub();
+    let device_set = animi::dsir::DeviceSet::default();
+    let dsir = die(animi::device_map::device_map(&psir, &device_set));
+    let dsir_json = die(dsir.to_json());
+    let dsir_out = format!("{}.dsir.json", path.trim_end_matches(".anim"));
+    if let Err(e) = fs::write(&dsir_out, &dsir_json) {
+        A.error(format_args!("无法写入 {}: {}", dsir_out, e));
+        process::exit(1);
+    }
+    A.info(format_args!("✅ {} → {}", path, dsir_out));
+
+    // ── Pass 8: CodeGen — DSIR → ESIR ──
+    let esir = die(animi::codegen::codegen(&dsir));
+    let esir_bytes = die(esir.to_binary());
+    let esir_out = format!("{}.esir", path.trim_end_matches(".anim"));
+    if let Err(e) = fs::write(&esir_out, &esir_bytes) {
+        A.error(format_args!("无法写入 {}: {}", esir_out, e));
+        process::exit(1);
+    }
+    A.info(format_args!("✅ {} → {} ({} 帧, {}ms)", path, esir_out, esir.frame_count, esir.duration_ms));
 }

@@ -4,3 +4,5 @@ Cargo.lock
 target/
 txt/
 .codegraph/
+*.dsir.json
+*.esir
