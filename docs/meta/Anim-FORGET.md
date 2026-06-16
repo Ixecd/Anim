@@ -1,7 +1,7 @@
 # FORGET.md — 待修复项（P0 + P1 + P2）
 
 > 扫描日期：2026-06-15
-> 范围：代码（src/ 19 模块，137 测试）+ 设计文档（13 ADR）
+> 范围：代码（src/ 19 模块，140 测试）+ 设计文档（14 ADR）
 > 原则：P0 = 生产命门。P1 = 功能受限。P2 = 代码质量/可维护性。
 > 命名：animi 是交织器（interlinker），不是编译器。
 > 版本：v1.0 已打 tag——自举前唯一 tag。自举完成前不再打任何 tag。
@@ -130,7 +130,7 @@
 - ✅ `PsirDoc.degraded` — 脱敏降级标志
 
 ### 基础设施
-- ✅ YAML 配置系统 — `configs/default.yaml`（60 参数 9 段）+ `src/config.rs` + `--config`
+- ✅ YAML 配置系统 — `configs/default.yaml`（67 参数 10 段）+ `src/config.rs` + `--config`
 - ✅ ADR 013 Pipeline + Hook 架构 — `src/pipeline.rs`（7 hooks）+ PipelineStage 6 阶段
 - ✅ Postcard 二进制 ABI（ADR 008）
 - ✅ PBM 地基 — SessionLabel / DataConfidence / ColdStartGuard / DampingMatrix / DampingState
@@ -139,6 +139,7 @@
 - ✅ 源码 SHA-256 — SPL 锚定就绪
 - ✅ 错误码自动生成 — build.rs → docs/error-codes.md
 - ✅ 137 单元测试全绿，clippy 零 warning
+- ✅ ADR 014 oi 三层严重度 — oi!/oi_warn!/oi_note! + Severity Deny/Warn/Note + --strict/--verbose
 - ✅ 全部硬编码数字已迁移到 configs/default.yaml
 
 ---
@@ -169,6 +170,11 @@ feeling <基本感受包名> {
 ## 编辑记录
 
 ```
+2026-06-15  v0.1.33 ADR 014 oi 三层严重度 + FORGET 刷新 + 全部硬编码回填 config
+            - oi!/oi_warn!/oi_note! + Severity Deny/Warn/Note + --strict/--verbose
+            - rule.rs: abrupt_stop + sandbox_accent 从 oi! 降为 oi_warn!
+            - 140 tests，14 ADR（新增 014）
+
 2026-06-15  v0.1.32 硬编码数字全量回填 config + ADR 014 oi 三层严重度
             - NeuroEnergyTracker::from_config(&LeakyBucketConfig)
             - ColdStartGuard::from_config(&ColdStartConfig)
