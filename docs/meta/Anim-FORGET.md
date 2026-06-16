@@ -1,7 +1,7 @@
 # FORGET.md — 待修复项（P0 + P1 + P2）
 
 > 扫描日期：2026-06-15
-> 范围：代码（src/ 19 模块，140 测试）+ 设计文档（14 ADR）
+> 范围：代码（src/ 23 模块，152 测试）+ 设计文档（15 ADR）
 > 原则：P0 = 生产命门。P1 = 功能受限。P2 = 代码质量/可维护性。
 > 命名：animi 是交织器（interlinker），不是编译器。
 > 版本：v1.0 已打 tag——自举前唯一 tag。自举完成前不再打任何 tag。
@@ -38,13 +38,13 @@
 
 ---
 
-## P1 — 功能受限（4/20）
+## P1 — 功能受限（12/20）
 
 ### 交织管线
 
-10. **四层 IR 仅 FSIR 实现** — PSIR/DSIR/ESIR 仅为规范描述。FIXME: v0.3。
+10. **四层 IR 全链路骨架完成** — FSIR/PSIR/DSIR/ESIR 全部有类型定义 + 序列化。PSIR 有完整 personalize。DSIR 有 DeviceMap 骨架（ear only v0.3）。ESIR 有 CodeGen 骨架（6 种 shape + Postcard 二进制）。完整 IR 分层落地。FIXME: v0.4 扩展（多设备降级 / 自适应帧密度 / 闭环修正）。
 
-11. **Pass 6-8（Personalize/DeviceMap/CodeGen）** — Pass 6 已完成。Pass 7-8 零代码。FIXME: v0.3 续行。
+11. **Pass 6-8（Personalize/DeviceMap/CodeGen）** — Pass 6 已完成。Pass 7-8 骨架已完成（v0.3——`.anim → .esir` 端到端跑通）。FIXME: v0.4 续行（多设备 + ESIR 优化）。
 
 12. **PBM 地基就绪，完整冷启动未实现** — `pbm.rs` 已有全部地基类型。四维差异化冷启动系数 + sigmoidal 收敛因子三实时置信度待 v0.3。FIXME: v0.3。
 
@@ -119,7 +119,8 @@
 - ✅ Pass 4 运行期插桩（guard.rs）— OiSmoothing 衰减曲线。已降为 `oi_smoothing` hook
 - ✅ Pass 5 FSIR（fsir.rs）— JSON + Postcard 双格式，双哈希
 - ✅ Pass 6 Personalize（personalize.rs）— FSIR × PBM → PSIR。sigmoidal 缩放 + DampingMatrix + ColdStartGuard + DefenceLevel
-- ✅ FSIR → ESIR 路径剩余 Pass 7-8 零代码
+- ✅ FSIR → ESIR 全链路 — Pass 7 DeviceMap + Pass 8 CodeGen（v0.3 骨架）
+- ✅ 四层 IR 全部落地 — DSIR（DeviceSet/DeviceAssignment/DsirDoc）+ ESIR（EsirFrame/EsirDoc）
 
 ### 安全体系（ADR 011/012）
 - ✅ `NeuroEnergyTracker` — 四维独立漏桶。非线性泄漏 + 不应期 + 跨维度耦合 σ + 全局桶
@@ -170,6 +171,15 @@ feeling <基本感受包名> {
 ## 编辑记录
 
 ```
+2026-06-15  v0.3  Pass 7 + Pass 8 骨架 — FSIR → ESIR 全链路闭合
+            - src/dsir.rs + src/device_map.rs — Pass 7: PSIR × DeviceSet → DSIR
+            - src/esir.rs + src/codegen.rs — Pass 8: 6 种 shape → ESIR 帧序列 + Postcard 二进制
+            - FsirDoc::to_psir_stub() — 离线 CLI 模式 PSIR 桩
+            - main.rs: .anim → .json → .dsir.json → .esir 端到端
+            - ADR 015: 设计文档定稿
+            - 152 tests，23 模块，15 ADR
+            - P1: 4/20 → 12/20 (#10/#11 闭合)
+
 2026-06-15  v0.1.33 ADR 014 oi 三层严重度 + FORGET 刷新 + 全部硬编码回填 config
             - oi!/oi_warn!/oi_note! + Severity Deny/Warn/Note + --strict/--verbose
             - rule.rs: abrupt_stop + sandbox_accent 从 oi! 降为 oi_warn!
