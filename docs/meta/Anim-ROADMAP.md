@@ -111,7 +111,8 @@ Anim 从 API 接收，不再是文件输入。
 ```
 v0.4   多设备 + 自适应帧密度 + 离线预交织 — 后台离线 FSIR 缓存, Session 启动延迟 <100ms
 v0.5   实时交织 + FPGA 对接 — ESIR → 硬件数据包, 闭环偏差修正, 紧急冲刷
-v0.6   API 模式 — Core 驱动 Anim。不再需要 .anim 文件。全自动感受生成。
+v0.6   API 模式 + App 联动 — Core 驱动 Anim。不再需要 .anim 文件。全自动感受生成。
+       独立/联动双模式 — 骨传导耳机式的 MP3/蓝牙双模。
 v1.0   自举 — 用 v0.x 的 animi 编译 Anim 写的 animi, 不再依赖 Rust 工具链
 v2.0   从 01 裸奔 — animi 运行在 Feelings 设备上, 不经过 OS
 ```
