@@ -7,8 +7,8 @@
 //
 // ADR 014 — 三层严重度：
 //   oi!   Deny  — 编译期硬拒绝。"这帧交叉被挡了。"
-//   oi_warn!  Warn  — 打印到 stderr，继续。"你确定？这里很深。"
-//   oi_note!  Note  — 仅 --verbose 打印。"你这不是在冥想，是在装睡。"
+//   oiw!  Warn  — 打印到 stderr，继续。"你确定？这里很深。"
+//   oin!  Note  — 仅 --verbose 打印。"你这不是在冥想，是在装睡。"
 
 /// oi! — 交叉被挡。不 panic。返回 Err(AnimiError::Variant { severity: Deny, fields })。
 ///
@@ -31,11 +31,11 @@ macro_rules! oi {
     };
 }
 
-/// oi_warn! — 警告。返回 Err(Warn) 给调用方自行处理。
+/// oiw! — 警告。返回 Err(Warn) 给调用方自行处理。
 ///
 /// 调用方（main.rs 或管线）按 --strict 决定是否升级为 Deny。
 #[macro_export]
-macro_rules! oi_warn {
+macro_rules! oiw {
     ($variant:ident, $($field:ident = $value:expr),* $(,)?) => {
         {
             let _file = $crate::error::CURRENT_FILE.with(|f| f.borrow().clone());
@@ -48,11 +48,11 @@ macro_rules! oi_warn {
     };
 }
 
-/// oi_note! — 调侃。返回 Err(Note) 给调用方自行处理。
+/// oin! — 调侃。返回 Err(Note) 给调用方自行处理。
 ///
 /// 调用方仅 --verbose 模式打印。
 #[macro_export]
-macro_rules! oi_note {
+macro_rules! oin {
     ($variant:ident, $($field:ident = $value:expr),* $(,)?) => {
         {
             let _file = $crate::error::CURRENT_FILE.with(|f| f.borrow().clone());
@@ -97,7 +97,7 @@ mod tests {
     #[test]
     fn oi_warn_returns_warn_severity() {
         fn warn() -> Result<(), AnimiError> {
-            oi_warn!(StaticSafetyError, rule="abrupt_stop".into(), detail="建议不超过 20".into());
+            oiw!(StaticSafetyError, rule="abrupt_stop".into(), detail="建议不超过 20".into());
         }
         let e = warn().unwrap_err();
         assert_eq!(e.severity(), Severity::Warn);
@@ -107,7 +107,7 @@ mod tests {
     #[test]
     fn oi_note_returns_note_severity() {
         fn note() -> Result<(), AnimiError> {
-            oi_note!(TypeCheckError, atom_name="calm_zero".into(), reason="强度为零的冥想包？".into());
+            oin!(TypeCheckError, atom_name="calm_zero".into(), reason="强度为零的冥想包？".into());
         }
         let e = note().unwrap_err();
         assert_eq!(e.severity(), Severity::Note);

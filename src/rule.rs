@@ -12,7 +12,7 @@ use crate::ast::*;
 use crate::config::AnimConfig;
 use crate::error::AnimiError;
 use crate::oi;
-use crate::oi_warn;
+use crate::oiw;
 use crate::registry::{AtomClass, Registry};
 
 /// 对源码执行静态安全规则检查。
@@ -35,7 +35,7 @@ pub fn check(
 
     // 规则 2：abrupt_stop 形状强度——降级为 Warn（设计建议，不是物理硬线）
     if source.shape.name == "abrupt_stop" && source.intensity.max > config.caps.abrupt_stop_max {
-        oi_warn!(
+        oiw!(
             StaticSafetyError,
             rule = "abrupt_stop 强度限制".into(),
             detail = format!(
@@ -63,7 +63,7 @@ pub fn check(
     for accent in &source.mix.accents {
         if let Some(entry) = registry.lookup(&accent.atom.name) {
             if entry.class == AtomClass::Sandbox && accent.ratio > config.caps.sandbox_accent_max {
-                oi_warn!(
+                oiw!(
                     StaticSafetyError,
                     rule = "沙箱配比上限".into(),
                     detail = format!(
