@@ -87,7 +87,12 @@ mod tests {
     #[test]
     fn oi_macro_returns_error() {
         fn lex() -> Result<(), AnimiError> {
-            oi!(LexError, line=42_usize, col=7_usize, msg="test oi".to_string());
+            oi!(
+                LexError,
+                line = 42_usize,
+                col = 7_usize,
+                msg = "test oi".to_string()
+            );
         }
         let e = lex().unwrap_err();
         assert_eq!(e.severity(), Severity::Deny);
@@ -97,7 +102,11 @@ mod tests {
     #[test]
     fn oi_warn_returns_warn_severity() {
         fn warn() -> Result<(), AnimiError> {
-            oiw!(StaticSafetyError, rule="abrupt_stop".into(), detail="建议不超过 20".into());
+            oiw!(
+                StaticSafetyError,
+                rule = "abrupt_stop".into(),
+                detail = "建议不超过 20".into()
+            );
         }
         let e = warn().unwrap_err();
         assert_eq!(e.severity(), Severity::Warn);
@@ -107,7 +116,11 @@ mod tests {
     #[test]
     fn oi_note_returns_note_severity() {
         fn note() -> Result<(), AnimiError> {
-            oin!(TypeCheckError, atom_name="calm_zero".into(), reason="强度为零的冥想包？".into());
+            oin!(
+                TypeCheckError,
+                atom_name = "calm_zero".into(),
+                reason = "强度为零的冥想包？".into()
+            );
         }
         let e = note().unwrap_err();
         assert_eq!(e.severity(), Severity::Note);

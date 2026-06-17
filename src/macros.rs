@@ -193,7 +193,7 @@ pub fn expand_macros(source: &str, macros: &HashMap<String, MacroDef>) -> String
             if i < chars.len() && chars[i] == '!' && macros.contains_key(&ident) {
                 // 这是宏调用——展开它
                 i += 1; // 跳过 !
-                // 跳过可选的空白到 (
+                        // 跳过可选的空白到 (
                 while i < chars.len() && chars[i].is_whitespace() {
                     i += 1;
                 }
@@ -365,7 +365,7 @@ feeling calm {
         assert!(expanded.contains("accents: [belonging 0.10]"));
         assert!(!expanded.contains("macro_rules!"));
         assert!(!expanded.contains("safe_accent!()"));
-    // 可以用正常管线继续处理——词法+语法+类型
+        // 可以用正常管线继续处理——词法+语法+类型
     }
 
     #[test]

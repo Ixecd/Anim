@@ -55,9 +55,7 @@ pub fn device_map(psir: &PsirDoc, device_set: &DeviceSet) -> Result<DsirDoc, Ani
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::psir::{
-        PersonalizedFeeling, PsirDoc, PsirIntensity, PsirPbmStamp, PsirShape,
-    };
+    use crate::psir::{PersonalizedFeeling, PsirDoc, PsirIntensity, PsirPbmStamp, PsirShape};
 
     fn make_psir() -> PsirDoc {
         PsirDoc {
@@ -68,7 +66,9 @@ mod tests {
                 damped: false,
             },
             accents: vec![],
-            shape: PsirShape { name: "gradual_rise_fall".into() },
+            shape: PsirShape {
+                name: "gradual_rise_fall".into(),
+            },
             intensity: PsirIntensity {
                 original_min: 15,
                 original_max: 45,
@@ -113,7 +113,9 @@ mod tests {
     #[test]
     fn missing_wrist_no_degrade_in_v0_3() {
         let psir = make_psir();
-        let ds = DeviceSet { devices: vec![DeviceId::Ear] }; // 缺 wrist
+        let ds = DeviceSet {
+            devices: vec![DeviceId::Ear],
+        }; // 缺 wrist
         let dsir = device_map(&psir, &ds).unwrap();
         // v0.3 骨架——缺设备不标记降级
         assert!(!dsir.any_degraded);

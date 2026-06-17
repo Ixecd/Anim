@@ -175,10 +175,7 @@ impl FsirDoc {
     /// 离线 CLI 模式——用 FSIR 生成一个简单的 PSIR 桩（没有 PBM 校准）。
     /// 仅用于 Pass 7/Pass 8 离线调试。Session 模式下走真实 personalize()。
     pub fn to_psir_stub(&self) -> crate::psir::PsirDoc {
-        use crate::psir::{
-            PersonalizedFeeling, PsirDoc, PsirIntensity,
-            PsirPbmStamp, PsirShape,
-        };
+        use crate::psir::{PersonalizedFeeling, PsirDoc, PsirIntensity, PsirPbmStamp, PsirShape};
         PsirDoc {
             name: self.name.clone(),
             main: PersonalizedFeeling {
@@ -187,7 +184,9 @@ impl FsirDoc {
                 damped: false,
             },
             accents: vec![],
-            shape: PsirShape { name: self.shape.name.clone() },
+            shape: PsirShape {
+                name: self.shape.name.clone(),
+            },
             intensity: PsirIntensity {
                 original_min: self.intensity.min,
                 original_max: self.intensity.max,
@@ -196,9 +195,13 @@ impl FsirDoc {
                 cap: 100,
             },
             smoothing: self.smoothing.as_ref().map(|s| crate::psir::PsirSmoothing {
-                steps: s.steps.iter().map(|step| crate::psir::PsirDecayStep {
-                    multiplier: step.multiplier,
-                }).collect(),
+                steps: s
+                    .steps
+                    .iter()
+                    .map(|step| crate::psir::PsirDecayStep {
+                        multiplier: step.multiplier,
+                    })
+                    .collect(),
             }),
             cold_start: false,
             defence_activated: false,
@@ -214,7 +217,8 @@ impl FsirDoc {
 
     /// 序列化为 JSON 字符串。
     pub fn to_json(&self) -> Result<String, AnimiError> {
-        serde_json::to_string_pretty(self).map_err(|e| AnimiError::InternalError { severity: Severity::Deny,
+        serde_json::to_string_pretty(self).map_err(|e| AnimiError::InternalError {
+            severity: Severity::Deny,
             file_name: crate::error::current_file(),
             msg: format!("FSIR JSON 序列化失败: {}", e),
         })
@@ -222,7 +226,8 @@ impl FsirDoc {
 
     /// 从 JSON 字符串反序列化。
     pub fn from_json(json: &str) -> Result<Self, AnimiError> {
-        serde_json::from_str(json).map_err(|e| AnimiError::InternalError { severity: Severity::Deny,
+        serde_json::from_str(json).map_err(|e| AnimiError::InternalError {
+            severity: Severity::Deny,
             file_name: crate::error::current_file(),
             msg: format!("FSIR JSON 反序列化失败: {}", e),
         })
@@ -238,7 +243,8 @@ impl FsirDoc {
     /// Go Server 端需要一个 Postcard encoder 来生成相同的字节流。
     /// Postcard wire format 规范简单（~2 页），适合手写 Go 端。
     pub fn to_binary(&self) -> Result<Vec<u8>, AnimiError> {
-        postcard::to_allocvec(self).map_err(|e| AnimiError::InternalError { severity: Severity::Deny,
+        postcard::to_allocvec(self).map_err(|e| AnimiError::InternalError {
+            severity: Severity::Deny,
             file_name: crate::error::current_file(),
             msg: format!("FSIR 二进制序列化失败: {}", e),
         })
@@ -248,7 +254,8 @@ impl FsirDoc {
     ///
     /// Feelings-OS 裸机环境可用——Postcard 不依赖 std，不依赖 alloc 之外的任何东西。
     pub fn from_binary(bytes: &[u8]) -> Result<Self, AnimiError> {
-        postcard::from_bytes(bytes).map_err(|e| AnimiError::InternalError { severity: Severity::Deny,
+        postcard::from_bytes(bytes).map_err(|e| AnimiError::InternalError {
+            severity: Severity::Deny,
             file_name: crate::error::current_file(),
             msg: format!("FSIR 二进制反序列化失败: {}", e),
         })

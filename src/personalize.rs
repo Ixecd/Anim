@@ -190,7 +190,9 @@ pub fn personalize(
         // 优先级二：DampingState 实时计算 → 降级 Damping Hold
         None => match (pbm.damping_state, pbm.current_pbm_values) {
             (Some(ds), Some(vals)) => match ds.compute_gradients(vals) {
-                Some(gradients) => DampingMatrix::apply(&gradients, &current_steps, &pbm.config.damping),
+                Some(gradients) => {
+                    DampingMatrix::apply(&gradients, &current_steps, &pbm.config.damping)
+                }
                 None => pbm.previous_frozen.cloned().unwrap_or_default(),
             },
             _ => pbm.previous_frozen.cloned().unwrap_or_default(),
@@ -283,7 +285,8 @@ pub fn personalize(
 
     // 强度上限二次校验
     if applied_max > effective_cap {
-        return Err(AnimiError::UserStateSafetyError { severity: Severity::Deny,
+        return Err(AnimiError::UserStateSafetyError {
+            severity: Severity::Deny,
             file_name: String::new(),
             cap: format!("{}", effective_cap),
             atom_name: fsir.name.clone(),

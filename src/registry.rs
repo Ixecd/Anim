@@ -55,12 +55,14 @@ impl Default for Registry {
 impl Registry {
     /// 从外部 JSON 文件加载。失败 → 返回错误信息。
     pub fn from_file(path: &str) -> Result<Self, AnimiError> {
-        let json = std::fs::read_to_string(path).map_err(|e| AnimiError::InternalError { severity: Severity::Deny,
+        let json = std::fs::read_to_string(path).map_err(|e| AnimiError::InternalError {
+            severity: Severity::Deny,
             file_name: path.to_string(),
             msg: format!("读取 Registry 失败: {}", e),
         })?;
         let defs: Vec<AtomDef> =
-            serde_json::from_str(&json).map_err(|e| AnimiError::InternalError { severity: Severity::Deny,
+            serde_json::from_str(&json).map_err(|e| AnimiError::InternalError {
+                severity: Severity::Deny,
                 file_name: path.to_string(),
                 msg: format!("Registry JSON 解析失败: {}", e),
             })?;
@@ -72,7 +74,8 @@ impl Registry {
                     || d.max_ratio.is_nan()
                     || d.max_ratio.is_infinite()
                 {
-                    return Err(AnimiError::InternalError { severity: Severity::Deny,
+                    return Err(AnimiError::InternalError {
+                        severity: Severity::Deny,
                         file_name: path.to_string(),
                         msg: format!(
                             "原子 '{}' 的 max_ratio {} 必须在 [0.0, 1.0] 范围内",

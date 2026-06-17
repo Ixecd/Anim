@@ -251,7 +251,10 @@ impl NeuroEnergyTracker {
     }
 
     pub fn with_max_dt(max_dt_seconds: f64) -> Self {
-        NeuroEnergyTracker { max_dt: max_dt_seconds, ..Self::default() }
+        NeuroEnergyTracker {
+            max_dt: max_dt_seconds,
+            ..Self::default()
+        }
     }
 
     #[cfg(test)]
@@ -339,7 +342,8 @@ impl NeuroEnergyTracker {
         }
 
         if self.cumulative_energy[idx] > threshold {
-            return Err(AnimiError::SafetyBreach { severity: Severity::Deny,
+            return Err(AnimiError::SafetyBreach {
+                severity: Severity::Deny,
                 file_name: crate::error::current_file(),
                 dimension: dim,
                 current_energy: self.cumulative_energy[idx],
@@ -361,7 +365,8 @@ impl NeuroEnergyTracker {
                 }
                 let effective = profile.critical_thresholds[j] * (1.0 - coupling);
                 if energies[j] > effective {
-                    return Err(AnimiError::SafetyBreach { severity: Severity::Deny,
+                    return Err(AnimiError::SafetyBreach {
+                        severity: Severity::Deny,
                         file_name: crate::error::current_file(),
                         dimension: DIM_ORDER[j],
                         current_energy: energies[j],
@@ -380,7 +385,8 @@ impl NeuroEnergyTracker {
             profile.critical_thresholds.iter().sum::<f64>() * self.global_beta;
 
         if energy_global > global_threshold {
-            return Err(AnimiError::SafetyBreach { severity: Severity::Deny,
+            return Err(AnimiError::SafetyBreach {
+                severity: Severity::Deny,
                 file_name: crate::error::current_file(),
                 dimension: PbmDimension::Emotional,
                 current_energy: energy_global,

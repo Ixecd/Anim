@@ -204,17 +204,28 @@ fn main() {
     ctx.registry = Some(&registry);
 
     // AfterTypeCheck —— static_safety hook（可 Warn）
-    die_soft(pipeline.run_stage(animi::pipeline::PipelineStage::AfterTypeCheck, &ctx), strict, verbose);
+    die_soft(
+        pipeline.run_stage(animi::pipeline::PipelineStage::AfterTypeCheck, &ctx),
+        strict,
+        verbose,
+    );
 
     // Pass 3——用户安全检查 + 强度缩放（硬线——Deny）
     let scaled = die(animi::safety::check_with_scale(&ast, user_cap, &config));
     *ctx.scaled_intensity.borrow_mut() = Some(scaled.clone());
 
     // AfterIntensityScale —— oi_smoothing / leaky_bucket hook（可 Warn/Note）
-    die_soft(pipeline.run_stage(animi::pipeline::PipelineStage::AfterIntensityScale, &ctx), strict, verbose);
+    die_soft(
+        pipeline.run_stage(animi::pipeline::PipelineStage::AfterIntensityScale, &ctx),
+        strict,
+        verbose,
+    );
 
     // 从 ctx 读取 oi_smoothing 产出
-    let smoothing = ctx.smoothing_output.borrow().clone()
+    let smoothing = ctx
+        .smoothing_output
+        .borrow()
+        .clone()
         .expect("oi_smoothing hook must produce output");
     A.info(format_args!(
         "oi 帧平滑: {} 帧 {}ms 衰减{}",
@@ -271,5 +282,8 @@ fn main() {
         A.error(format_args!("无法写入 {}: {}", esir_out, e));
         process::exit(1);
     }
-    A.info(format_args!("✅ {} → {} ({} 帧, {}ms)", path, esir_out, esir.frame_count, esir.duration_ms));
+    A.info(format_args!(
+        "✅ {} → {} ({} 帧, {}ms)",
+        path, esir_out, esir.frame_count, esir.duration_ms
+    ));
 }

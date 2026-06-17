@@ -124,19 +124,45 @@ impl fmt::Display for AnimiError {
             AnimiError::LexError { line, col, msg, .. } => {
                 write!(f, "{} 词法错误 ({}:{}:{}): {}", tag, file, line, col, msg)
             }
-            AnimiError::ParseError { line, col, expected, found, .. } => {
-                write!(f, "{} 语法错误 ({}:{}:{}): 期望 {}，但遇到 {}", tag, file, line, col, expected, found)
+            AnimiError::ParseError {
+                line,
+                col,
+                expected,
+                found,
+                ..
+            } => {
+                write!(
+                    f,
+                    "{} 语法错误 ({}:{}:{}): 期望 {}，但遇到 {}",
+                    tag, file, line, col, expected, found
+                )
             }
-            AnimiError::TypeCheckError { atom_name, reason, .. } => {
+            AnimiError::TypeCheckError {
+                atom_name, reason, ..
+            } => {
                 write!(f, "{} 类型错误 ({}): {}——{}", tag, file, atom_name, reason)
             }
             AnimiError::StaticSafetyError { rule, detail, .. } => {
                 write!(f, "{} 安全规则 ({}): {}——{}", tag, file, rule, detail)
             }
-            AnimiError::UserStateSafetyError { cap, atom_name, reason, .. } => {
-                write!(f, "{} 用户安全({}) ({}): {}——{}", tag, cap, file, atom_name, reason)
+            AnimiError::UserStateSafetyError {
+                cap,
+                atom_name,
+                reason,
+                ..
+            } => {
+                write!(
+                    f,
+                    "{} 用户安全({}) ({}): {}——{}",
+                    tag, cap, file, atom_name, reason
+                )
             }
-            AnimiError::SafetyBreach { dimension, current_energy, threshold, .. } => {
+            AnimiError::SafetyBreach {
+                dimension,
+                current_energy,
+                threshold,
+                ..
+            } => {
                 write!(f, "{} 时域能量熔断 ({}): 维度 {:?} 累积能量 {:.1} 超过临界阈值 {:.1}——触发强制保护帧",
                     tag, file, dimension, current_energy, threshold)
             }
@@ -157,7 +183,8 @@ mod tests {
     fn lex_error_display() {
         let e = AnimiError::LexError {
             file_name: "test.anim".into(),
-            line: 1, col: 5,
+            line: 1,
+            col: 5,
             msg: "unexpected @".into(),
             severity: Severity::Deny,
         };
@@ -172,7 +199,8 @@ mod tests {
     fn parse_error_display() {
         let e = AnimiError::ParseError {
             file_name: "test.anim".into(),
-            line: 3, col: 12,
+            line: 3,
+            col: 12,
             expected: "}".into(),
             found: "EOF".into(),
             severity: Severity::Deny,

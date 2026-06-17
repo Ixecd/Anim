@@ -28,7 +28,9 @@ pub struct DeviceSet {
 impl Default for DeviceSet {
     /// 默认设备集——耳后（唯一硬线设备）。v0.3 骨架。
     fn default() -> Self {
-        DeviceSet { devices: vec![DeviceId::Ear] }
+        DeviceSet {
+            devices: vec![DeviceId::Ear],
+        }
     }
 }
 
@@ -83,12 +85,10 @@ pub struct DsirDoc {
 impl DsirDoc {
     /// 序列化为 JSON。
     pub fn to_json(&self) -> Result<String, crate::error::AnimiError> {
-        serde_json::to_string_pretty(self).map_err(|e| {
-            crate::error::AnimiError::InternalError {
-                file_name: crate::error::current_file(),
-                msg: format!("DSIR JSON 序列化失败: {}", e),
-                severity: crate::error::Severity::Deny,
-            }
+        serde_json::to_string_pretty(self).map_err(|e| crate::error::AnimiError::InternalError {
+            file_name: crate::error::current_file(),
+            msg: format!("DSIR JSON 序列化失败: {}", e),
+            severity: crate::error::Severity::Deny,
         })
     }
 }

@@ -136,11 +136,7 @@ impl Pipeline {
     }
 
     /// 执行指定阶段的所有已启用 hook。
-    pub fn run_stage(
-        &self,
-        stage: PipelineStage,
-        ctx: &Ctx,
-    ) -> Result<(), AnimiError> {
+    pub fn run_stage(&self, stage: PipelineStage, ctx: &Ctx) -> Result<(), AnimiError> {
         for hook in &self.hooks {
             if hook.stage() == stage {
                 hook.run(ctx)?;
@@ -151,11 +147,7 @@ impl Pipeline {
 
     /// 按顺序遍历所有阶段——等同显式调用每个 run_stage。
     /// 仅用于 invoke_all(AfterTypeCheck, AfterIntensityScale, AfterPersonalize) 等紧凑调用。
-    pub fn invoke_all(
-        &self,
-        stages: &[PipelineStage],
-        ctx: &Ctx,
-    ) -> Result<(), AnimiError> {
+    pub fn invoke_all(&self, stages: &[PipelineStage], ctx: &Ctx) -> Result<(), AnimiError> {
         for &stage in stages {
             self.run_stage(stage, ctx)?;
         }
@@ -184,8 +176,12 @@ fn hook_enabled(cfg: &HooksConfig, name: &str) -> bool {
 
 struct StaticSafetyHook;
 impl PipelineHook for StaticSafetyHook {
-    fn name(&self) -> &str { "static_safety" }
-    fn stage(&self) -> PipelineStage { PipelineStage::AfterTypeCheck }
+    fn name(&self) -> &str {
+        "static_safety"
+    }
+    fn stage(&self) -> PipelineStage {
+        PipelineStage::AfterTypeCheck
+    }
     fn run(&self, ctx: &Ctx) -> Result<(), AnimiError> {
         let ast = ctx.ast.expect("static_safety: AST must be set");
         let reg = ctx.registry.expect("static_safety: registry must be set");
@@ -197,8 +193,12 @@ impl PipelineHook for StaticSafetyHook {
 
 struct LowAnchorCapHook;
 impl PipelineHook for LowAnchorCapHook {
-    fn name(&self) -> &str { "low_anchor_cap" }
-    fn stage(&self) -> PipelineStage { PipelineStage::AfterIntensityScale }
+    fn name(&self) -> &str {
+        "low_anchor_cap"
+    }
+    fn stage(&self) -> PipelineStage {
+        PipelineStage::AfterIntensityScale
+    }
     fn run(&self, _ctx: &Ctx) -> Result<(), AnimiError> {
         // low_anchor_cap 在 safety::check_with_scale / personalize 中已经生效。
         // 这里是钩子占位——实际逻辑在强度缩放路径中。
@@ -210,8 +210,12 @@ impl PipelineHook for LowAnchorCapHook {
 
 struct OiSmoothingHook;
 impl PipelineHook for OiSmoothingHook {
-    fn name(&self) -> &str { "oi_smoothing" }
-    fn stage(&self) -> PipelineStage { PipelineStage::AfterIntensityScale }
+    fn name(&self) -> &str {
+        "oi_smoothing"
+    }
+    fn stage(&self) -> PipelineStage {
+        PipelineStage::AfterIntensityScale
+    }
     fn run(&self, ctx: &Ctx) -> Result<(), AnimiError> {
         let ast = ctx.ast.expect("oi_smoothing: AST must be set");
         let smoothing = crate::guard::inject(ast, ctx.config)?;
@@ -224,8 +228,12 @@ impl PipelineHook for OiSmoothingHook {
 
 struct LeakyBucketIntakeHook;
 impl PipelineHook for LeakyBucketIntakeHook {
-    fn name(&self) -> &str { "leaky_bucket_intake" }
-    fn stage(&self) -> PipelineStage { PipelineStage::AfterIntensityScale }
+    fn name(&self) -> &str {
+        "leaky_bucket_intake"
+    }
+    fn stage(&self) -> PipelineStage {
+        PipelineStage::AfterIntensityScale
+    }
     fn run(&self, ctx: &Ctx) -> Result<(), AnimiError> {
         // 离线 CLI 模式——无 tracker 状态——跳过。
         // 在线 Session 模式——tracker 由 main.rs 在 Session 启动时注入 ctx.tracker。
@@ -250,8 +258,12 @@ impl PipelineHook for LeakyBucketIntakeHook {
 
 struct MonotonyHook;
 impl PipelineHook for MonotonyHook {
-    fn name(&self) -> &str { "monotony" }
-    fn stage(&self) -> PipelineStage { PipelineStage::AfterPersonalize }
+    fn name(&self) -> &str {
+        "monotony"
+    }
+    fn stage(&self) -> PipelineStage {
+        PipelineStage::AfterPersonalize
+    }
     fn run(&self, _ctx: &Ctx) -> Result<(), AnimiError> {
         // 离线 CLI 模式——无跨帧状态——跳过。
         // 在线 Session 模式——由 personalize() 内部的 monotony 检测处理。
@@ -263,8 +275,12 @@ impl PipelineHook for MonotonyHook {
 
 struct CrossDimCouplingHook;
 impl PipelineHook for CrossDimCouplingHook {
-    fn name(&self) -> &str { "cross_dim_coupling" }
-    fn stage(&self) -> PipelineStage { PipelineStage::AfterPersonalize }
+    fn name(&self) -> &str {
+        "cross_dim_coupling"
+    }
+    fn stage(&self) -> PipelineStage {
+        PipelineStage::AfterPersonalize
+    }
     fn run(&self, ctx: &Ctx) -> Result<(), AnimiError> {
         if let Some(ref t) = *ctx.tracker.borrow() {
             t.verify_cross_dimension(&UserSafetyProfile::standard())?;
@@ -277,8 +293,12 @@ impl PipelineHook for CrossDimCouplingHook {
 
 struct ColdStartHook;
 impl PipelineHook for ColdStartHook {
-    fn name(&self) -> &str { "cold_start" }
-    fn stage(&self) -> PipelineStage { PipelineStage::OnSessionStart }
+    fn name(&self) -> &str {
+        "cold_start"
+    }
+    fn stage(&self) -> PipelineStage {
+        PipelineStage::OnSessionStart
+    }
     fn run(&self, _ctx: &Ctx) -> Result<(), AnimiError> {
         // 离线 CLI 模式——无 Session 概念——跳过。
         // 在线 Session 模式——由 personalize() 内部的 ColdStartGuard 处理。

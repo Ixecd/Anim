@@ -305,10 +305,14 @@ pub struct HookSwitch {
     pub enabled: bool,
 }
 
-fn default_true() -> bool { true }
+fn default_true() -> bool {
+    true
+}
 
 impl Default for HookSwitch {
-    fn default() -> Self { HookSwitch { enabled: true } }
+    fn default() -> Self {
+        HookSwitch { enabled: true }
+    }
 }
 
 /// 所有 hook 的启用/禁开关。

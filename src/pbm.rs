@@ -108,7 +108,10 @@ impl Default for ColdStartGuard {
 impl ColdStartGuard {
     /// 从 ColdStartConfig 构造。
     pub fn from_config(cfg: &crate::config::ColdStartConfig) -> Self {
-        ColdStartGuard { session_count: 0, threshold: cfg.sessions_threshold }
+        ColdStartGuard {
+            session_count: 0,
+            threshold: cfg.sessions_threshold,
+        }
     }
 
     /// 本次 Session 是否处于冷启动期。
@@ -357,7 +360,10 @@ impl Default for DampingState {
 impl DampingState {
     /// 从 DampingConfig 创建——初始步长从 YAML config 读取。
     pub fn from_config(cfg: &crate::config::DampingConfig) -> Self {
-        DampingState { step_multipliers: cfg.initial_multipliers, last_pbm_snapshot: None }
+        DampingState {
+            step_multipliers: cfg.initial_multipliers,
+            last_pbm_snapshot: None,
+        }
     }
 
     /// 以设计估值步长乘数创建新的阻尼状态。
@@ -397,7 +403,13 @@ impl DampingState {
     ///
     /// `step_factor` = 步长乘数（来自 DataConfidence——High=1.0, Low=0.15, Contaminated=0.0）。
     /// 这里取置信度对应的步长作为目标，按 EMA(0.9) 缓慢靠拢。
-    pub fn update(&mut self, current: &[f64; 4], confidence: DataConfidence, data_cfg: &crate::config::DataConfidenceConfig, damping_cfg: &crate::config::DampingConfig) {
+    pub fn update(
+        &mut self,
+        current: &[f64; 4],
+        confidence: DataConfidence,
+        data_cfg: &crate::config::DataConfidenceConfig,
+        damping_cfg: &crate::config::DampingConfig,
+    ) {
         self.last_pbm_snapshot = Some(*current);
         let target = confidence.step_multiplier(data_cfg);
         let ema = damping_cfg.ema_alpha;
@@ -436,9 +448,25 @@ mod tests {
 
     #[test]
     fn data_confidence_multipliers() {
-        assert!((DataConfidence::High.step_multiplier(&crate::config::DataConfidenceConfig::default()) - 1.0).abs() < 1e-10);
-        assert!((DataConfidence::Low.step_multiplier(&crate::config::DataConfidenceConfig::default()) - 0.15).abs() < 1e-10);
-        assert!((DataConfidence::Contaminated.step_multiplier(&crate::config::DataConfidenceConfig::default()) - 0.0).abs() < 1e-10);
+        assert!(
+            (DataConfidence::High.step_multiplier(&crate::config::DataConfidenceConfig::default())
+                - 1.0)
+                .abs()
+                < 1e-10
+        );
+        assert!(
+            (DataConfidence::Low.step_multiplier(&crate::config::DataConfidenceConfig::default())
+                - 0.15)
+                .abs()
+                < 1e-10
+        );
+        assert!(
+            (DataConfidence::Contaminated
+                .step_multiplier(&crate::config::DataConfidenceConfig::default())
+                - 0.0)
+                .abs()
+                < 1e-10
+        );
     }
 
     // ColdStartGuard
@@ -557,7 +585,8 @@ mod tests {
             (PbmDimension::Tactile, 0.5),
             (PbmDimension::Auditory, 0.5),
         ];
-        let states = DampingMatrix::apply(&gradients, &steps, &crate::config::DampingConfig::default());
+        let states =
+            DampingMatrix::apply(&gradients, &steps, &crate::config::DampingConfig::default());
         for (_, s) in &states {
             assert_eq!(*s, StepState::Active);
         }
@@ -577,7 +606,8 @@ mod tests {
             (PbmDimension::Tactile, 0.5),
             (PbmDimension::Auditory, 0.5),
         ];
-        let states = DampingMatrix::apply(&gradients, &steps, &crate::config::DampingConfig::default());
+        let states =
+            DampingMatrix::apply(&gradients, &steps, &crate::config::DampingConfig::default());
         // Visceral 应被 Emotional 冻结
         assert_eq!(
             states[&PbmDimension::Visceral],
@@ -621,7 +651,12 @@ mod tests {
     fn damping_state_computes_gradients() {
         let mut ds = DampingState::new();
         // 首帧：更新快照
-        ds.update(&[0.10, 0.20, 0.10, 0.05], DataConfidence::High, &crate::config::DataConfidenceConfig::default(), &crate::config::DampingConfig::default());
+        ds.update(
+            &[0.10, 0.20, 0.10, 0.05],
+            DataConfidence::High,
+            &crate::config::DataConfidenceConfig::default(),
+            &crate::config::DampingConfig::default(),
+        );
         assert!(ds.last_pbm_snapshot.is_some());
 
         // 第二帧：计算梯度
@@ -653,12 +688,22 @@ mod tests {
         assert!((ds.step_multipliers[1] - 0.50).abs() < 1e-10);
 
         // Low 置信度 → target=0.15 → EMA: 0.50×0.9 + 0.15×0.1 = 0.465
-        ds.update(&[0.1, 0.2, 0.3, 0.4], DataConfidence::Low, &crate::config::DataConfidenceConfig::default(), &crate::config::DampingConfig::default());
+        ds.update(
+            &[0.1, 0.2, 0.3, 0.4],
+            DataConfidence::Low,
+            &crate::config::DataConfidenceConfig::default(),
+            &crate::config::DampingConfig::default(),
+        );
         let expected = 0.50 * 0.9 + 0.15 * 0.1;
         assert!((ds.step_multipliers[1] - expected).abs() < 1e-10);
 
         // High 置信度 → target=1.0 → EMA: expected×0.9 + 1.0×0.1
-        ds.update(&[0.1, 0.2, 0.3, 0.4], DataConfidence::High, &crate::config::DataConfidenceConfig::default(), &crate::config::DampingConfig::default());
+        ds.update(
+            &[0.1, 0.2, 0.3, 0.4],
+            DataConfidence::High,
+            &crate::config::DataConfidenceConfig::default(),
+            &crate::config::DampingConfig::default(),
+        );
         let expected2 = expected * 0.9 + 1.0 * 0.1;
         assert!((ds.step_multipliers[1] - expected2).abs() < 1e-10);
     }
@@ -668,7 +713,12 @@ mod tests {
         let mut ds = DampingState::new();
         // 连续 Low → multiplier → 0.05 floor
         for _ in 0..100 {
-            ds.update(&[0.0, 0.0, 0.0, 0.0], DataConfidence::Low, &crate::config::DataConfidenceConfig::default(), &crate::config::DampingConfig::default());
+            ds.update(
+                &[0.0, 0.0, 0.0, 0.0],
+                DataConfidence::Low,
+                &crate::config::DataConfidenceConfig::default(),
+                &crate::config::DampingConfig::default(),
+            );
         }
         for m in &ds.step_multipliers {
             assert!(*m >= 0.05);

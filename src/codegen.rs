@@ -74,7 +74,8 @@ impl ShapeProfile {
 ///
 /// v0.3 骨架：固定 1ms/帧，首帧 + 尾帧嵌入安全校验标记。
 pub fn codegen(dsir: &DsirDoc) -> Result<EsirDoc, AnimiError> {
-    let profile = ShapeProfile::from_shape_name(&dsir.shape_name, dsir.applied_min, dsir.applied_max);
+    let profile =
+        ShapeProfile::from_shape_name(&dsir.shape_name, dsir.applied_min, dsir.applied_max);
     let peak = dsir.applied_max.max(dsir.applied_min);
     let _min = dsir.applied_min.min(dsir.applied_max);
 
