@@ -1,0 +1,14 @@
+macro_rules! safe_accent {
+    () => {
+        accents: [belonging 0.10]
+    }
+}
+
+feeling calm {
+    mix {
+        main: calm_meditative
+        safe_accent!()
+    }
+    shape: steady
+    intensity: [10, 20]
+}

@@ -1,7 +1,7 @@
 # FORGET.md — 待修复项（P0 + P1 + P2）
 
 > 扫描日期：2026-06-15
-> 范围：代码（src/ 23 模块，152 测试）+ 设计文档（15 ADR）
+> 范围：代码（src/ 24 模块，157 测试）+ 设计文档（15 ADR）
 > 原则：P0 = 生产命门。P1 = 功能受限。P2 = 代码质量/可维护性。
 > 命名：animi 是交织器（interlinker），不是编译器。
 > 版本：v1.0 已打 tag——自举前唯一 tag。自举完成前不再打任何 tag。
@@ -38,7 +38,7 @@
 
 ---
 
-## P1 — 功能受限（12/20）
+## P1 — 功能受限（13/20）
 
 ### 交织管线
 
@@ -58,9 +58,9 @@
 
 ### 语法
 
-16. **Anim 宏系统零代码** — ADR 005 已定稿。`macro_rules!` 解析器+展开器未实现。
+16. ~~**Anim 宏系统零代码**~~ ✅ — `src/macros.rs`。`macro_rules!` 源码级展开 + 参数替换 + 最大递归深度 32。Pass 0 后、Pass 1 前展开。5 测试全绿。ADR 005。
 
-17. **宏递归组合风险绕过** — 组合风险必须在完全展开后的 AST 上计算。FIXME: 宏展开阶段实现时。
+17. **宏递归组合风险绕过** — 组合风险必须在完全展开后的 AST 上计算。
 
 ~~21. **科学计数法浮点字面量不支持**~~ ✅ — `src/lexer.rs`。
 
@@ -139,9 +139,10 @@
 - ✅ oi 帧平滑过渡 — OiSmoothing + decay_sequence 从 config 读取
 - ✅ 源码 SHA-256 — SPL 锚定就绪
 - ✅ 错误码自动生成 — build.rs → docs/error-codes.md
-- ✅ 137 单元测试全绿，clippy 零 warning
+- ✅ 157 单元测试全绿，clippy 零 warning
 - ✅ ADR 014 oi 三层严重度 — oi!/oi_warn!/oi_note! + Severity Deny/Warn/Note + --strict/--verbose
-- ✅ 全部硬编码数字已迁移到 configs/default.yaml
+- ✅ Anim 宏系统 — `src/macros.rs` macro_rules! 源码级展开（ADR 005）
+- ✅ 全部硬编码数字已迁移到 configs/default.yaml（67 参数 10 段）
 
 ---
 
@@ -171,6 +172,12 @@ feeling <基本感受包名> {
 ## 编辑记录
 
 ```
+2026-06-17  v0.3.1 Anim 宏系统落地 — macro_rules! 源码级展开
+            - src/macros.rs — extract_macros + expand_macros + 5 测试
+            - main.rs: 宏展开在 Pass 0 后、Pass 1 前
+            - eg/macro-calm.anim — 端到端示例
+            - P1 #16 闭合。157 tests，24 模块。
+
 2026-06-15  v0.3  Pass 7 + Pass 8 骨架 — FSIR → ESIR 全链路闭合
             - src/dsir.rs + src/device_map.rs — Pass 7: PSIR × DeviceSet → DSIR
             - src/esir.rs + src/codegen.rs — Pass 8: 6 种 shape → ESIR 帧序列 + Postcard 二进制

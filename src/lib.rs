@@ -11,6 +11,7 @@ pub mod fsir;
 pub mod guard;
 pub mod lexer;
 pub mod log;
+pub mod macros;
 pub mod oi;
 pub mod parser;
 pub mod pbm;

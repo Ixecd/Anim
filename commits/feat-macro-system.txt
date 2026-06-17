@@ -1,0 +1,7 @@
+feat: Anim 宏系统 — macro_rules! 源码级展开（ADR 005）
+
+- src/macros.rs — extract_macros + expand_macros + 参数替换 + 5 测试
+- main.rs: 宏展开在 Pass 0 后、Pass 1 前 — 预处理源码后进正常管线
+- eg/macro-calm.anim — 端到端示例
+- FORGET: P1 #16 闭合，P1 count 12→13/20，扫描日期/模块数/测试数更新
+- 157 测试全绿，clippy 零 warning。

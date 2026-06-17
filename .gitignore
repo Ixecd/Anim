@@ -6,3 +6,5 @@ txt/
 .codegraph/
 *.dsir.json
 *.esir
+*.dsir.json
+*.esir

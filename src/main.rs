@@ -181,7 +181,14 @@ fn main() {
         }
     };
 
-    let mut lexer = animi::lexer::Lexer::new(&src);
+    // ── Pass 0a-expand：宏展开 ──
+    let (macros, expanded_src) = animi::macros::extract_macros(&src);
+    let processed_src = animi::macros::expand_macros(&expanded_src, &macros);
+    if !macros.is_empty() {
+        A.info(format_args!("展开 {} 个宏定义", macros.len()));
+    }
+
+    let mut lexer = animi::lexer::Lexer::new(&processed_src);
     let tokens = die(lexer.tokenize());
 
     let mut parser = animi::parser::Parser::new(tokens);
