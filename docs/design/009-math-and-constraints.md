@@ -391,6 +391,64 @@ worst = max(主旋律.sandbox_response, max(各点缀.sandbox_response))
 
 **与 DefenceLevel 的关系**：DefenceLevel（D1/D2/D3）是 Core PBM 下发的生理标识——独立于原子标签。D2/D3 可覆盖任何原子标签（含 Attainment）执行熔断。
 
+### 十.9 神经内分泌工程约束 —— v0.7
+
+参考：`Feelings/docs/feelings-science/behavior-state-transition-framework.md`
+
+沙箱和 Governance 解决的是"要不要挡"的问题。本节解决的是"怎么安全地执行"的问题。三条约束来自神经内分泌物理现实——不是设计偏好。
+
+**约束一：时域失配——信号可逆 ≠ 激素可逆**
+
+```
+FPGA 信号: < 100μs 即刻可逆（膜电位归零）
+激素清除: 皮质醇血清半衰期 60-90min，催产素中枢半衰期 ~20min
+风险: 单帧阶跃信号 → 误触发 HPA 级联 → 即使瞬间掐断信号，激素持续激荡 1.5h+
+
+强制规则:
+  → 任何涉及 HPA 轴的感受包必须使用 gradual_rise_fall 或 steady
+  → 严禁 sharp_peak——单帧尖峰 = 不可撤回的激素浪涌
+  → 代码位置: rule.rs / safety.rs Pass 2-3——形状检测 + 强度爬升斜率限制
+```
+
+**约束二：突触稳态——内源通路也会下调**
+
+```
+药理学: 不引入外源配体 → 不直接导致竞争性受体下调 ✓
+神经生理学: 长期高频去极化 → 突触后受体内吞 (OXTR Internalization) → 突触剪切
+与健身同构: 天天大重量 → 肌纤维撕裂 → 需要恢复期
+
+强制规则:
+  → 高强度注入必须包含 ADR 012 N/M 恢复帧节律
+  → 单一维度连续高频注入 ≤ 5000 帧（~5min）
+  → 到期强制降级为保护帧（intensity ≤ 5, shape=steady）
+  → 跨 Session 同维度高强度感受包 ≥ 6h 间隔
+  → 代码位置: safety.rs Pass 3——帧窗口计数器 + 到期强制降级逻辑
+```
+
+**约束三：蓝斑分叉——跨维度耦合约束**
+
+```
+倒 U 型曲线 (Yerkes-Dodson):
+  safety:belonging 配比适中 → 巅峰专注 (high engagement)
+  safety 过多 → 过度镇静 (drowsy)
+  safety 过少 / 时序抖动 → 惊恐发作 (panic attack)
+
+强制规则:
+  → 检测到 Visceral::safety + Emotional::belonging 联合激发
+  → 强度比值强制锁定 safety:belonging ∈ [0.6, 1.2]
+  → 两者相位 (Phase) 在 FPGA 调度时强制对齐
+  → 严防时序抖动 (Jitter) 导致瞬时失配 → 惊恐分叉
+  → 代码位置: rule.rs Pass 2 静态安全规则——新增跨维度耦合约束检查
+```
+
+**实现优先级**：
+```
+P0: 帧窗口硬上限 (约束二)  → belongs/safety/deep_rest 原子 + 30<强度<50 + >5000帧 → 强制降级
+P1: 形状硬约束 (约束一)     → 特定原子+强度>30 → 禁止 sharp_peak，允许 gradual_rise_fall/steady
+P2: 跨维度耦合 (约束三)     → safety+belonging 联合检测 + 比值校验 + FPGA 相位对齐
+P3: 跨 Session 冷却 (约束二) → Session 间状态持久化（需 Core PBM 支持——v0.8+）
+```
+
 
 
 ---
@@ -486,6 +544,7 @@ Anim 不判断、不诊断、不存档。只执行分级的安全约束。Defenc
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| v0.7 | 2026-06-19 | §十.9 新增——神经内分泌工程约束（时域失配 / 突触稳态 / 蓝斑分叉）。三条硬约束从 Feelings 科学文档推导到代码实现位置（Pass 2-3 + FPGA 调度）。P0-P3 实现优先级。|
 | v0.6 | 2026-06-19 | §十.8 新增——SandboxResponse 治理响应分类（Attainment/Neutral/Caution/Shield）。原子级别差异化治理——成就类 90+不降级只监控，Shield 类无条件熔断。内建 Registry 8 原子标注完成。|
 | v0.5 | 2026-06-19 | §十重写——沙箱重定义（强度阈值路由——不再按 AtomClass）+ Governance 三层响应（G1告知/G2降级/G3熔断）+ 核心+沙箱叠加总强度校验 + 点缀绝对强度校验（含 d_sensitivity 防御敏感系数）+ 沙箱违规→DefenceLevel 升级桥接。约束速查表更新。P0 #1/#3/#4 设计闭合。|
 | v0.4 | 2026-06-10 | §九点缀比例帽语义修正+freeze_factor。§七冷启动阻尼淡入窗。§十低锚点置信度硬上限 low_anchor_cap(R<0.3→cap 20)。§十一创伤表更新——"创伤分级"→防御激活层级 DefenceLevel（D1/D2/D3）。|

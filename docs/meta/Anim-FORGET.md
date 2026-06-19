@@ -1,22 +1,22 @@
 # FORGET.md — 待修复项（P0 + P1 + P2）
 
-> 扫描日期：2026-06-15
-> 范围：代码（src/ 24 模块，157 测试）+ 设计文档（15 ADR）
+> 扫描日期：2026-06-19
+> 范围：代码（src/ 25 模块，187 测试）+ 设计文档（15 ADR）
 > 原则：P0 = 生产命门。P1 = 功能受限。P2 = 代码质量/可维护性。
 > 命名：animi 是交织器（interlinker），不是编译器。
 > 版本：v1.0 已打 tag——自举前唯一 tag。自举完成前不再打任何 tag。
 
 ---
 
-## P0 — 生产命门（11/12）
+## P0 — 生产命门（9/12）
 
-1. **三层安全防线不全 — DefenceLevel 判定逻辑空桩** — `pbm.rs` 已定义 `DefenceLevel` 枚举（D1/D2/D3），但判定触发条件空白。等控器的 VSA 相变标记长什么样？PBM 内部状态机凭什么从 None 升到 D1？只能来自等控器自己的生理信号——不能是用户自述的叙事标签（叙事污染检测）。FIXME: v0.3。
+1. **三层安全防线不全 — DefenceLevel 判定逻辑空桩** — `pbm.rs` 已定义 `DefenceLevel` 枚举（D1/D2/D3），但判定触发条件空白。等控器的 VSA 相变标记长什么样？PBM 内部状态机凭什么从 None 升到 D1？只能来自等控器自己的生理信号——不能是用户自述的叙事标签（叙事污染检测）。**部分设计闭合：** ADR 009 §十.4 Governance G1/G2/G3 已定义 DefenceLevel 参与治理的逻辑 + §十.6 沙箱违规→DefenceLevel 升级桥接。真正触发条件仍需 Core PBM 数据。FIXME: v0.3。
 
 2. **Session 中用户状态突变安全盲区** — PSIR 只在启动时校验一次。运行中 cap 变了但旧参数继续输出。需 10Hz 轻量安全看门狗。FIXME: ADR 009。
 
-3. **混合原子包强度叠加绕过沙箱** — 核心+沙箱原子混合时总强度可能超上限。FIXME: ADR 009。
+3. ~~**混合原子包强度叠加绕过沙箱**~~ ✅ — 沙箱已从原子分类模型重构为强度阈值路由（`intensity ≥ 90 → 自动进沙箱`）。ADR 009 §十.3 定义叠加总强度校验公式 `combined = main × (1 + Σ accent_ratio × weight) ≤ cap`。Governance 三层响应（G1/G2/G3）+ SandboxResponse 原子标签。代码：`src/sandbox.rs`。**设计闭合，代码已落。**
 
-4. **DefenceLevel 激活用户的点缀配比绝对强度** — 禁主不禁点+配比≤0.10，但不考虑绝对强度×防御敏感系数。FIXME: ADR 009。
+4. ~~**DefenceLevel 激活用户的点缀配比绝对强度**~~ ✅ — ADR 009 §十.5 定义公式 `absolute = ratio × max × d_sensitivity(level) ≤ ACCENT_ABSOLUTE_CAP (30)`。d_sensitivity: None=1.0, D1=1.3, D2=1.8, D3=2.5。`src/sandbox.rs :: check_accent_absolute()`。**设计闭合，代码已落。**
 
 10. ~~**时间窗口累积能量安全盲区**~~ ✅ — `NeuroEnergyTracker` 四维独立漏桶已实现。非线性泄漏（防 PWM）、时钟挂起防护、绝对不应期保护窗、跨维度耦合 σ、全局总耦合能耗漏桶全部落地。`src/safety.rs` + ADR 011。
 
@@ -170,8 +170,17 @@ feeling <基本感受包名> {
 ---
 
 ## 编辑记录
-
 ```
+
+2026-06-19  v0.4 Sandbox + Governance 完整重构 — 告别阻断，拥抱引导
+            - ADR 009 §十 完全重写：沙箱 = 强度阈值路由（≥90）+ GovernanceAction 引导感受
+            - SandboxResponse 原子标签：Attainment/Neutral/Caution/Shield，8 原子内建标注
+            - GovernanceAction（PassThrough/Steer/Redirect/Anchor）替代 Error 返回值
+            - ADR 009 §十.9 神经内分泌工程约束：时域失配 / 突触稳态 / 蓝斑分叉
+            - src/sandbox.rs：187 测试，check_combined/check_accent_absolute + worst_response/strictest
+            - P0 #3/#4 设计闭合+代码落地。P0 #1 部分设计闭合。P0 计数 11/12 → 9/12。
+            - 25 模块，187 测试，clippy 零 warning。
+
 2026-06-17  v0.3.1 Anim 宏系统落地 — macro_rules! 源码级展开
             - src/macros.rs — extract_macros + expand_macros + 5 测试
             - main.rs: 宏展开在 Pass 0 后、Pass 1 前

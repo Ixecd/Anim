@@ -52,9 +52,10 @@ make ci     # fmt-check + clippy + test + build
   ↓ Pass 0a 词法（lexer.rs）—— ASCII-only，CRLF，BOM skip
   ↓ Pass 0b 语法（parser.rs）—— 递归下降，顺序无关，重复检测
   ↓ Pass 1  类型检查（typeck.rs）—— Registry 校验 + max_ratio + 编辑距离建议
-  ↓ Pass 2  静态安全（rule.rs）—— 全局上限 100，abrupt_stop≤20，沙箱限制
-  ↓ Pass 3  用户安全（safety.rs）—— 桩 + scale_intensity（v1.2 接入用户档案）
-  ↓ Pass 4  运行期插桩（guard.rs）—— 桩（v1.2 接入 ESIR）
+  ↓ Pass 2  静态安全（rule.rs）—— 全局上限 100，abrupt_stop≤20
+  ↓ Pass 3  用户安全（safety.rs）—— scale_intensity，低锚点硬上限
+          ↓ intensity.max ≥ 90 → 沙箱路由 (src/sandbox.rs) —— GovernanceAction 引导
+  ↓ Pass 4  运行期插桩（guard.rs）—— OiSmoothing 衰减曲线
   ↓ Pass 5  FSIR 生成（fsir.rs）—— AST → FsirDoc → JSON
   ↓
 fsir.json
@@ -144,13 +145,15 @@ Anim/
 ## 五、FORGET 状态
 
 ```
-P0: 5/9   — 安全盲区 4（三层防线不全/Session突变/沙箱混合/创伤阈值）+ 架构 5 全清
+P0: 3/9   — 安全盲区 2（三层防线不全/Session突变）+ 架构 1（PBM 宿主未迁移到 Core）
+          沙箱混合 ✅ (ADR 009 §十.3 设计闭合+代码落地)
+          创伤阈值 ✅ (ADR 009 §十.5 d_sensitivity 公式)
 P1: 3/14  — IR管线3+设备3+语法2+缓存1+可观测1+代码功能3（错误文件名✅/日志✅/错误测试✅）
 P2: 0/0   — 全清
 ```
 
 - v1.0 tag 已打——自举完成前不再打任何 tag
-- 下一阶段关键入口：P0 安全盲区补齐（ADR 009）→ Pass 6-8（PSIR/DSIR/ESIR）
+- 下一阶段关键入口：P0 安全盲区补齐 → Pass 6-8（PSIR/DSIR/ESIR）→ 神经内分泌工程约束实现（ADR 009 §十.9）
 
 ---
 

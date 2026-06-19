@@ -1,0 +1,10 @@
+docs(design): ADR 009 v0.7 + FORGET/HANDOFF/012 refresh
+
+- ADR 009 §十.9 — neuroendocrine engineering constraints (3 laws)
+  * time-domain mismatch: gradual_rise_fall mandatory, sharp_peak banned
+  * synaptic homeostasis: 5000-frame hard cap, ADR 012 N/M mandatory
+  * LC bifurcation: cross-dimensional coupling safety:belonging in [0.6, 1.2]
+- FORGET.md — P0 #3/#4 closed (design + code), P0 #1 partial design closure
+  * P0 count: 11/12 -> 9/12
+- HANDOFF.md — sandbox routing line updated (Pass 3 not Pass 2)
+- ADR 012 — terminology fix (sandbox -> Governance), cross-refs to 009 §十.4/§十.9
