@@ -244,20 +244,59 @@ fn main() {
             .iter()
             .map(|a| (a.atom.name.clone(), a.ratio))
             .collect();
-        die_soft(
-            animi::sandbox::check_combined(scaled.max, &accent_ratios, user_cap, worst, None),
-            strict,
-            verbose,
-        );
+
+        let combined_action =
+            animi::sandbox::check_combined(scaled.max, &accent_ratios, user_cap, worst, None);
+        let mut actions = vec![combined_action];
         for acc in &ast.mix.accents {
             let r = registry
                 .sandbox_response(&acc.atom.name)
                 .unwrap_or_default();
-            die_soft(
-                animi::sandbox::check_accent_absolute(acc.ratio, scaled.max, r, None),
-                strict,
-                verbose,
-            );
+            actions.push(animi::sandbox::check_accent_absolute(
+                acc.ratio, scaled.max, r, None,
+            ));
+        }
+        let final_action = animi::sandbox::strictest(&actions);
+        if !final_action.is_passthrough() {
+            A.info(format_args!("沙箱治理: {}", final_action.description()));
+            match &final_action {
+                animi::sandbox::GovernanceAction::Steer {
+                    blend_atom,
+                    blend_intensity,
+                    ..
+                } => {
+                    A.info(format_args!(
+                        "  → G1 温和拉回: 叠加 {} @ {} 强度",
+                        blend_atom, blend_intensity
+                    ));
+                }
+                animi::sandbox::GovernanceAction::Redirect {
+                    atom, intensity, ..
+                } => {
+                    A.info(format_args!(
+                        "  → G2 重新导向: 替换为 {} @ {} 强度",
+                        atom, intensity
+                    ));
+                }
+                animi::sandbox::GovernanceAction::Anchor {
+                    atom,
+                    intensity,
+                    escalate_defence,
+                    ..
+                } => {
+                    A.info(format_args!(
+                        "  → G3 安全锚点: {} @ {} 强度{}",
+                        atom,
+                        intensity,
+                        if *escalate_defence {
+                            " (升级 DefenceLevel)"
+                        } else {
+                            ""
+                        }
+                    ));
+                }
+                _ => {}
+            }
         }
     }
 

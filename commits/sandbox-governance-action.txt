@@ -1,0 +1,17 @@
+feat(sandbox): GovernanceAction — guided feelings, not errors
+
+Governance redesign: instead of blocking with error/deny, sandbox now
+returns a GovernanceAction that prescribes a guiding feeling:
+
+  PassThrough — original feeling passes through unchanged
+  Steer       — G1: blend low-intensity calm_meditative overlay
+  Redirect    — G2: replace with deep_rest at cap intensity
+  Anchor      — G3: force grounding frames + escalate DefenceLevel
+
+- sandbox.rs: GovernanceAction enum + strictest() aggregation
+- check_combined/check_accent_absolute return GovernanceAction
+- main.rs + personalize.rs: handle actions as guidance, not errors
+- 187 tests all pass, clippy zero warnings
+
+Philosophy: Feelings is a guide + feeling-giving device, not a guard.
+Governance says "come back gently" — not "access denied".

@@ -299,7 +299,8 @@ pub fn personalize(
 
     // ── 6.5. Sandbox + Governance —— ADR 009 §十 ──
     // 强度 90+ → 沙箱路由 → 叠加总校验 + 点缀绝对强度校验
-    if crate::sandbox::is_sandbox(fsir.intensity.max) {
+    // Governance 返回引导指令而非错误——治理不是阻断，是引导。
+    let sandbox_action = if crate::sandbox::is_sandbox(fsir.intensity.max) {
         let mut responses: Vec<crate::registry::SandboxResponse> = Vec::new();
         if let Some(r) = registry.sandbox_response(&fsir.mix.main) {
             responses.push(r);
@@ -316,23 +317,30 @@ pub fn personalize(
             .iter()
             .map(|a| (a.atom.clone(), a.ratio))
             .collect();
-        crate::sandbox::check_combined(
+        let mut actions = vec![crate::sandbox::check_combined(
             applied_max,
             &accent_data,
             effective_cap,
             worst,
             pbm.defence_level,
-        )?;
+        )];
         for acc in &fsir.mix.accents {
             let r = registry.sandbox_response(&acc.atom).unwrap_or_default();
-            crate::sandbox::check_accent_absolute(
+            actions.push(crate::sandbox::check_accent_absolute(
                 acc.ratio,
                 fsir.intensity.max,
                 r,
                 pbm.defence_level,
-            )?;
+            ));
         }
-    }
+        Some(crate::sandbox::strictest(&actions))
+    } else {
+        None
+    };
+
+    // ── 6.6. Governance 注入 PSIR —— 引导而非阻断 ──
+    // PassThrough → 直通。其他 → v0.7 由下游 Pass 7-8 应用治理指令。
+    let _governance = sandbox_action.as_ref().filter(|a| !a.is_passthrough());
 
     // ── 7. 防御激活判定 ─────── v0.4: PBM 状态机驱动 ──────
     // 从 PBM 的 defence_level 推导是否激活防御缩放路径。
