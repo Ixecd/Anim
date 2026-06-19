@@ -1,0 +1,14 @@
+docs(design): Sandbox redefined + Governance — ADR 009 v0.5 update
+
+- §十 full rewrite — sandbox from AtomClass label -> intensity threshold routing
+  · intensity >= 90 -> sandbox execution environment (regardless of atom class)
+  · rationale: 8 built-in Registry atoms all Core, sandbox tags never took effect
+- Governance three-tier response: G1 warn / G2 degrade / G3 fuse
+  · sandbox is not silent suppression — notify + intervene
+- combined intensity check (P0 #3): main_max × (1 + Σ accent_ratio × weight)
+- accent absolute intensity check (P0 #4): ratio × intensity × d_sensitivity(level)
+- defence sensitivity coefficient: None=1.0 / D1=1.3 / D2=1.8 / D3=2.5
+- sandbox violation -> DefenceLevel escalation bridge
+- constraint quick-reference table updated, old rule.rs lines marked deprecated
+
+P0 #1/#3/#4 design closure under unified Governance framework.

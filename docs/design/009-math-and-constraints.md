@@ -244,16 +244,114 @@ v0.3 无此保护时——Session 9→10 断崖完全暴露。现已修复——
 
 ---
 
-## 十、静态安全约束速查
+## 十、沙箱路由与 Governance 治理
 
-**位置**：`src/rule.rs`、`src/safety.rs`
+**位置**：`src/sandbox.rs`（新增）、`src/personalize.rs`
+
+### 十.1 设计前提——沙箱重定义
+
+旧模型：沙箱 = `AtomClass::Sandbox` 标签。原子打上 Sandbox 标签 → 受限。
+
+新模型（v0.5+）：**沙箱 = 强度阈值触发的执行环境。** 与原子分类解耦。
+
+```
+intensity.max ≥ SANDBOX_THRESHOLD (90)
+  → 无论原子是 Core 还是 Sandbox
+  → 整个感受包在沙箱内执行
+  → Governance 规则引擎接管
+```
+
+**为什么不按原子分类**：内建 Registry 8 个原子全是 Core——没有 Sandbox 原子。标签沙箱从未实际生效。真正的风险不在原子类型，在强度量级。90+ 的信号无论是什么感受都需要额外约束。
+
+### 十.2 沙箱路由规则
+
+| 触发条件 | 路由 | 效果 |
+|---------|------|------|
+| `intensity.max < 90` | 标准路径 | 现有一切不变 |
+| `intensity.max ≥ 90` | 沙箱路径 | 强度叠加总校验 + 点缀配比硬帽 + Governance 激活 |
+
+路由点：Pass 3（`safety.rs`）之后、Pass 6（`personalize.rs`）之前。`scale_intensity` 完成后立即判定——缩放过后的 `scaled_max` ≥ 90 即触发。
+
+### 十.3 核心+沙箱叠加总强度校验（P0 #3）
+
+**问题**：主旋律 max=100 通过全局上限，沙箱点缀 ratio=0.3，等效渲染强度 = 100 + 100×0.3 = 130。Pass 1 只看 `source.intensity.max` 没看叠加。
+
+**公式**：
+
+```
+combined = applied_main_max × (1 + Σ accent.applied_ratio_for_intensity)
+
+if combined > effective_cap:
+    → Governance 触发
+```
+
+`applied_ratio_for_intensity`：点缀对总强度的贡献权重。Core 原子 = `ratio × 1.0`，Sandbox 原子 = `ratio × 1.5`（沙箱原子强度感知非线性——经验加权）。
+
+**执行点**：`personalize.rs`，在 sigmoidal 强度缩放完成后、PSIR 组装前。
+
+### 十.4 Governance 三层响应（P0 #1/#3/#4）
+
+沙箱不是静默镇压——是告知 + 干预：
+
+| 层级 | 条件 | 响应 | 严重度 |
+|------|------|------|--------|
+| G1 — 告知 | combined > cap 但超限 ≤ 10% 且无 DefenceLevel | 生成 Warn 输出 + 继续执行 | Warn |
+| G2 — 降级 | combined > cap 超限 > 10% 或 DefenceLevel ≥ D1 | 强制压低点缀配比 + 强度压制到 cap | Warn → Deny |
+| G3 — 熔断 | combined > cap × 1.3 或 DefenceLevel ≥ D2 | 拒绝输出 + SafetyBreach + DefenceLevel 升级 | Deny |
+
+**告知信息格式**（G1/G2 产出）：
+```
+"强度叠加超限：主旋律 93 + 点缀(×2) 累积 116 > cap 100。已自动降级至 100。"
+```
+
+### 十.5 点缀配比绝对强度校验（P0 #4）
+
+**旧公式**（`rule.rs`）：`ratio ≤ sandbox_accent_max`——只看配比，不看绝对强度。
+
+**新公式**：
+
+```
+absolute_accent_intensity = accent.ratio × source_intensity.max × d_sensitivity(defence_level)
+
+if absolute_accent_intensity > ACCENT_ABSOLUTE_CAP:
+    → Governance 触发
+```
+
+`d_sensitivity(level)`：防御敏感系数。
+
+| DefenceLevel | d_sensitivity | 含义 |
+|-------------|---------------|------|
+| None | 1.0 | 标准感知 |
+| D1 | 1.3 | 敏感度上升 30% |
+| D2 | 1.8 | 敏感度上升 80% |
+| D3 | 2.5 | 极限敏感 |
+
+**例**：DefenceLevel=D1, ratio=0.3, intensity=90  
+→ absolute = 0.3 × 90 × 1.3 = 35.1。若 `ACCENT_ABSOLUTE_CAP = 30` → 触发 Governance。
+
+### 十.6 沙箱违规 → DefenceLevel 升级桥接
+
+沙箱内的 Governance 违规和 DefenceLevel 不是独立的：
+
+```
+连续 N_sessions 触发 G1/G2 → DefenceLevel: None → D1
+单次触发 G3            → DefenceLevel: 当前 → 当前+1（上限 D3）
+```
+
+DefenceLevel 升级由 Feelings-Core 的 PBM 状态机执行——Anim 只产出违规信号。
+
+### 十.7 静态安全约束速查（更新）
+
+**位置**：`src/rule.rs`、`src/safety.rs`、`src/sandbox.rs`（新增）
 
 | 约束 | 常量/公式 | 位置 |
 |------|----------|------|
 | 全局强度上限 | `MAX_GLOBAL_INTENSITY = 100` | `rule.rs` |
 | abrupt_stop 形状强度 | `≤ 20` | `rule.rs` |
-| 沙箱原子作点缀 | `ratio ≤ 0.30` | `rule.rs` |
-| 沙箱原子作主旋律 | 禁止 | `rule.rs` |
+| ~~沙箱原子作点缀~~ → 强度 90+ 进沙箱 | `intensity.max ≥ 90` → 沙箱路由 | `sandbox.rs` |
+| ~~沙箱原子作主旋律~~ → 沙箱内强度叠加校验 | `combined ≤ effective_cap` | `sandbox.rs` |
+| 沙箱点缀绝对强度 | `ratio × max × d_sensitivity ≤ 30` | `sandbox.rs` |
+| Governance 三层响应 | G1=告知, G2=降级, G3=熔断 | `sandbox.rs` |
 | 低锚点置信度硬上限 | `low_anchor_cap(user_cap, R)` — R < 0.3 → `cap = min(20, user_cap)` | `safety.rs :: low_anchor_cap()` |
 | 强度等比缩放 | `ratio = user_cap / source_max` | `safety.rs :: scale_intensity()` |
 | 强度区间合法性 | `max ≥ min` | `ast.rs :: Intensity::validate()` |
@@ -351,6 +449,7 @@ Anim 不判断、不诊断、不存档。只执行分级的安全约束。Defenc
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| v0.5 | 2026-06-19 | §十重写——沙箱重定义（强度阈值路由——不再按 AtomClass）+ Governance 三层响应（G1告知/G2降级/G3熔断）+ 核心+沙箱叠加总强度校验 + 点缀绝对强度校验（含 d_sensitivity 防御敏感系数）+ 沙箱违规→DefenceLevel 升级桥接。约束速查表更新。P0 #1/#3/#4 设计闭合。|
 | v0.4 | 2026-06-10 | §九点缀比例帽语义修正+freeze_factor。§七冷启动阻尼淡入窗。§十低锚点置信度硬上限 low_anchor_cap(R<0.3→cap 20)。§十一创伤表更新——"创伤分级"→防御激活层级 DefenceLevel（D1/D2/D3）。|
 | v0.3 | 2026-06-09 | 完整重写：sigmoidal + 强度缩放 + OiSmoothing + SessionLabel × DataConfidence + 约束速查 + Trauma |
 | v0.2 | 2026-06-09 | 从 009-pbm-math.md 拆分，覆盖 sigmoidal、冷启动、阻尼、点缀帽。迁移至 archived. |
