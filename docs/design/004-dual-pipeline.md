@@ -2,7 +2,7 @@
 
 > 状态：已定稿
 > 日期：2026-05-26
-> 对应规范：Feelings-LANGUAGE.md 4.7-4.8
+> [Core] 前台管线 (DSIR→ESIR→FPGA) 归属 Feelings-Core。后台 (编译) 归属 Anim。
 
 ---
 

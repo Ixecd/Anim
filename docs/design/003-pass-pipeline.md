@@ -2,7 +2,7 @@
 
 > 状态：已定稿
 > 日期：2026-05-26
-> 对应规范：Feelings-LANGUAGE.md 4.1-4.6
+> [Core] Pass 3/4/6/7/8 归属 Feelings-Core (需 PBM + Session + 设备)。Pass 0-2/5 归属 Anim。Core 未出生前由 Anim 暂代全部。
 
 ---
 

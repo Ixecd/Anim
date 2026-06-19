@@ -2,7 +2,7 @@
 
 > 状态：已定稿（修订：2026-06-17 — v0.3 全链路落地后对齐实现态）
 > 日期：2026-05-26
-> 对应规范：Feelings-LANGUAGE.md 四、Anim 的交织管线
+> [Core] PSIR/DSIR/ESIR 三层归属 Feelings-Core (运行时)。Anim 只输出 FSIR。Core 未出生前由 Anim 暂代。
 
 ---
 

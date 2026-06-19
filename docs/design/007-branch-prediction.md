@@ -2,7 +2,7 @@
 
 > 状态：定稿
 > 日期：2026-05-29
-> 性质：Anim 预测器设计的硬件理论基础
+> [Core] 全文归属 Feelings-Core。PBM 预测器核心——依赖个人生理历史 + Session 状态。Core 未出生前无代码。
 > 来源：Smith 1981 "A Study of Branch Prediction Strategies" 及后续四十年分支预测研究的逐层推演
 > 核心：Smith 的 2-bit 饱和计数器不只改变了 CPU 设计——它定义了 Anim 的 PBM 冷启动逻辑、帧级预判的置信度更新、以及"预测失败不 panic——安全插桩接管"的硬件哲学。
 
