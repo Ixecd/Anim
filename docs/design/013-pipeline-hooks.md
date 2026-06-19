@@ -2,7 +2,7 @@
 
 > 状态：定稿
 > 日期：2026-06-15
-> 性质：Anim 管线架构重构——从硬编码顺序调用到 reactor 模型
+> [Core] 7 个 Hook 中 5 个归属 Core (low_anchor_cap / leaky_bucket / monotony / cross_dim / cold_start)。2 个归属 Anim (static_safety / oi_smoothing)。Hook 机制本身 (trait/Pipeline/Ctx) 归属 Anim。
 > 对应：ADR 011/012 代码落地后的复杂度控制
 
 ---

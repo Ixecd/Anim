@@ -2,8 +2,7 @@
 
 > 状态：定稿
 > 日期：2026-06-12
-> 对应 FORGET：P0 #10
-> 性质：Anim 安全架构——单帧上限只防一帧。防不住持续几千帧的合法强度累积。
+> [Core] 全文归属 Feelings-Core。四维漏桶需 Session 级状态 + 个人 Profile 参数。Core 未出生前由 Anim safety.rs 暂代。
 
 ---
 
