@@ -1,0 +1,15 @@
+docs(design): ADR 016 — complete NeuralPathway + FormFactor expansions
+
+NeuralPathway: 9 -> 17 variants
+  Head: Occipital (visual) + Facial (VII expression)
+  Upper limb: RadialUlnar (forearm) + Digital (fingertip)
+  Torso: Intercostal (chest/rib)
+  Lower limb: Femoral (thigh) + Plantar (sole)
+
+FormFactor: 7 -> 16 variants
+  Head: OccipitalBand + FacialPatch
+  Upper limb: ArmBand + FingerRing
+  Torso: ChestStrap
+  Lower limb: ThighSleeve + AnkleBand + Insole
+
+Both enums organized by body region. New device position = add entry, trait unchanged.

@@ -30,43 +30,93 @@ ADR 015 的 DSIR 是硬编码 `{ ear }` 单设备集。ear-only 够 v0.3 闭环�
 ```rust
 /// 设备声明的神经通路。
 ///
-/// 一个设备可能接入多条通路，每条通路对应不同的信号注入质量和物理约束。
+/// 人体能放传感器的位置 × 对应神经通路。新位置只需加枚举条目，trait 零改动。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum NeuralPathway {
+    // ── 头部 ──
     /// 迷走神经耳支（Arnold 神经）— 耳后设备
     VnsEarBranch,
-    /// 迷走神经颈段 — 颈部环带
-    VnsCervicalBranch,
-    /// 三叉神经 — 口腔护齿
+    /// 三叉神经 — 口腔护齿 / 面颊
     Trigeminal,
-    /// C 类触觉纤维 — 腕部设备
-    CtFiber,
-    /// 颞叶皮层 — 太阳穴设备
-    CorticalTemporal,
-    /// 脊髓本体感传导 — 后颈设备
-    SpinalCervical,
     /// 听觉通路（骨传导 / 气传导）
     Cochlear,
+    /// 颞叶皮层 — 太阳穴
+    CorticalTemporal,
+    /// 枕后视觉皮层邻近 — 后脑
+    Occipital,
+    /// 面部表情肌 VII — 情绪微表情采集
+    Facial,
+
+    // ── 颈部 ──
+    /// 迷走神经颈段 — 颈部环带
+    VnsCervicalBranch,
+    /// 脊髓本体感传导 — 后颈 / C3-C5
+    SpinalCervical,
+
+    // ── 上肢 ──
+    /// C 类触觉纤维 — 腕部 / 掌部
+    CtFiber,
     /// 外周混合神经 — wrist/peripheral
     PeripheralMixed,
+    /// 前臂肌梭 + 皮电 — 桡神经 / 尺神经
+    RadialUlnar,
+    /// 指腹精细触觉（Merkel/Meissner/Pacinian）— 全身最高密度
+    Digital,
+
+    // ── 躯干 ──
+    /// 胸廓 / 肋间 — 呼吸节律 + 心震
+    Intercostal,
+
+    // ── 下肢 ──
+    /// 大腿 / 股神经 — 大直径，本体感强
+    Femoral,
+    /// 足底 — 机械感受器密度仅次于手指
+    Plantar,
 }
 
 /// 设备物理形态——决定在极端环境下的存续能力。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FormFactor {
+    // ── 头部 ──
     /// 耳后吸附式 — 无对抗场景标准形态
     EarClip,
-    /// 颈部环带 — 柔性 PCB + 硅胶
-    Collar,
     /// 口腔护齿 — 三叉神经通路
     Mouthguard,
-    /// 腕部表带 — 腕表 / 手环
-    WristBand,
     /// 太阳穴贴片 — 颞叶区
     TemplePatch,
-    /// 非接触雷达 — 3-5m 范围
+    /// 后脑头带 — 枕叶区
+    OccipitalBand,
+    /// 面部轻量贴片 — 表情肌 EMG
+    FacialPatch,
+
+    // ── 颈部 ──
+    /// 颈部环带 — 柔性 PCB + 硅胶
+    Collar,
+
+    // ── 上肢 ──
+    /// 腕部表带 — 腕表 / 手环
+    WristBand,
+    /// 前臂环带 — 尺/桡神经通路，肌梭
+    ArmBand,
+    /// 手指环 — 全身最高触觉密度
+    FingerRing,
+
+    // ── 躯干 ──
+    /// 胸部弹性带 — 呼吸/心震，睡眠场景
+    ChestStrap,
+
+    // ── 下肢 ──
+    /// 大腿套 — 股神经 + 本体感觉
+    ThighSleeve,
+    /// 踝部环带 — 步态/平衡
+    AnkleBand,
+    /// 鞋垫式 — 足底压力/机械感受器
+    Insole,
+
+    // ── 非接触 ──
+    /// 非接触雷达 — 毫米波/UWB，3-5m
     RemoteRadar,
-    /// 夹耳式独立摄像头
+    /// 夹耳式独立摄像头 — 环境望诊
     ClipCamera,
 }
 
