@@ -1,0 +1,9 @@
+docs(design): ADR 016 — DeviceCapability trait + DSIR polymorphic routing
+
+- NeuralPathway enum: 9 variants (VnsEar/Cervical, Trigeminal, CtFiber...)
+- DeviceCapability trait: pathways + quality + form_factor + online
+- PbmDimension -> NeuralPathway mapping with primary + fallback chains
+- DSIR polymorphic routing: match by pathway, degrade by quality, fallback penalty 0.8x
+- InjectedMode: zero-device routing for pre-game hormone injection scenario
+- EarDevice + MouthguardDevice example implementations
+- 8 FormFactor variants covering full device spectrum
