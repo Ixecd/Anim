@@ -17,6 +17,29 @@ pub enum AtomClass {
     Sandbox,
 }
 
+/// 90+ 强度沙箱治理响应分类 —— ADR 009 v0.5 §十.8
+///
+/// 不是所有 90+ 都是威胁。原子级别的差异化治理：
+/// - 成就/高峰体验 → 不降级，只监控
+/// - 物理矛盾信号 → 直接熔断
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum SandboxResponse {
+    /// 成就/高峰体验 — 90+是设计目标，不降级，只记录。
+    Attainment,
+    /// 中性 — 90+不常见，触发 G1 告知。
+    #[default]
+    Neutral,
+    /// 需谨慎 — 90+触发 G2 降级。
+    Caution,
+    /// 必须防护 — 90+直接 G3 熔断，无论强度叠加。
+    Shield,
+}
+
+fn default_dimension() -> PbmDimension {
+    PbmDimension::Emotional
+}
+
 /// Registry 中的一个感受原子条目（可序列化版本——用于外部 JSON 加载）。
 #[derive(Debug, Clone, Deserialize)]
 struct AtomDef {
@@ -25,10 +48,8 @@ struct AtomDef {
     max_ratio: f64,
     #[serde(default = "default_dimension")]
     dimension: PbmDimension,
-}
-
-fn default_dimension() -> PbmDimension {
-    PbmDimension::Emotional
+    #[serde(default)]
+    sandbox_response: SandboxResponse,
 }
 
 /// 运行时 Registry。由外部 JSON 或内建列表初始化。
@@ -44,6 +65,8 @@ pub struct AtomEntry {
     pub max_ratio: f64,
     /// 该原子的主感受维度——用于 PBM 四维系数选择。
     pub dimension: PbmDimension,
+    /// 90+ 强度沙箱治理响应分类。
+    pub sandbox_response: SandboxResponse,
 }
 
 impl Default for Registry {
@@ -88,6 +111,7 @@ impl Registry {
                     class: d.class,
                     max_ratio: d.max_ratio,
                     dimension: d.dimension,
+                    sandbox_response: d.sandbox_response,
                 })
             })
             .collect::<Result<_, _>>()?;
@@ -97,23 +121,31 @@ impl Registry {
     /// 内建 fallback——8 个核心原子。
     fn from_builtin() -> Self {
         use PbmDimension::*;
+        use SandboxResponse::*;
         let builtin = vec![
-            ("calm_meditative", AtomClass::Core, 1.0, Emotional),
-            ("belonging", AtomClass::Core, 0.5, Emotional),
-            ("clarity", AtomClass::Core, 0.5, Auditory),
-            ("safety", AtomClass::Core, 0.5, Visceral),
-            ("post_achievement", AtomClass::Core, 0.3, Emotional),
-            ("gentle_focus", AtomClass::Core, 0.5, Auditory),
-            ("deep_rest", AtomClass::Core, 0.5, Visceral),
-            ("warmth", AtomClass::Core, 0.5, Tactile),
+            ("calm_meditative", AtomClass::Core, 1.0, Emotional, Neutral),
+            ("belonging", AtomClass::Core, 0.5, Emotional, Neutral),
+            ("clarity", AtomClass::Core, 0.5, Auditory, Neutral),
+            ("safety", AtomClass::Core, 0.5, Visceral, Shield),
+            (
+                "post_achievement",
+                AtomClass::Core,
+                0.3,
+                Emotional,
+                Attainment,
+            ),
+            ("gentle_focus", AtomClass::Core, 0.5, Auditory, Caution),
+            ("deep_rest", AtomClass::Core, 0.5, Visceral, Shield),
+            ("warmth", AtomClass::Core, 0.5, Tactile, Neutral),
         ];
         let atoms = builtin
             .into_iter()
-            .map(|(n, c, r, d)| AtomEntry {
+            .map(|(n, c, r, d, s)| AtomEntry {
                 name: n.into(),
                 class: c,
                 max_ratio: r,
                 dimension: d,
+                sandbox_response: s,
             })
             .collect();
         Registry { atoms }
@@ -138,12 +170,18 @@ impl Registry {
             hasher.update(atom.name.as_bytes());
             hasher.update(format!("{:?}", atom.class).as_bytes());
             hasher.update(atom.max_ratio.to_be_bytes());
+            hasher.update(format!("{:?}", atom.sandbox_response).as_bytes());
         }
         hex::encode(hasher.finalize())
     }
 
     pub fn max_ratio(&self, name: &str) -> Option<f64> {
         self.lookup(name).map(|e| e.max_ratio)
+    }
+
+    /// 查询原子的沙箱治理响应分类。未找到 → None。
+    pub fn sandbox_response(&self, name: &str) -> Option<SandboxResponse> {
+        self.lookup(name).map(|e| e.sandbox_response)
     }
 
     pub fn atom_names(&self) -> impl Iterator<Item = &str> {

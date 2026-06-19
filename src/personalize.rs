@@ -297,6 +297,43 @@ pub fn personalize(
         });
     }
 
+    // ── 6.5. Sandbox + Governance —— ADR 009 §十 ──
+    // 强度 90+ → 沙箱路由 → 叠加总校验 + 点缀绝对强度校验
+    if crate::sandbox::is_sandbox(fsir.intensity.max) {
+        let mut responses: Vec<crate::registry::SandboxResponse> = Vec::new();
+        if let Some(r) = registry.sandbox_response(&fsir.mix.main) {
+            responses.push(r);
+        }
+        for acc in &fsir.mix.accents {
+            if let Some(r) = registry.sandbox_response(&acc.atom) {
+                responses.push(r);
+            }
+        }
+        let worst = crate::sandbox::worst_response(&responses);
+        let accent_data: Vec<(String, f64)> = fsir
+            .mix
+            .accents
+            .iter()
+            .map(|a| (a.atom.clone(), a.ratio))
+            .collect();
+        crate::sandbox::check_combined(
+            applied_max,
+            &accent_data,
+            effective_cap,
+            worst,
+            pbm.defence_level,
+        )?;
+        for acc in &fsir.mix.accents {
+            let r = registry.sandbox_response(&acc.atom).unwrap_or_default();
+            crate::sandbox::check_accent_absolute(
+                acc.ratio,
+                fsir.intensity.max,
+                r,
+                pbm.defence_level,
+            )?;
+        }
+    }
+
     // ── 7. 防御激活判定 ─────── v0.4: PBM 状态机驱动 ──────
     // 从 PBM 的 defence_level 推导是否激活防御缩放路径。
     // None = 等控器当前不需要防御缩放。

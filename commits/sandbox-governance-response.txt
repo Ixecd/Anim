@@ -1,0 +1,15 @@
+feat(sandbox): SandboxResponse tags + atom-level governance
+
+- Registry: add SandboxResponse enum (Attainment/Neutral/Caution/Shield)
+  * Attainment — high intensity by design, monitor only
+  * Neutral — standard tiered governance (G1/G2/G3)
+  * Caution — unconditional G2 degrade
+  * Shield — unconditional G3 fuse (contradiction signal)
+  * 8 built-in atoms tagged: 2 Attainment, 4 Neutral, 1 Caution, 2 Shield
+- sandbox.rs: check_combined/check_accent_absolute accept SandboxResponse
+  * worst_response() — max across main + all accents
+  * D2/D3 overrides any atom tag (SafetyBreach)
+- main.rs + personalize.rs: lookup responses from Registry at sandbox entry
+- ADR 009 v0.6 — §十.8 SandboxResponse taxonomy + atom tagging table
+
+184 tests, zero clippy warnings.

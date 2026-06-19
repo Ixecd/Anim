@@ -21,6 +21,7 @@ pub mod psir;
 pub mod registry;
 pub mod rule;
 pub mod safety;
+pub mod sandbox;
 pub mod typeck;
 
 pub use log::{set_log_level, Level, A};

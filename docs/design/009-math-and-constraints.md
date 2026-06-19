@@ -356,6 +356,43 @@ DefenceLevel 升级由 Feelings-Core 的 PBM 状态机执行——Anim 只产出
 | 强度等比缩放 | `ratio = user_cap / source_max` | `safety.rs :: scale_intensity()` |
 | 强度区间合法性 | `max ≥ min` | `ast.rs :: Intensity::validate()` |
 
+### 十.8 SandboxResponse 原子治理标签 —— v0.6
+
+不是所有 90+ 强度都是威胁。原子级别的差异化治理——通过 Registry 标签判定。
+
+**枚举**（`registry.rs :: SandboxResponse`）：
+
+| 标签 | 含义 | 90+ 治理行为 |
+|------|------|-------------|
+| `Attainment` | 成就/高峰体验 — 90+是设计目标 | 安静通过——只监控，不限制 |
+| `Neutral` | 中性 — 90+不常见但非危险 | 按强度叠加 G1/G2/G3 分级响应 |
+| `Caution` | 需谨慎 — 不应需要极端强度 | 无条件 G2 降级 |
+| `Shield` | 必须防护 — 物理矛盾信号 | 无条件 G3 熔断 |
+
+**内建 Registry 标注**：
+
+| 原子 | SandboxResponse | 理由 |
+|------|----------------|------|
+| `post_achievement` | Attainment | 高峰体验——强度越高越合理 |
+| `calm_meditative` | Neutral | 非典型但不危险 |
+| `belonging` | Neutral | 非典型但不危险 |
+| `clarity` | Neutral | 非典型但不危险 |
+| `warmth` | Neutral | 非典型但不危险 |
+| `gentle_focus` | Caution | 专注不应需要高强度刺激 |
+| `safety` | Shield | 安全+高强度 = 矛盾——直接熔断 |
+| `deep_rest` | Shield | 休息+高强度 = 矛盾——直接熔断 |
+
+**聚合逻辑**（`sandbox.rs :: worst_response()`）：
+
+```
+worst = max(主旋律.sandbox_response, max(各点缀.sandbox_response))
+→ 按 worst 的治理级别执行
+```
+
+**与 DefenceLevel 的关系**：DefenceLevel（D1/D2/D3）是 Core PBM 下发的生理标识——独立于原子标签。D2/D3 可覆盖任何原子标签（含 Attainment）执行熔断。
+
+
+
 ---
 
 ## 十一、防御激活层级（v0.4 已接入——DefenceLevel）
@@ -449,6 +486,7 @@ Anim 不判断、不诊断、不存档。只执行分级的安全约束。Defenc
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| v0.6 | 2026-06-19 | §十.8 新增——SandboxResponse 治理响应分类（Attainment/Neutral/Caution/Shield）。原子级别差异化治理——成就类 90+不降级只监控，Shield 类无条件熔断。内建 Registry 8 原子标注完成。|
 | v0.5 | 2026-06-19 | §十重写——沙箱重定义（强度阈值路由——不再按 AtomClass）+ Governance 三层响应（G1告知/G2降级/G3熔断）+ 核心+沙箱叠加总强度校验 + 点缀绝对强度校验（含 d_sensitivity 防御敏感系数）+ 沙箱违规→DefenceLevel 升级桥接。约束速查表更新。P0 #1/#3/#4 设计闭合。|
 | v0.4 | 2026-06-10 | §九点缀比例帽语义修正+freeze_factor。§七冷启动阻尼淡入窗。§十低锚点置信度硬上限 low_anchor_cap(R<0.3→cap 20)。§十一创伤表更新——"创伤分级"→防御激活层级 DefenceLevel（D1/D2/D3）。|
 | v0.3 | 2026-06-09 | 完整重写：sigmoidal + 强度缩放 + OiSmoothing + SessionLabel × DataConfidence + 约束速查 + Trauma |

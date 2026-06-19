@@ -221,6 +221,46 @@ fn main() {
         verbose,
     );
 
+    // ── Sandbox routing + Governance —— ADR 009 §十 ──
+    if animi::sandbox::is_sandbox(scaled.max) {
+        A.info(format_args!(
+            "沙箱激活: 强度 max={} >= {}",
+            scaled.max,
+            animi::sandbox::SANDBOX_THRESHOLD
+        ));
+        let mut responses: Vec<animi::registry::SandboxResponse> = Vec::new();
+        if let Some(r) = registry.sandbox_response(&ast.mix.main.name) {
+            responses.push(r);
+        }
+        for acc in &ast.mix.accents {
+            if let Some(r) = registry.sandbox_response(&acc.atom.name) {
+                responses.push(r);
+            }
+        }
+        let worst = animi::sandbox::worst_response(&responses);
+        let accent_ratios: Vec<(String, f64)> = ast
+            .mix
+            .accents
+            .iter()
+            .map(|a| (a.atom.name.clone(), a.ratio))
+            .collect();
+        die_soft(
+            animi::sandbox::check_combined(scaled.max, &accent_ratios, user_cap, worst, None),
+            strict,
+            verbose,
+        );
+        for acc in &ast.mix.accents {
+            let r = registry
+                .sandbox_response(&acc.atom.name)
+                .unwrap_or_default();
+            die_soft(
+                animi::sandbox::check_accent_absolute(acc.ratio, scaled.max, r, None),
+                strict,
+                verbose,
+            );
+        }
+    }
+
     // 从 ctx 读取 oi_smoothing 产出
     let smoothing = ctx
         .smoothing_output
