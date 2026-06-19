@@ -3,6 +3,7 @@
 pub mod ast;
 pub mod codegen;
 pub mod config;
+pub mod core;
 pub mod device_map;
 pub mod dsir;
 pub mod error;

@@ -1,0 +1,10 @@
+refactor(core): create src/core/ — Feelings-Core responsibilities placeholder
+
+- src/core/mod.rs — 5-section Core migration blueprint
+  * PBM (personal baseline matrix) — storage, cold start, damping state
+  * Personalize (FSIR -> PSIR) — sigmoidal scale, baseline calibration
+  * NeuroEnergyTracker — 4-dimensional leaky bucket state
+  * Session — lifecycle, frame window, cross-session state
+  * Pipeline — hook runtime scheduling
+- Future Core traits documented: CorePbm, CoreSession, CorePersonalize
+- Anim currently hosts all Core logic — Core is zero-code
