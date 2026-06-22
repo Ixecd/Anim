@@ -172,6 +172,12 @@ feeling <基本感受包名> {
 ## 编辑记录
 ```
 
+2026-06-22  v0.5 Core 迁移里程碑 — Feelings-Core Rust 项目初始化
+            - Feelings-Core: 5 模块 (pbm/personalize/tracker/session/dsir) + Cargo.toml
+            - Anim: src/core/mod.rs — Core 职责蓝图 + 迁移路线文档
+            - FORGET/HANDOFF/009/012 PROTOCOL 闭源 → MIT 开源措辞全局修正
+            - 下一步: Anim pbm.rs/safety.rs/personalize.rs 代码迁入 Core
+
 2026-06-19  v0.4 Sandbox + Governance 完整重构 — 告别阻断，拥抱引导
             - ADR 009 §十 完全重写：沙箱 = 强度阈值路由（≥90）+ GovernanceAction 引导感受
             - SandboxResponse 原子标签：Attainment/Neutral/Caution/Shield，8 原子内建标注
