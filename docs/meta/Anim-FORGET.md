@@ -10,9 +10,9 @@
 
 ## P0 — 生产命门（9/12）
 
-1. **三层安全防线不全 — DefenceLevel 判定逻辑空桩** — `pbm.rs` 已定义 `DefenceLevel` 枚举（D1/D2/D3），但判定触发条件空白。等控器的 VSA 相变标记长什么样？PBM 内部状态机凭什么从 None 升到 D1？只能来自等控器自己的生理信号——不能是用户自述的叙事标签（叙事污染检测）。**部分设计闭合：** ADR 009 §十.4 Governance G1/G2/G3 已定义 DefenceLevel 参与治理的逻辑 + §十.6 沙箱违规→DefenceLevel 升级桥接。真正触发条件仍需 Core PBM 数据。FIXME: v0.3。
+1. **三层安全防线不全 — DefenceLevel 判定逻辑空桩** — `pbm.rs` 已定义 `DefenceLevel` 枚举（D1/D2/D3），但判定触发条件空白。等控器的 VSA 相变标记长什么样？PBM 内部状态机凭什么从 None 升到 D1？只能来自等控器自己的生理信号——不能是用户自述的叙事标签（叙事污染检测）。**部分设计闭合：** ADR 009 §十.4 Governance G1/G2/G3 已定义 DefenceLevel 参与治理的逻辑 + §十.6 沙箱违规→DefenceLevel 升级桥接。→ **归属 Core。** 真正触发条件需 Core PBM 数据。
 
-2. **Session 中用户状态突变安全盲区** — PSIR 只在启动时校验一次。运行中 cap 变了但旧参数继续输出。需 10Hz 轻量安全看门狗。FIXME: ADR 009。
+2. **Session 中用户状态突变安全盲区** — PSIR 只在启动时校验一次。运行中 cap 变了但旧参数继续输出。需 10Hz 轻量安全看门狗。→ **归属 Core。**
 
 3. ~~**混合原子包强度叠加绕过沙箱**~~ ✅ — 沙箱已从原子分类模型重构为强度阈值路由（`intensity ≥ 90 → 自动进沙箱`）。ADR 009 §十.3 定义叠加总强度校验公式 `combined = main × (1 + Σ accent_ratio × weight) ≤ cap`。Governance 三层响应（G1/G2/G3）+ SandboxResponse 原子标签。代码：`src/sandbox.rs`。**设计闭合，代码已落。**
 
@@ -42,25 +42,25 @@
 
 ### 交织管线
 
-10. **四层 IR 全链路骨架完成** — FSIR/PSIR/DSIR/ESIR 全部有类型定义 + 序列化。PSIR 有完整 personalize。DSIR 有 DeviceMap 骨架（ear only v0.3）。ESIR 有 CodeGen 骨架（6 种 shape + Postcard 二进制）。完整 IR 分层落地。FIXME: v0.4 扩展（多设备降级 / 自适应帧密度 / 闭环修正）。
+10. **四层 IR 全链路骨架完成** — FSIR/PSIR/DSIR/ESIR 全部有类型定义 + 序列化。PSIR 有完整 personalize。DSIR 有 DeviceMap 骨架（ear only v0.3）。ESIR 有 CodeGen 骨架（6 种 shape + Postcard 二进制）。完整 IR 分层落地。→ **归属 Core。**
 
-11. **Pass 6-8（Personalize/DeviceMap/CodeGen）** — Pass 6 已完成。Pass 7-8 骨架已完成（v0.3——`.anim → .esir` 端到端跑通）。FIXME: v0.4 续行（多设备 + ESIR 优化）。
+11. **Pass 6-8（Personalize/DeviceMap/CodeGen）** — Pass 6 已完成。Pass 7-8 骨架已完成（v0.3——`.anim → .esir` 端到端跑通）。→ **归属 Core。**
 
-12. **PBM 地基就绪，完整冷启动未实现** — `pbm.rs` 已有全部地基类型。四维差异化冷启动系数 + sigmoidal 收敛因子三实时置信度待 v0.3。FIXME: v0.3。
+12. **PBM 地基就绪，完整冷启动未实现** — `pbm.rs` 已有全部地基类型。四维差异化冷启动系数 + sigmoidal 收敛因子三实时置信度待 v0.3。→ **归属 Core。**
 
 ### 设备
 
-13. **设备热插拔安全重校验缺失** — 设备断开重连后 DSIR 不重做安全校验。FIXME: ADR 009。
+13. **设备热插拔安全重校验缺失** — 设备断开重连后 DSIR 不重做安全校验。→ **归属 Core。**
 
-14. **outline 模式安全约束缺失** — 缺设备时降级行为未定义。FIXME: ADR 009+。
+14. **outline 模式安全约束缺失** — 缺设备时降级行为未定义。→ **归属 Core。**
 
-15. **多设备时钟同步与无线抖动零设计** — 边界归 Feelings-OS `timerd` + `busd`。Anim 侧只定义 ESIR 帧时序约束（1ms 帧周期），不实现 Jitter Buffer。本行保留仅作提醒。
+15. **多设备时钟同步与无线抖动零设计** — 边界归 Feelings-OS `timerd` + `busd`。Anim 侧只定义 ESIR 帧时序约束（1ms 帧周期），不实现 Jitter Buffer。→ **归属 Feelings-OS。**
 
 ### 语法
 
 16. ~~**Anim 宏系统零代码**~~ ✅ — `src/macros.rs`。`macro_rules!` 源码级展开 + 参数替换 + 最大递归深度 32。Pass 0 后、Pass 1 前展开。5 测试全绿。ADR 005。
 
-17. **宏递归组合风险绕过** — 组合风险必须在完全展开后的 AST 上计算。
+17. **宏递归组合风险绕过** — → **归属 Anim。**
 
 ~~21. **科学计数法浮点字面量不支持**~~ ✅ — `src/lexer.rs`。
 
@@ -82,11 +82,11 @@
 
 ### 缓存
 
-18. **后台预编译 FSIR 缓存失效策略缺失** — FSIR 已有 `pattern_registry_hash` + `safety_rules_version`（None）字段。逻辑未实现。FIXME: v0.4。
+18. **后台预编译 FSIR 缓存失效策略缺失** — FSIR 已有 `pattern_registry_hash` + `safety_rules_version`（None）字段。→ **归属 Anim。**
 
 ### 可观测性
 
-19. **运行期 oi 可观测性为零** — FPGA 需 oi 原因寄存器。FIXME: v0.5。
+19. **运行期 oi 可观测性为零** — → **归属 Feelings-OS。**
 
 ### 代码功能
 
@@ -96,9 +96,9 @@
 
 ## P2 — 代码质量 / 可维护性（2/2）
 
-25. **log.rs 全局日志级别使用 Relaxed 内存顺序** — 单线程 CLI 不触发。需升级为 `Release`/`Acquire`。FIXME: v0.4。
+25. **log.rs 全局日志级别使用 Relaxed 内存顺序** — 单线程 CLI 不触发。需升级为 `Release`/`Acquire`。→ **归属 Anim。**
 
-29. **PbmDimension HashMap 可换固定数组** — 4 枚举值 SipHasher 开销。当前 1ms/帧不构成瓶颈。FIXME: v0.4。
+29. **PbmDimension HashMap 可换固定数组** — 4 枚举值 SipHasher 开销。当前 1ms/帧不构成瓶颈。→ **归属 Anim。**
 
 ~~25. **无日志系统**~~ ✅ — `A_info!/A_warn!/A_error!` 宏。
 
