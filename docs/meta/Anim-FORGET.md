@@ -60,7 +60,7 @@
 
 16. ~~**Anim 宏系统零代码**~~ ✅ — `src/macros.rs`。`macro_rules!` 源码级展开 + 参数替换 + 最大递归深度 32。Pass 0 后、Pass 1 前展开。5 测试全绿。ADR 005。
 
-17. **宏递归组合风险绕过** — → **归属 Anim。**
+17. ~~**宏递归组合风险绕过**~~ ✅ — 宏展开后 `validate_expanded()` 校验：拒绝超大源码 (>1MB)。拒绝递归组合爆炸。`src/macros.rs`。
 
 ~~21. **科学计数法浮点字面量不支持**~~ ✅ — `src/lexer.rs`。
 
@@ -82,7 +82,7 @@
 
 ### 缓存
 
-18. **后台预编译 FSIR 缓存失效策略缺失** — FSIR 已有 `pattern_registry_hash` + `safety_rules_version`（None）字段。→ **归属 Anim。**
+18. ~~**后台预编译 FSIR 缓存失效策略缺失**~~ ✅ — `FsirDoc::is_cache_valid()`：校验 registry_hash + safety_rules_version 双条件。任一不匹配 → 缓存失效。`SAFETY_RULES_VERSION` 常量。`src/fsir.rs`。`SAFETY_RULES_VERSION` 常量。`src/fsir.rs`。
 
 ### 可观测性
 

@@ -4,6 +4,10 @@
 // FSIR 是感受结构的"通用本体"——不绑定任何个人生理参数或设备。
 // 同一份 .anim → 同一份 FSIR → 不同的人上 PSIR 不同。
 
+/// 当前安全规则版本号。全局安全规则更新时递增。
+/// 缓存校验时——FSIR 记录的版本号与此不一致 → 缓存失效，重新编译。
+pub const SAFETY_RULES_VERSION: u32 = 1;
+
 use crate::ast::*;
 use crate::error::{AnimiError, Severity};
 use serde::{Deserialize, Serialize};
@@ -144,7 +148,7 @@ impl FsirDoc {
                 compiled_at: now,
                 source_hash,
                 pattern_registry_hash: registry_hash,
-                safety_rules_version: None,
+                safety_rules_version: Some(SAFETY_RULES_VERSION),
             },
             name: source.name.clone(),
             mix: FsirMix {
@@ -233,6 +237,40 @@ impl FsirDoc {
         })
     }
 
+    /// 校验缓存的 FSIR 是否仍然有效。
+    ///
+    /// 两个失效条件：
+    /// - Registry 哈希不匹配 → 原子定义已变更，缓存失效
+    /// - 安全规则版本号不匹配 → 安全规则已更新，缓存失效
+    ///
+    /// 返回 true 表示缓存有效——可直接复用，跳过重新编译。
+    pub fn is_cache_valid(
+        &self,
+        current_registry_hash: &str,
+        current_safety_rules_version: u32,
+    ) -> bool {
+        let registry_match = self
+            .meta
+            .pattern_registry_hash
+            .as_ref()
+            .is_some_and(|h| h == current_registry_hash);
+        let safety_match = self
+            .meta
+            .safety_rules_version
+            .map(|v| v == current_safety_rules_version)
+            .unwrap_or(true);
+        registry_match && safety_match
+    }
+
+    /// 从 Postcard 二进制反序列化 FsirDoc。
+    pub fn from_binary(bytes: &[u8]) -> Result<Self, AnimiError> {
+        postcard::from_bytes(bytes).map_err(|e| AnimiError::InternalError {
+            severity: Severity::Deny,
+            file_name: crate::error::current_file(),
+            msg: format!("FSIR 二进制反序列化失败: {}", e),
+        })
+    }
+
     /// 序列化为 Postcard 二进制（LEB128 varint 编码）。
     ///
     /// Postcard 是 `#[no_std]` 兼容的 Serde 二进制格式：
@@ -247,17 +285,6 @@ impl FsirDoc {
             severity: Severity::Deny,
             file_name: crate::error::current_file(),
             msg: format!("FSIR 二进制序列化失败: {}", e),
-        })
-    }
-
-    /// 从 Postcard 二进制反序列化。
-    ///
-    /// Feelings-OS 裸机环境可用——Postcard 不依赖 std，不依赖 alloc 之外的任何东西。
-    pub fn from_binary(bytes: &[u8]) -> Result<Self, AnimiError> {
-        postcard::from_bytes(bytes).map_err(|e| AnimiError::InternalError {
-            severity: Severity::Deny,
-            file_name: crate::error::current_file(),
-            msg: format!("FSIR 二进制反序列化失败: {}", e),
         })
     }
 }
@@ -282,6 +309,29 @@ mod tests {
             max: ast.intensity.max,
         };
         Ok(FsirDoc::from_ast(&ast, None, None, &scaled, None))
+    }
+
+    /// 创建一个最小 FSIR 用于缓存校验测试。
+    fn make_test_fsir(registry_hash: Option<&str>) -> FsirDoc {
+        FsirDoc {
+            meta: FsirMeta {
+                animi_version: "0.1.0".into(),
+                compiled_at: "2026-01-01T00:00:00Z".into(),
+                source_hash: None,
+                pattern_registry_hash: registry_hash.map(|s| s.to_string()),
+                safety_rules_version: Some(SAFETY_RULES_VERSION),
+            },
+            name: "test".into(),
+            mix: FsirMix {
+                main: "x".into(),
+                accents: vec![],
+            },
+            shape: FsirShape {
+                name: "steady".into(),
+            },
+            intensity: FsirIntensity { min: 10, max: 20 },
+            smoothing: None,
+        }
     }
 
     #[test]
@@ -457,7 +507,26 @@ feeling calm {
         assert_eq!(parsed["meta"]["animi_version"], "0.1.0");
         assert!(parsed["meta"]["source_hash"].is_null());
         assert!(parsed["meta"]["pattern_registry_hash"].is_null()); // None → null in JSON
-        assert!(parsed["meta"]["safety_rules_version"].is_null());
+        assert!(parsed["meta"]["safety_rules_version"] == 1); // SAFETY_RULES_VERSION
         assert!(parsed["meta"]["compiled_at"].is_string());
+    }
+
+    #[test]
+    fn cache_valid_with_matching_hashes() {
+        let fsir = make_test_fsir(Some("abc123"));
+        assert!(fsir.is_cache_valid("abc123", SAFETY_RULES_VERSION));
+    }
+
+    #[test]
+    fn cache_invalid_with_mismatched_registry_hash() {
+        let fsir = make_test_fsir(Some("abc123"));
+        assert!(!fsir.is_cache_valid("different_hash", SAFETY_RULES_VERSION));
+    }
+
+    #[test]
+    fn cache_valid_when_safety_version_is_none() {
+        let mut fsir = make_test_fsir(Some("abc123"));
+        fsir.meta.safety_rules_version = None;
+        assert!(fsir.is_cache_valid("abc123", 2)); // None → 兼容任何版本
     }
 }

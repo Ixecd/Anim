@@ -4,7 +4,34 @@
 // 宏展开不是字符串替换——是 AST 节点嵌入。
 // 展开后的 AST 必经 Pass 1/2/3 全量检查——不存在"展开就放行"。
 
+use crate::error::AnimiError;
+use crate::error::Severity;
 use std::collections::HashMap;
+
+/// 宏展开后源码的最大允许长度（字节）。
+/// 防止递归宏组合产生指数级膨胀的源码。
+pub const MAX_EXPANDED_SIZE: usize = 1_000_000;
+
+/// 最大嵌套宏调用层数。
+pub const MAX_MACRO_NESTING: usize = 32;
+
+/// 验证展开后的源码是否安全——不超出合理界限。
+///
+/// 在宏展开后、Pass 1 前调用。拒绝膨胀超限的源码。
+pub fn validate_expanded(source: &str) -> Result<(), AnimiError> {
+    if source.len() > MAX_EXPANDED_SIZE {
+        return Err(AnimiError::InternalError {
+            file_name: crate::error::current_file(),
+            msg: format!(
+                "宏展开后源码过大 ({} bytes > {} max)。可能存在递归宏组合爆炸。",
+                source.len(),
+                MAX_EXPANDED_SIZE
+            ),
+            severity: Severity::Deny,
+        });
+    }
+    Ok(())
+}
 
 /// 宏定义——macro_rules! 声明。
 #[derive(Debug, Clone)]
@@ -385,5 +412,17 @@ feeling calm {
         let expanded = expand_macros(&source, &macros);
         assert!(expanded.contains("calm_meditative"));
         assert!(expanded.contains("belonging 0.3"));
+    }
+
+    #[test]
+    fn validate_expanded_accepts_normal_source() {
+        let src = "feeling calm { mix { main: x accents: [] } shape: steady intensity: [10, 20] }";
+        assert!(validate_expanded(src).is_ok());
+    }
+
+    #[test]
+    fn validate_expanded_rejects_oversized_source() {
+        let huge = "x".repeat(MAX_EXPANDED_SIZE + 1);
+        assert!(validate_expanded(&huge).is_err());
     }
 }

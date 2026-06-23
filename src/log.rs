@@ -11,7 +11,7 @@ static LOG_LEVEL: AtomicU8 = AtomicU8::new(1); // 默认 Info
 
 /// 设置全局日志级别。
 pub fn set_log_level(level: Level) {
-    LOG_LEVEL.store(level.as_u8(), Ordering::Relaxed);
+    LOG_LEVEL.store(level.as_u8(), Ordering::Release);
 }
 
 /// 日志级别——Debug < Info < Warn < Error。
@@ -81,7 +81,7 @@ impl Logger {
 /// 内部写到 stderr，带时间戳和颜色。
 #[allow(dead_code)]
 fn emit(level: Level, args: std::fmt::Arguments) {
-    if level.as_u8() < LOG_LEVEL.load(Ordering::Relaxed) {
+    if level.as_u8() < LOG_LEVEL.load(Ordering::Acquire) {
         return;
     }
     let ts = chrono::Utc::now().format("%Y-%m-%dT%H:%M:%SZ");
