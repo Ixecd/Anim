@@ -10,7 +10,7 @@ use crate::psir::{
     PsirIntensityInput, PsirMetaInput, PsirSmoothing,
 };
 use crate::registry::Registry;
-use std::collections::HashMap;
+use crate::safety::dim_index;
 
 // ── 冷启动四维系数 ──────────────────────────────────────────
 
@@ -86,7 +86,7 @@ pub struct PbmState<'a> {
     pub damping_gradients: Option<&'a [(PbmDimension, f64); 4]>,
     /// 上一帧的冻结状态——当 damping_gradients=None 时使用 (Damping Hold)。
     /// None = 无历史状态（首帧或长时间无信号→安全降级为零阻尼）。
-    pub previous_frozen: Option<&'a HashMap<PbmDimension, StepState>>,
+    pub previous_frozen: Option<&'a [StepState; 4]>,
     /// 冷启动后阻尼淡入窗长度（Session 数）。10 + window 后全额阻尼。
     /// 0 = 无窗口（立即全额阻尼）。默认 5。
     pub cold_start_window: u32,
@@ -183,27 +183,20 @@ pub fn personalize(
         .map(|ds| ds.current_steps())
         .unwrap_or_else(default_steps);
 
-    let frozen: HashMap<PbmDimension, StepState> = match pbm.damping_gradients {
-        // 优先级一：外部注入梯度（传感器直通）
+    let frozen: [StepState; 4] = match pbm.damping_gradients {
         Some(gradients) => DampingMatrix::apply(gradients, &current_steps, &pbm.config.damping),
-
-        // 优先级二：DampingState 实时计算 → 降级 Damping Hold
         None => match (pbm.damping_state, pbm.current_pbm_values) {
             (Some(ds), Some(vals)) => match ds.compute_gradients(vals) {
                 Some(gradients) => {
                     DampingMatrix::apply(&gradients, &current_steps, &pbm.config.damping)
                 }
-                None => pbm.previous_frozen.cloned().unwrap_or_default(),
+                None => pbm.previous_frozen.copied().unwrap_or_default(),
             },
-            _ => pbm.previous_frozen.cloned().unwrap_or_default(),
+            _ => pbm.previous_frozen.copied().unwrap_or_default(),
         },
     };
     let is_frozen = |dim: PbmDimension| -> bool {
-        !cold_start
-            && frozen
-                .get(&dim)
-                .map(|s| matches!(s, StepState::Frozen { .. }))
-                .unwrap_or(false)
+        !cold_start && matches!(frozen[dim_index(dim)], StepState::Frozen { .. })
     };
 
     // ── 2b. 冷启动阻尼淡入窗（P1 #29） ─────────────────────────

@@ -12,7 +12,6 @@
 // 待 v0.3 实现。本文件是那一切的底座。
 
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 // ── Session 标签与数据置信度 (P0 #6) ──────────────────────────
 
@@ -184,9 +183,10 @@ pub enum DefenceLevel {
 }
 
 /// 单个维度的步长状态。
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum StepState {
     /// 活跃——本维度步长正常更新。
+    #[default]
     Active,
     /// 冻结——被其他维度的瞬时震荡污染，本维度步长暂停更新。
     Frozen { frozen_by: PbmDimension },
@@ -279,7 +279,9 @@ impl DampingMatrix {
         gradients: &[(PbmDimension, f64); 4],
         current_steps: &[(PbmDimension, f64); 4],
         cfg: &crate::config::DampingConfig,
-    ) -> HashMap<PbmDimension, StepState> {
+    ) -> [StepState; 4] {
+        use crate::safety::dim_index;
+
         let step_map = |dim: PbmDimension| -> f64 {
             current_steps
                 .iter()
@@ -288,20 +290,14 @@ impl DampingMatrix {
                 .unwrap_or(1.0)
         };
 
-        // 初始化所有维度为 Active
-        let mut states: HashMap<_, _> = gradients
-            .iter()
-            .map(|(d, _)| (*d, StepState::Active))
-            .collect();
+        let mut states = [StepState::default(); 4];
 
-        // 检查哪些维度触发了阻尼
         for (dim, grad) in gradients.iter() {
             let threshold = Self::gradient_threshold(*dim, cfg) * step_map(*dim);
             if *grad > threshold {
-                // 此维度触发了阻尼——冻结所有受影响的维度
                 for (target_dim, _) in gradients.iter() {
                     if let Some(frozen_by) = Self::should_freeze(*dim, *target_dim) {
-                        states.insert(*target_dim, StepState::Frozen { frozen_by });
+                        states[dim_index(*target_dim)] = StepState::Frozen { frozen_by };
                     }
                 }
             }
@@ -587,13 +583,15 @@ mod tests {
         ];
         let states =
             DampingMatrix::apply(&gradients, &steps, &crate::config::DampingConfig::default());
-        for (_, s) in &states {
+        for s in &states {
             assert_eq!(*s, StepState::Active);
         }
     }
 
     #[test]
     fn damping_apply_emotional_trigger_freezes_visceral_and_tactile() {
+        use crate::safety::dim_index;
+
         let gradients = [
             (PbmDimension::Visceral, 0.1),
             (PbmDimension::Emotional, 1.5), // > 2.0 × 0.5 = 1.0 → 触发
@@ -610,22 +608,25 @@ mod tests {
             DampingMatrix::apply(&gradients, &steps, &crate::config::DampingConfig::default());
         // Visceral 应被 Emotional 冻结
         assert_eq!(
-            states[&PbmDimension::Visceral],
+            states[dim_index(PbmDimension::Visceral)],
             StepState::Frozen {
                 frozen_by: PbmDimension::Emotional
             }
         );
         // Emotional 自身保持 Active
-        assert_eq!(states[&PbmDimension::Emotional], StepState::Active);
+        assert_eq!(
+            states[dim_index(PbmDimension::Emotional)],
+            StepState::Active
+        );
         // Tactile 应被 Emotional 冻结
         assert_eq!(
-            states[&PbmDimension::Tactile],
+            states[dim_index(PbmDimension::Tactile)],
             StepState::Frozen {
                 frozen_by: PbmDimension::Emotional
             }
         );
         // Auditory 保持
-        assert_eq!(states[&PbmDimension::Auditory], StepState::Active);
+        assert_eq!(states[dim_index(PbmDimension::Auditory)], StepState::Active);
     }
 
     #[test]
