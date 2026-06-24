@@ -241,11 +241,11 @@ fn main() {
             }
         }
         let worst = animi::sandbox::worst_response(&responses);
-        let accent_ratios: Vec<(String, f64)> = ast
+        let accent_ratios: Vec<(&str, f64)> = ast
             .mix
             .accents
             .iter()
-            .map(|a| (a.atom.name.clone(), a.ratio))
+            .map(|a| (a.atom.name.as_str(), a.ratio))
             .collect();
 
         let combined_action =

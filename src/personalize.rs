@@ -144,7 +144,7 @@ pub struct PbmState<'a> {
     pub previous_intensities: Option<&'a [u32; 4]>,
 
     /// 脱敏检测连续 N 帧计数器——按维度。
-    pub monotony_counters: Option<&'a [u32; 4]>,
+    pub monotony_counters: Option<&'a mut [u32; 4]>,
 
     /// 信号节律模板——ADR 012。Core 强度调度器下发。
     /// None = 无节律限制（默认——当前 Core 零代码）。
@@ -162,7 +162,7 @@ pub struct PbmState<'a> {
 pub fn personalize(
     fsir: &FsirDoc,
     registry: &Registry,
-    pbm: &PbmState,
+    pbm: &mut PbmState,
     tracker: Option<&mut crate::safety::NeuroEnergyTracker>,
 ) -> Result<PsirDoc, AnimiError> {
     // ── 1. 冷启动判定 ──────────────────────────────────────
@@ -312,11 +312,11 @@ pub fn personalize(
             }
         }
         let worst = crate::sandbox::worst_response(&responses);
-        let accent_data: Vec<(String, f64)> = fsir
+        let accent_data: Vec<(&str, f64)> = fsir
             .mix
             .accents
             .iter()
-            .map(|a| (a.atom.clone(), a.ratio))
+            .map(|a| (a.atom.as_str(), a.ratio))
             .collect();
         let mut actions = vec![crate::sandbox::check_combined(
             applied_max,
@@ -373,27 +373,29 @@ pub fn personalize(
     }
 
     // ── 8c. ADR 012 信号变异度检测（脱敏看门狗）────────────
-    // 比较当前帧强度与上一帧同维度强度——滑动平均后连续 N 帧变化 < δ → 置 degraded。
+    // 比较当前帧强度与上一帧同维度强度——
+    // 连续 N 帧变化 < δ → 置 degraded。
     let mut degraded = false;
-    if let (Some(prev_ints), Some(counters)) = (pbm.previous_intensities, pbm.monotony_counters) {
+    if let (Some(prev_ints), Some(counters)) = (
+        pbm.previous_intensities,
+        pbm.monotony_counters.as_deref_mut(),
+    ) {
         let idx = crate::safety::dim_index(main_dim);
         let prev = prev_ints[idx];
         let curr = applied_max;
         let delta = (curr as i64 - prev as i64).unsigned_abs();
-        // δ_threshold = 2（默认——变化幅度 < 2 强度分视为停滞）
         let delta_threshold = pbm.config.monotony.delta_threshold;
-        // N 帧窗口（默认 500 帧 = 500ms）
         let monotony_n = pbm.config.monotony.detection_frames;
 
         if delta < delta_threshold.into() {
-            let new_count = counters[idx].saturating_add(1);
-            if new_count >= monotony_n {
+            counters[idx] = counters[idx].saturating_add(1);
+            if counters[idx] >= monotony_n {
                 degraded = true;
             }
+        } else {
+            // 信号恢复跳变——重置停滞计数器
+            counters[idx] = 0;
         }
-        // 注：到达稳态阈值前 counters 值需要被写入以追踪跨帧状态。
-        // v1.1——degraded 标志写入 PSIR，不上报 Core（Core 零代码）。
-        // v1.2+——Core 读取 degraded → 在下一帧强度调度时插入恢复帧。
     }
 
     // ── 9. 组装 PSIR ─────────────────────────────────────
@@ -523,7 +525,7 @@ mod tests {
     fn basic_personalize() {
         let fsir = make_fsir("calm", "calm_meditative", vec![("belonging", 0.3)], 15, 45);
         let registry = Registry::default();
-        let pbm = PbmState {
+        let mut pbm = PbmState {
             guard: &ColdStartGuard::default(),
             damping_gradients: None,
             previous_frozen: None,
@@ -542,7 +544,7 @@ mod tests {
             rhythm_template: None,
             config: &crate::config::AnimConfig::default(),
         };
-        let psir = personalize(&fsir, &registry, &pbm, None).expect("personalize failed");
+        let psir = personalize(&fsir, &registry, &mut pbm, None).expect("personalize failed");
         assert_eq!(psir.name, "calm");
         assert!(psir.cold_start);
         assert!(!psir.defence_activated);

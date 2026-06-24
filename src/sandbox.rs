@@ -121,7 +121,7 @@ pub fn accent_intensity_weight(_atom_name: &str) -> f64 {
 /// 公式：combined = main_max × (1 + Σ accent_ratio × accent_weight)
 pub fn check_combined(
     applied_main_max: u32,
-    accent_ratios: &[(String, f64)],
+    accent_ratios: &[(&str, f64)],
     effective_cap: u32,
     response: SandboxResponse,
     defence_level: Option<DefenceLevel>,
@@ -341,19 +341,19 @@ mod tests {
 
     #[test]
     fn combined_under_cap_passes() {
-        let action = check_combined(50, &[("belonging".into(), 0.3)], 100, nr(), None);
+        let action = check_combined(50, &[("belonging", 0.3)], 100, nr(), None);
         assert!(action.is_passthrough());
     }
 
     #[test]
     fn combined_g1_steer() {
-        let action = check_combined(90, &[("belonging".into(), 0.11)], 100, nr(), None);
+        let action = check_combined(90, &[("belonging", 0.11)], 100, nr(), None);
         assert!(matches!(action, GovernanceAction::Steer { .. }));
     }
 
     #[test]
     fn combined_g2_redirect() {
-        let action = check_combined(90, &[("belonging".into(), 0.2)], 100, nr(), None);
+        let action = check_combined(90, &[("belonging", 0.2)], 100, nr(), None);
         assert!(matches!(action, GovernanceAction::Redirect { .. }));
     }
 
@@ -361,7 +361,7 @@ mod tests {
     fn combined_g2_d1_redirect() {
         let action = check_combined(
             90,
-            &[("belonging".into(), 0.05)],
+            &[("belonging", 0.05)],
             100,
             nr(),
             Some(DefenceLevel::D1),
@@ -371,7 +371,7 @@ mod tests {
 
     #[test]
     fn combined_g3_anchor() {
-        let action = check_combined(90, &[("belonging".into(), 0.5)], 100, nr(), None);
+        let action = check_combined(90, &[("belonging", 0.5)], 100, nr(), None);
         assert!(matches!(action, GovernanceAction::Anchor { .. }));
     }
 
@@ -391,7 +391,7 @@ mod tests {
     fn combined_attainment_passthrough_at_high_intensity() {
         let action = check_combined(
             95,
-            &[("belonging".into(), 0.3)],
+            &[("belonging", 0.3)],
             100,
             SandboxResponse::Attainment,
             None,
