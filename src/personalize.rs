@@ -40,6 +40,17 @@ impl Default for PbmColdStartCoefficients {
     }
 }
 
+impl PbmColdStartCoefficients {
+    pub fn get(&self, dim: PbmDimension) -> f64 {
+        match dim {
+            PbmDimension::Visceral => self.visceral,
+            PbmDimension::Emotional => self.emotional,
+            PbmDimension::Tactile => self.tactile,
+            PbmDimension::Auditory => self.auditory,
+        }
+    }
+}
+
 // ── Sigmoidal 非线性缩放 ─────────────────────────────────────
 
 /// 强度 sigmoidal 非线性缩放。
@@ -183,18 +194,20 @@ pub fn personalize(
         .map(|ds| ds.current_steps())
         .unwrap_or_else(default_steps);
 
-    let frozen: [StepState; 4] = match pbm.damping_gradients {
-        Some(gradients) => DampingMatrix::apply(gradients, &current_steps, &pbm.config.damping),
-        None => match (pbm.damping_state, pbm.current_pbm_values) {
-            (Some(ds), Some(vals)) => match ds.compute_gradients(vals) {
-                Some(gradients) => {
-                    DampingMatrix::apply(&gradients, &current_steps, &pbm.config.damping)
-                }
-                None => pbm.previous_frozen.copied().unwrap_or_default(),
-            },
-            _ => pbm.previous_frozen.copied().unwrap_or_default(),
-        },
-    };
+    let frozen: [StepState; 4] = pbm
+        .damping_gradients
+        .map(|g| DampingMatrix::apply(g, &current_steps, &pbm.config.damping))
+        .or_else(|| {
+            let ds = pbm.damping_state?;
+            let vals = pbm.current_pbm_values?;
+            let grads = ds.compute_gradients(vals)?;
+            Some(DampingMatrix::apply(
+                &grads,
+                &current_steps,
+                &pbm.config.damping,
+            ))
+        })
+        .unwrap_or_else(|| pbm.previous_frozen.copied().unwrap_or_default());
     let is_frozen = |dim: PbmDimension| -> bool {
         !cold_start && matches!(frozen[dim_index(dim)], StepState::Frozen { .. })
     };
@@ -230,12 +243,7 @@ pub fn personalize(
     // ── 4. 主旋律——按自身维度判定阻尼 ────────────────────────
     let main_dim = atom_dimension(&fsir.mix.main);
     let damped_main = is_frozen(main_dim);
-    let baseline_coeff = match main_dim {
-        PbmDimension::Visceral => pbm.coeffs.visceral,
-        PbmDimension::Emotional => pbm.coeffs.emotional,
-        PbmDimension::Tactile => pbm.coeffs.tactile,
-        PbmDimension::Auditory => pbm.coeffs.auditory,
-    };
+    let baseline_coeff = pbm.coeffs.get(main_dim);
 
     // ── 5. 主旋律——FSIR 原子名 → 个人偏移 → 个人参数 ──────────
     let main = PersonalizedFeeling {
@@ -245,7 +253,7 @@ pub fn personalize(
     };
 
     // ── 6. 点缀——遍历FSIR点缀 + 比例帽校验 + 缩放 ─────────────
-    let mut accents = Vec::new();
+    let mut accents = Vec::with_capacity(fsir.mix.accents.len());
     for acc in &fsir.mix.accents {
         // v0.4: 按点缀自身的维度判定阻尼 (P1 #27 fix)
         let accent_dim = atom_dimension(&acc.atom);
