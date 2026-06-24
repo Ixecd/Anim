@@ -96,9 +96,9 @@
 
 ## P2 — 代码质量 / 可维护性（2/2）
 
-25. **log.rs 全局日志级别使用 Relaxed 内存顺序** — 单线程 CLI 不触发。需升级为 `Release`/`Acquire`。→ **归属 Anim。**
+25. **log.rs 全局日志级别使用 Relaxed 内存顺序** — 单线程 CLI 不触发。需升级为 `Release`/`Acquire`。→ **归属 Anim。**(已闭合—[StepState;4] 固定数组)
 
-29. **PbmDimension HashMap 可换固定数组** — 4 枚举值 SipHasher 开销。当前 1ms/帧不构成瓶颈。→ **归属 Anim。**
+29. ~~**PbmDimension HashMap 可换固定数组**~~ ✅ — 4 枚举值 SipHasher 开销。当前 1ms/帧不构成瓶颈。→ **归属 Anim。**(已闭合—[StepState;4] 固定数组)
 
 ~~25. **无日志系统**~~ ✅ — `A_info!/A_warn!/A_error!` 宏。
 
