@@ -8,7 +8,7 @@
 
 ---
 
-## P0 — 生产命门（9/12）
+## P0 — 生产命门（7/12）
 
 1. **三层安全防线不全 — DefenceLevel 判定逻辑空桩** — `pbm.rs` 已定义 `DefenceLevel` 枚举（D1/D2/D3），但判定触发条件空白。等控器的 VSA 相变标记长什么样？PBM 内部状态机凭什么从 None 升到 D1？只能来自等控器自己的生理信号——不能是用户自述的叙事标签（叙事污染检测）。**部分设计闭合：** ADR 009 §十.4 Governance G1/G2/G3 已定义 DefenceLevel 参与治理的逻辑 + §十.6 沙箱违规→DefenceLevel 升级桥接。→ **归属 Core。** 真正触发条件需 Core PBM 数据。
 
@@ -171,6 +171,16 @@ feeling <基本感受包名> {
 
 ## 编辑记录
 ```
+
+2026-06-24  v0.6 Anim P1 全清 + Core 泛型重构 + LANGUAGE.md 对齐
+            - Anim: P1 #17 宏递归闭合 / P1 #18 FSIR缓存闭合 / P2 #25 log内存有序闭合
+              192 tests green, 零 clippy 警告。Anim 职责收敛: .anim → FSIR。
+            - Core: FeelingTarget trait + NeuroEnergyTracker<D,S> + Session<D,S> 全线泛型化。
+              维度数编译期展开。D3 主动麻痹锚点留位。PersonalityAnchor 舱位已开。
+              CoreConfig 全面参数化+validate_dimensions。CLI --species 默认 human。
+              20 tests green。P0 0/7→泛型地基就位。
+            - Feelings: LANGUAGE.md trauma→defence 全量清除。沙箱→多类型 Governance。
+              Registry 原子名全量对齐当前 8 原子。教练 AI 混合部署 (本地FPGA+云端深度推理)。
 
 2026-06-22  v0.5 Core 迁移里程碑 — Feelings-Core Rust 项目初始化
             - Feelings-Core: 5 模块 (pbm/personalize/tracker/session/dsir) + Cargo.toml
