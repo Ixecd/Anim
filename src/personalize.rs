@@ -299,42 +299,20 @@ pub fn personalize(
     }
 
     // ── 6.5. Sandbox + Governance —— ADR 009 §十 ──
-    // 强度 90+ → 沙箱路由 → 叠加总校验 + 点缀绝对强度校验
-    // Governance 返回引导指令而非错误——治理不是阻断，是引导。
     let sandbox_action = if crate::sandbox::is_sandbox(fsir.intensity.max) {
-        let mut responses: Vec<crate::registry::SandboxResponse> = Vec::new();
-        if let Some(r) = registry.sandbox_response(&fsir.mix.main) {
-            responses.push(r);
-        }
-        for acc in &fsir.mix.accents {
-            if let Some(r) = registry.sandbox_response(&acc.atom) {
-                responses.push(r);
-            }
-        }
-        let worst = crate::sandbox::worst_response(&responses);
-        let accent_data: Vec<(&str, f64)> = fsir
+        let atom_data: Vec<(String, f64)> = fsir
             .mix
             .accents
             .iter()
-            .map(|a| (a.atom.as_str(), a.ratio))
+            .map(|a| (a.atom.clone(), a.ratio))
             .collect();
-        let mut actions = vec![crate::sandbox::check_combined(
-            applied_max,
-            &accent_data,
+        Some(crate::sandbox::evaluate(
+            fsir.intensity.max,
             effective_cap,
-            worst,
+            &atom_data,
+            registry,
             pbm.defence_level,
-        )];
-        for acc in &fsir.mix.accents {
-            let r = registry.sandbox_response(&acc.atom).unwrap_or_default();
-            actions.push(crate::sandbox::check_accent_absolute(
-                acc.ratio,
-                fsir.intensity.max,
-                r,
-                pbm.defence_level,
-            ));
-        }
-        Some(crate::sandbox::strictest(&actions))
+        ))
     } else {
         None
     };

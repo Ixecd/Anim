@@ -259,6 +259,54 @@ fn action_rank(action: &GovernanceAction) -> u8 {
     }
 }
 
+// ── 沙箱编排——单一入口 ──────────────────────────────────────
+
+/// 沙箱治理路由编排——main.rs 和 personalize.rs 共享此单一入口。
+///
+/// 聚合 steps:
+///   1. 从 Registry 查 SandboxResponse → worst_response
+///   2. 构建 accent_ratios → check_combined(effective_cap)
+///   3. 每点缀 check_accent_absolute(source_intensity_max)
+///   4. strictest → 返回最终 GovernanceAction
+pub fn evaluate(
+    intensity_max: u32,
+    effective_cap: u32,
+    atom_names: &[(String, f64)],
+    registry: &crate::registry::Registry,
+    defence_level: Option<crate::pbm::DefenceLevel>,
+) -> GovernanceAction {
+    let mut responses = Vec::new();
+    for (name, _) in atom_names {
+        if let Some(r) = registry.sandbox_response(name) {
+            responses.push(r);
+        }
+    }
+    let worst = worst_response(&responses);
+
+    let accent_ratios: Vec<(&str, f64)> =
+        atom_names.iter().map(|(n, r)| (n.as_str(), *r)).collect();
+
+    let mut actions = vec![check_combined(
+        intensity_max,
+        &accent_ratios,
+        effective_cap,
+        worst,
+        defence_level,
+    )];
+
+    for (name, ratio) in atom_names {
+        let r = registry.sandbox_response(name).unwrap_or_default();
+        actions.push(check_accent_absolute(
+            *ratio,
+            intensity_max,
+            r,
+            defence_level,
+        ));
+    }
+
+    strictest(&actions)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

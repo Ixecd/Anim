@@ -231,38 +231,16 @@ fn main() {
             scaled.max,
             animi::sandbox::SANDBOX_THRESHOLD
         ));
-        let mut responses: Vec<animi::registry::SandboxResponse> = Vec::new();
-        if let Some(r) = registry.sandbox_response(&ast.mix.main.name) {
-            responses.push(r);
-        }
-        for acc in &ast.mix.accents {
-            if let Some(r) = registry.sandbox_response(&acc.atom.name) {
-                responses.push(r);
-            }
-        }
-        let worst = animi::sandbox::worst_response(&responses);
-        let accent_ratios: Vec<(&str, f64)> = ast
+        let atom_data: Vec<(String, f64)> = ast
             .mix
             .accents
             .iter()
-            .map(|a| (a.atom.name.as_str(), a.ratio))
+            .map(|a| (a.atom.name.clone(), a.ratio))
             .collect();
-
-        let combined_action =
-            animi::sandbox::check_combined(scaled.max, &accent_ratios, user_cap, worst, None);
-        let mut actions = vec![combined_action];
-        for acc in &ast.mix.accents {
-            let r = registry
-                .sandbox_response(&acc.atom.name)
-                .unwrap_or_default();
-            actions.push(animi::sandbox::check_accent_absolute(
-                acc.ratio, scaled.max, r, None,
-            ));
-        }
-        let final_action = animi::sandbox::strictest(&actions);
-        if !final_action.is_passthrough() {
-            A.info(format_args!("沙箱治理: {}", final_action.description()));
-            match &final_action {
+        let action = animi::sandbox::evaluate(scaled.max, user_cap, &atom_data, &registry, None);
+        if !action.is_passthrough() {
+            A.info(format_args!("沙箱治理: {}", action.description()));
+            match &action {
                 animi::sandbox::GovernanceAction::Steer {
                     blend_atom,
                     blend_intensity,
