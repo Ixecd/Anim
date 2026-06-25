@@ -3,7 +3,10 @@
 // 用法：animi <file.anim> [registry.json]
 //       animi --help
 //       animi --version
-// 输出：<file>.json
+// 输出：<file>.json (FSIR)
+//
+// Anim 职责收敛：.anim → FSIR only (Pass 0-5)
+// Pass 6+ 归属 Feelings-Core
 
 use sha2::{Digest, Sha256};
 use std::env;
@@ -14,7 +17,6 @@ use animi::error::AnimiError;
 use animi::error::Severity;
 use animi::log::A;
 
-/// 硬错误——Deny 级别，直接退出。
 fn die<T>(r: Result<T, AnimiError>) -> T {
     match r {
         Ok(v) => v,
@@ -25,8 +27,6 @@ fn die<T>(r: Result<T, AnimiError>) -> T {
     }
 }
 
-/// 软错误——按 severity + flags 分发。Warn 打印继续，Note 静默吞掉。
-/// 返回 None 表示被吞掉了，调用方应继续。
 fn die_soft(r: Result<(), AnimiError>, strict: bool, verbose: bool) {
     match r {
         Ok(()) => {}
@@ -81,7 +81,6 @@ fn main() {
         return;
     }
 
-    // 解析可选参数：--cap <N>、--config <path>、--strict、--verbose 和 <registry.json>
     let mut user_cap: u32 = 100;
     let mut config_path: Option<String> = None;
     let mut reg_path: Option<&String> = None;
@@ -135,7 +134,6 @@ fn main() {
         }
     }
 
-    // Registry——外部 JSON 或内建 fallback
     let registry = if let Some(path) = reg_path {
         match animi::registry::Registry::from_file(path) {
             Ok(r) => {
@@ -154,7 +152,6 @@ fn main() {
         animi::registry::Registry::default()
     };
 
-    // Config——外部 YAML 或默认值
     let config = if let Some(ref cfg_path) = config_path {
         match animi::config::AnimConfig::load(cfg_path) {
             Ok(c) => {
@@ -170,7 +167,6 @@ fn main() {
         animi::config::AnimConfig::default()
     };
 
-    // 设置当前文件名——oi! 宏自动从中读取
     animi::error::CURRENT_FILE.with(|f| *f.borrow_mut() = path.clone());
 
     let src = match fs::read_to_string(path) {
@@ -187,16 +183,12 @@ fn main() {
     if !macros.is_empty() {
         A.info(format_args!("展开 {} 个宏定义", macros.len()));
     }
-
-    // 宏展开后验证——拒绝递归组合爆炸 ← P1 #17
     die(animi::macros::validate_expanded(&processed_src));
 
     let mut lexer = animi::lexer::Lexer::new(&processed_src);
     let tokens = die(lexer.tokenize());
-
     let mut parser = animi::parser::Parser::new(tokens);
     let ast = die(parser.parse());
-
     let checker = animi::typeck::TypeChecker::new(&registry);
     die(checker.check(&ast));
 
@@ -206,82 +198,22 @@ fn main() {
     ctx.ast = Some(&ast);
     ctx.registry = Some(&registry);
 
-    // AfterTypeCheck —— static_safety hook（可 Warn）
     die_soft(
         pipeline.run_stage(animi::pipeline::PipelineStage::AfterTypeCheck, &ctx),
         strict,
         verbose,
     );
 
-    // Pass 3——用户安全检查 + 强度缩放（硬线——Deny）
+    // Pass 3——用户安全检查 + 强度缩放
     let scaled = die(animi::safety::check_with_scale(&ast, user_cap, &config));
     *ctx.scaled_intensity.borrow_mut() = Some(scaled.clone());
 
-    // AfterIntensityScale —— oi_smoothing / leaky_bucket hook（可 Warn/Note）
     die_soft(
         pipeline.run_stage(animi::pipeline::PipelineStage::AfterIntensityScale, &ctx),
         strict,
         verbose,
     );
 
-    // ── Sandbox routing + Governance —— ADR 009 §十 ──
-    if animi::sandbox::is_sandbox(scaled.max) {
-        A.info(format_args!(
-            "沙箱激活: 强度 max={} >= {}",
-            scaled.max,
-            animi::sandbox::SANDBOX_THRESHOLD
-        ));
-        let atom_data: Vec<(String, f64)> = ast
-            .mix
-            .accents
-            .iter()
-            .map(|a| (a.atom.name.clone(), a.ratio))
-            .collect();
-        let action = animi::sandbox::evaluate(scaled.max, user_cap, &atom_data, &registry, None);
-        if !action.is_passthrough() {
-            A.info(format_args!("沙箱治理: {}", action.description()));
-            match &action {
-                animi::sandbox::GovernanceAction::Steer {
-                    blend_atom,
-                    blend_intensity,
-                    ..
-                } => {
-                    A.info(format_args!(
-                        "  → G1 温和拉回: 叠加 {} @ {} 强度",
-                        blend_atom, blend_intensity
-                    ));
-                }
-                animi::sandbox::GovernanceAction::Redirect {
-                    atom, intensity, ..
-                } => {
-                    A.info(format_args!(
-                        "  → G2 重新导向: 替换为 {} @ {} 强度",
-                        atom, intensity
-                    ));
-                }
-                animi::sandbox::GovernanceAction::Anchor {
-                    atom,
-                    intensity,
-                    escalate_defence,
-                    ..
-                } => {
-                    A.info(format_args!(
-                        "  → G3 安全锚点: {} @ {} 强度{}",
-                        atom,
-                        intensity,
-                        if *escalate_defence {
-                            " (升级 DefenceLevel)"
-                        } else {
-                            ""
-                        }
-                    ));
-                }
-                _ => {}
-            }
-        }
-    }
-
-    // 从 ctx 读取 oi_smoothing 产出
     let smoothing = ctx
         .smoothing_output
         .borrow()
@@ -298,7 +230,6 @@ fn main() {
         }
     ));
 
-    // 源码哈希——SPL 锚定用
     let src_hash = hex::encode(Sha256::digest(src.as_bytes()));
     let multipliers: Vec<f64> = smoothing.steps.iter().map(|s| s.multiplier).collect();
     let doc = animi::fsir::FsirDoc::from_ast(
@@ -313,37 +244,10 @@ fn main() {
     );
 
     let json = die(doc.to_json());
-
     let out_path = format!("{}.json", path.trim_end_matches(".anim"));
     if let Err(e) = fs::write(&out_path, &json) {
         A.error(format_args!("无法写入 {}: {}", out_path, e));
         process::exit(1);
     }
-
     A.info(format_args!("✅ {} → {}", path, out_path));
-
-    // ── Pass 7: DeviceMap — PSIR × DeviceSet → DSIR ──
-    let psir = doc.to_psir_stub();
-    let device_set = animi::dsir::DeviceSet::default();
-    let dsir = die(animi::device_map::device_map(&psir, &device_set));
-    let dsir_json = die(dsir.to_json());
-    let dsir_out = format!("{}.dsir.json", path.trim_end_matches(".anim"));
-    if let Err(e) = fs::write(&dsir_out, &dsir_json) {
-        A.error(format_args!("无法写入 {}: {}", dsir_out, e));
-        process::exit(1);
-    }
-    A.info(format_args!("✅ {} → {}", path, dsir_out));
-
-    // ── Pass 8: CodeGen — DSIR → ESIR ──
-    let esir = die(animi::codegen::codegen(&dsir));
-    let esir_bytes = die(esir.to_binary());
-    let esir_out = format!("{}.esir", path.trim_end_matches(".anim"));
-    if let Err(e) = fs::write(&esir_out, &esir_bytes) {
-        A.error(format_args!("无法写入 {}: {}", esir_out, e));
-        process::exit(1);
-    }
-    A.info(format_args!(
-        "✅ {} → {} ({} 帧, {}ms)",
-        path, esir_out, esir.frame_count, esir.duration_ms
-    ));
 }

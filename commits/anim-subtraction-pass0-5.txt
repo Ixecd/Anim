@@ -1,0 +1,24 @@
+refactor: Anim 减法——职责收敛到 Pass 0-5（.anim → FSIR only）
+
+删除 8 个完整模块（已迁移至 Feelings-Core）:
+- src/personalize.rs    Pass 6 — 541 行（FSIR×PBM→PSIR）
+- src/device_map.rs     Pass 7 — 123 行
+- src/codegen.rs        Pass 8 — 230 行
+- src/dsir.rs           设备路由类型 — 131 行
+- src/esir.rs           ESIR 帧类型 — 129 行
+- src/sandbox.rs        沙箱治理 — 539 行
+- src/psir.rs           PSIR 类型 — 217 行
+- src/core/mod.rs       迁移蓝图文档 — 119 行
+
+修剪 5 个模块（保留 Anim 独占部分）:
+- src/pbm.rs            730→35 行（仅保留 PbmDimension+DefenceLevel 共享枚举）
+- src/safety.rs         833→58 行（仅保留 Pass 3 的 check_with_scale+scale_intensity+low_anchor_cap）
+- src/pipeline.rs       307→128 行（仅保留 Pipeline framework+StaticSafetyHook+OiSmoothingHook）
+- src/fsir.rs           移除 to_psir_stub()（42 行，Pass 7-8 离线桩）
+- src/main.rs           349→242 行（移除 Pass 7-8 + sandbox routing）
+
+Anim 职责收敛为一行: .anim 源码 → FSIR JSON (Pass 0-5)
+Pass 6+ 全部归属 Feelings-Core。
+
+94 tests green, 0 warnings. 从 192 tests 砍去 98 tests (51%)。
+删除 ~2,029 行代码 + 修剪 ~1,200 行。

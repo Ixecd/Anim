@@ -1,13 +1,11 @@
 // src/lib.rs — animi 交织器库入口
+//
+// Anim 职责收敛：.anim → FSIR only (Pass 0-5)
+// Pass 6+ 归属 Feelings-Core
 
 pub mod ast;
-pub mod codegen;
 pub mod config;
-pub mod core;
-pub mod device_map;
-pub mod dsir;
 pub mod error;
-pub mod esir;
 pub mod fsir;
 pub mod guard;
 pub mod lexer;
@@ -16,16 +14,10 @@ pub mod macros;
 pub mod oi;
 pub mod parser;
 pub mod pbm;
-pub mod personalize;
 pub mod pipeline;
-pub mod psir;
 pub mod registry;
 pub mod rule;
 pub mod safety;
-pub mod sandbox;
 pub mod typeck;
 
 pub use log::{set_log_level, Level, A};
-
-// 日志便捷宏由 #[macro_export] 自动导出到 crate root。
-// 库用户可直接 `use animi::A_info;` 后调用 `A_info!("hello")` 等。
