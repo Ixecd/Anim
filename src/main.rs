@@ -192,33 +192,18 @@ fn main() {
     let checker = animi::typeck::TypeChecker::new(&registry);
     die(checker.check(&ast));
 
-    // ── Pipeline + Hook 架构 —— ADR 013 ──
-    let pipeline = animi::pipeline::Pipeline::build(&config);
-    let mut ctx = animi::pipeline::Ctx::new(&config, user_cap);
-    ctx.ast = Some(&ast);
-    ctx.registry = Some(&registry);
-
+    // ── Pass 2b：静态安全规则 ──
     die_soft(
-        pipeline.run_stage(animi::pipeline::PipelineStage::AfterTypeCheck, &ctx),
+        animi::rule::check(&ast, &registry, &config),
         strict,
         verbose,
     );
 
     // Pass 3——用户安全检查 + 强度缩放
     let scaled = die(animi::safety::check_with_scale(&ast, user_cap, &config));
-    *ctx.scaled_intensity.borrow_mut() = Some(scaled.clone());
 
-    die_soft(
-        pipeline.run_stage(animi::pipeline::PipelineStage::AfterIntensityScale, &ctx),
-        strict,
-        verbose,
-    );
-
-    let smoothing = ctx
-        .smoothing_output
-        .borrow()
-        .clone()
-        .expect("oi_smoothing hook must produce output");
+    // ── Pass 3b：oi 帧平滑 ──
+    let smoothing = die(animi::guard::inject(&ast, &config));
     A.info(format_args!(
         "oi 帧平滑: {} 帧 {}ms 衰减{}",
         smoothing.frame_count(),

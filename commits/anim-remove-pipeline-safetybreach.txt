@@ -1,0 +1,14 @@
+refactor: Anim 再减——删除 pipeline.rs，内联 hook 调用，移除 SafetyBreach
+
+删除 pipeline.rs（127行）——Hook trait/PipelineStage/Ctx/RefCell 全部移除。
+仅剩 2 个 hook，直接内联到 main.rs 作为普通函数调用：
+  - rule::check(&ast, &registry, &config)     ← static_safety
+  - guard::inject(&ast, &config)               ← oi_smoothing
+
+移除 SafetyBreach 错误变体——NeuroEnergyTracker 已迁移至 Core，无消费者。
+更新 build.rs valid 列表，补充 LexError/ParseError/TypeCheckError doc 注释。
+
+管线从"trait 框架 + Runtime hook dispatch"收敛为 8 个直接函数调用：
+  macros→lexer→parser→typeck→rule::check→safety::check_with_scale→guard::inject→FSIR
+
+94 tests green, 0 warnings。

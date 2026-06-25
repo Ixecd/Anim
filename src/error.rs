@@ -35,6 +35,7 @@ pub fn current_file() -> String {
 /// animi 交织器的错误类型。
 #[derive(Debug)]
 pub enum AnimiError {
+    /// 词法错误——不合法字符或词法结构（Pass 0a）。
     LexError {
         file_name: String,
         line: usize,
@@ -42,6 +43,7 @@ pub enum AnimiError {
         msg: String,
         severity: Severity,
     },
+    /// 语法错误——不符合 Anim 语法的结构（Pass 0b）。
     ParseError {
         file_name: String,
         line: usize,
@@ -50,6 +52,7 @@ pub enum AnimiError {
         found: String,
         severity: Severity,
     },
+    /// 类型错误——未注册原子/Shape 或无效配比（Pass 1）。
     TypeCheckError {
         file_name: String,
         atom_name: String,
@@ -71,14 +74,6 @@ pub enum AnimiError {
         reason: String,
         severity: Severity,
     },
-    /// 时域能量累积熔断——ADR 011 Neuro-Leaky Bucket。
-    SafetyBreach {
-        file_name: String,
-        dimension: crate::pbm::PbmDimension,
-        current_energy: f64,
-        threshold: f64,
-        severity: Severity,
-    },
     /// 交织器内部错误。
     InternalError {
         file_name: String,
@@ -96,7 +91,6 @@ impl AnimiError {
             AnimiError::TypeCheckError { severity, .. } => *severity,
             AnimiError::StaticSafetyError { severity, .. } => *severity,
             AnimiError::UserStateSafetyError { severity, .. } => *severity,
-            AnimiError::SafetyBreach { severity, .. } => *severity,
             AnimiError::InternalError { severity, .. } => *severity,
         }
     }
@@ -110,7 +104,6 @@ impl fmt::Display for AnimiError {
             AnimiError::TypeCheckError { file_name, .. } => file_name,
             AnimiError::StaticSafetyError { file_name, .. } => file_name,
             AnimiError::UserStateSafetyError { file_name, .. } => file_name,
-            AnimiError::SafetyBreach { file_name, .. } => file_name,
             AnimiError::InternalError { file_name, .. } => file_name,
         };
 
@@ -156,15 +149,6 @@ impl fmt::Display for AnimiError {
                     "{} 用户安全({}) ({}): {}——{}",
                     tag, cap, file, atom_name, reason
                 )
-            }
-            AnimiError::SafetyBreach {
-                dimension,
-                current_energy,
-                threshold,
-                ..
-            } => {
-                write!(f, "{} 时域能量熔断 ({}): 维度 {:?} 累积能量 {:.1} 超过临界阈值 {:.1}——触发强制保护帧",
-                    tag, file, dimension, current_energy, threshold)
             }
             AnimiError::InternalError { msg, .. } => {
                 write!(f, "{} 内部错误 ({}): {}", tag, file, msg)

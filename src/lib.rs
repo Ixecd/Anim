@@ -14,7 +14,6 @@ pub mod macros;
 pub mod oi;
 pub mod parser;
 pub mod pbm;
-pub mod pipeline;
 pub mod registry;
 pub mod rule;
 pub mod safety;

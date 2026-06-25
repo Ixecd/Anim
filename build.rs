@@ -15,7 +15,6 @@ fn main() {
         "TypeCheckError",
         "StaticSafetyError",
         "UserStateSafetyError",
-        "SafetyBreach",
         "InternalError",
     ];
 
