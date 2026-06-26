@@ -65,9 +65,9 @@ macro_rules! oin {
     };
 }
 
-/// 无 `return` 封装——可用于 match 表达式臂等。默认 Deny。
+/// oie! — 无 return 封装。可用于 match 表达式臂等。默认 Deny。
 #[macro_export]
-macro_rules! oi_err {
+macro_rules! oie {
     ($variant:ident, $($field:ident = $value:expr),* $(,)?) => {
         {
             let _file = $crate::error::CURRENT_FILE.with(|f| f.borrow().clone());

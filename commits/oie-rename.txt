@@ -1,0 +1,7 @@
+refactor: oi_err! → oie! 统一命名
+
+oi_err 和 oi 的区别不是语义上的——是语法上的。
+oi!   = return Err(AnimiError)    函数内直接返回
+oie!  = Err(AnimiError)           不 return，仅构造——用于 match 臂/表达式
+
+o = 交叉。i = 被挡。e = expression（非 return 封装）。
