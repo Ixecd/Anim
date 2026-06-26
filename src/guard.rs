@@ -240,7 +240,10 @@ feeling calm {
 
     #[test]
     fn inject_boundary_intensity_21_is_decay() {
-        // 强度 > 20 → 衰减。边界值 21 应走衰减路径。
+        // 强度 > hard_cut_boundary → 衰减。边界值取 cfg 阈值 + 1。
+        let cfg = crate::config::AnimConfig::default();
+        let boundary = cfg.oi_smoothing.hard_cut_boundary;
+        assert!(boundary == 20, "默认阈值变更需同步更新此测试");
         let src = r#"
 feeling calm {
     mix {
@@ -317,16 +320,18 @@ feeling calm {
     // ── smooth_for_intensity 测试 ─────────────────────────
 
     #[test]
-    fn smoothing_for_peak_20_is_hard_cut() {
+    fn smoothing_for_peak_at_boundary_is_hard_cut() {
         let cfg = crate::config::AnimConfig::default();
-        let s = smoothing_for_intensity(5, 20, &cfg);
+        let boundary = cfg.oi_smoothing.hard_cut_boundary;
+        let s = smoothing_for_intensity(5, boundary, &cfg);
         assert!(s.is_hard_cut());
     }
 
     #[test]
-    fn smoothing_for_peak_21_is_decay() {
+    fn smoothing_for_peak_above_boundary_is_decay() {
         let cfg = crate::config::AnimConfig::default();
-        let s = smoothing_for_intensity(10, 21, &cfg);
+        let boundary = cfg.oi_smoothing.hard_cut_boundary;
+        let s = smoothing_for_intensity(10, boundary + 1, &cfg);
         assert!(!s.is_hard_cut());
         assert_eq!(s.frame_count(), 5);
     }

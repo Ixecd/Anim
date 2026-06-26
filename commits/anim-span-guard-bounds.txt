@@ -1,0 +1,8 @@
+fix: Anim AST Span追踪 + guard测试边界对齐配置
+
+#1 Span: FeelingAtom/Accent 新增 Span{line, col}, parser 在构造 AST 时填入。
+    为后续 Pass 2+ 错误报告提供精确行号，不再只依赖 thread-local CURRENT_FILE。
+
+#3 测试边界: smoothing_for_peak_at_boundary_is_hard_cut /
+    smoothing_for_peak_above_boundary_is_decay 改用 config.oi_smoothing.hard_cut_boundary。
+    inject_boundary_intensity_21_is_decay 加断言验证默认阈值=20。

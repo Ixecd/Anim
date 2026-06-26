@@ -6,6 +6,13 @@
 
 use serde::Serialize;
 
+/// 源码位置——无损追踪。跨 Pass 传递，不依赖 Thread Local。
+#[derive(Debug, Clone, Copy, Serialize)]
+pub struct Span {
+    pub line: usize,
+    pub col: usize,
+}
+
 /// 一份 .anim 源码的完整 AST。
 ///
 /// 三层结构：
@@ -57,11 +64,9 @@ pub struct Mix {
 /// 点缀条目——一个感受原子 + 它的配比系数。
 #[derive(Debug, Clone, Serialize)]
 pub struct Accent {
-    /// 点缀的感受原子。
     pub atom: FeelingAtom,
-
-    /// 配比系数。0.0 = 不参与混音。1.0 = 和主旋律等权。
     pub ratio: f64,
+    pub span: Span,
 }
 
 /// 感受原子——Pattern Registry 中注册的一个命名感受单元。
@@ -70,8 +75,8 @@ pub struct Accent {
 /// 类型检查（Pass 1）会验证这个名称是否在 Registry 中存在。
 #[derive(Debug, Clone, Serialize)]
 pub struct FeelingAtom {
-    /// 感受原子名称。如 "calm_meditative"。
     pub name: String,
+    pub span: Span,
 }
 
 /// 形状曲线——定义感受随时间展开的方式。

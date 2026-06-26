@@ -144,8 +144,15 @@ impl Parser {
         // main: <atom>
         self.expect_keyword(TokenKind::Main, "main")?;
         self.expect(TokenKind::Colon, ":")?;
+        let main_span = (self.peek().line, self.peek().col);
         let main_name = self.expect_identifier("主旋律感受原子名")?;
-        let main = FeelingAtom { name: main_name };
+        let main = FeelingAtom {
+            name: main_name,
+            span: crate::ast::Span {
+                line: main_span.0,
+                col: main_span.1,
+            },
+        };
 
         // accents: [<atom> <ratio>, ...]
         self.expect_keyword(TokenKind::Accents, "accents")?;
@@ -170,6 +177,7 @@ impl Parser {
         }
 
         loop {
+            let accent_span = (self.peek().line, self.peek().col);
             let atom_name = self.expect_identifier("点缀感受原子名")?;
             let ratio_literal = self.expect_number("点缀配比")?;
 
@@ -196,8 +204,18 @@ impl Parser {
             }
 
             accents.push(Accent {
-                atom: FeelingAtom { name: atom_name },
+                atom: FeelingAtom {
+                    name: atom_name,
+                    span: crate::ast::Span {
+                        line: accent_span.0,
+                        col: accent_span.1,
+                    },
+                },
                 ratio,
+                span: crate::ast::Span {
+                    line: accent_span.0,
+                    col: accent_span.1,
+                },
             });
 
             let peek = self.peek();
