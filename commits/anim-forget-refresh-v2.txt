@@ -1,0 +1,5 @@
+docs: Anim-FORGET 刷新——减法完成 + Span/guard/推迟记录
+
+减法已完成：删除 9 模块，修剪 5 模块，94 tests green。
+新增：Span 追踪、guard 边界对齐配置、oie 统一命名、pipeline 删除。
+推迟：Zero-copy Token Stream（.anim < 1KB 不值得）。

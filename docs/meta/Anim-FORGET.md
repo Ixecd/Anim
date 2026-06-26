@@ -78,24 +78,36 @@ Anim 不做: Pass 6 Personalize → Core
 ### 保留不动
 - `src/lexer.rs` `src/parser.rs` `src/macros.rs` — Pass 0 全链路
 - `src/typeck.rs` `src/rule.rs` `src/fsir.rs` — Pass 1-5
-- `src/registry.rs` — Atom Registry，Anim 需要
-- `src/sandbox.rs` — 沙箱强度阈值路由，Anim 独占
-- `src/guard.rs` — oi_smoothing hook
-- `src/pipeline.rs` — Hook 管线
+- `src/registry.rs` — Atom Registry
+- `src/guard.rs` — oi_smoothing
 - `src/config.rs` — Config 系统
 - `src/log.rs` — 日志
-- `src/error.rs` — 错误类型
+- `src/error.rs` — 6 个错误变体（SafetyBreach 已移除）
+- `src/oi.rs` — oi!/oiw!/oin!/oie! 宏
+- `src/ast.rs` — AST 节点 + Span 追踪
+
+### 已推迟
+
+| 项目 | 原因 |
+|---|---|
+| #2 零拷贝 Token Stream (`&'a str` 替代 `String`) | .anim 文件通常 < 1KB，`String::clone()` 开销可忽略。先打通 Core 管线。 |
 
 ---
 
 ## 编辑记录
 
 ```
-2026-06-25  减法审计——Anim 职责收敛到 Pass 0-5（.anim → FSIR）。
-            P0 全部闭合（含 Core 覆盖）。P1 全部迁移至 Core/Feelings-OS。
-            待砍：pbm.rs/safety.rs/personalize.rs 中已归属 Core 的代码。
-            core/mod.rs 迁移蓝图完成历史使命——移除。
-            192 tests green。待减法完成后重跑。
+2026-06-25  减法审计——Anim 职责收敛到 Pass 0-5（.anim → FSIR only）。
+            删除 9 模块（personalize/device_map/codegen/dsir/esir/sandbox/psir/core/pipeline）。
+            修剪 5 模块（pbm 730→35, safety 833→58, config 403→115, error -SafetyBreach,
+            main inlined hooks）。94 tests green。
+
+2026-06-25  Anim 二轮整理——Span 追踪 + guard 边界 + oie 统一 + pipeline 删除。
+            AST 新增 Span{line,col}，parser 在构造时填入。guard 测试边界对齐
+            config.oi_smoothing.hard_cut_boundary。oi_err → oie 统一命名。
+            删除 pipeline.rs——2 hook 直接内联到 main.rs。
+            Zero-copy Token Stream 推迟（.anim < 1KB 不值得）。
+            94 tests green。
 
 2026-06-24  v0.6 Anim P1 全清 + Core 泛型重构
             192 tests green。Anim 职责收敛: .anim → FSIR。
