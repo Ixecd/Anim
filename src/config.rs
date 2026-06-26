@@ -80,7 +80,7 @@ fn default_decay_sequence() -> Vec<f64> {
     vec![1.0, 0.6, 0.3, 0.1, 0.0]
 }
 fn default_max_steps() -> usize {
-    4
+    5
 }
 
 impl Default for OiSmoothingConfig {

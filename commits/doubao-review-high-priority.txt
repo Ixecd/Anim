@@ -1,0 +1,8 @@
+fix: config default_max_steps 一致化 + main.rs suffix 后缀处理
+
+Bug 1: config.rs default_max_steps() 返回 4 但 Default impl 的 max_steps 为 5、
+      decay_sequence 长度为 5，不一致。改为返回 5。
+Bug 2: main.rs trim_end_matches(".anim") 反复移除后缀——"a.anim.anim"→"a.json"。
+      改用 strip_suffix(".anim").unwrap_or(path)，仅移除一次。
+
+豆包 review 高优先级修复。

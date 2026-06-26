@@ -229,7 +229,8 @@ fn main() {
     );
 
     let json = die(doc.to_json());
-    let out_path = format!("{}.json", path.trim_end_matches(".anim"));
+    let basename = path.strip_suffix(".anim").unwrap_or(path);
+    let out_path = format!("{}.json", basename);
     if let Err(e) = fs::write(&out_path, &json) {
         A.error(format_args!("无法写入 {}: {}", out_path, e));
         process::exit(1);
