@@ -77,7 +77,7 @@ fn main() {
     }
 
     if path == "--version" || path == "-V" {
-        println!("animi v0.1.0");
+        println!("animi v{}", env!("CARGO_PKG_VERSION"));
         return;
     }
 

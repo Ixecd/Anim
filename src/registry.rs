@@ -12,9 +12,10 @@ use crate::pbm::PbmDimension;
 /// 原子类型——核心（官方审核）vs 沙箱（用户上传，未验证）。
 #[derive(Debug, Clone, Copy, PartialEq, Deserialize)]
 #[serde(rename_all = "lowercase")]
+#[repr(u8)]
 pub enum AtomClass {
-    Core,
-    Sandbox,
+    Core = 0,
+    Sandbox = 1,
 }
 
 /// 90+ 强度沙箱治理响应分类 —— ADR 009 v0.5 §十.8
@@ -24,16 +25,13 @@ pub enum AtomClass {
 /// - 物理矛盾信号 → 直接熔断
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Default)]
 #[serde(rename_all = "lowercase")]
+#[repr(u8)]
 pub enum SandboxResponse {
-    /// 成就/高峰体验 — 90+是设计目标，不降级，只记录。
-    Attainment,
-    /// 中性 — 90+不常见，触发 G1 告知。
+    Attainment = 0,
     #[default]
-    Neutral,
-    /// 需谨慎 — 90+触发 G2 降级。
-    Caution,
-    /// 必须防护 — 90+直接 G3 熔断，无论强度叠加。
-    Shield,
+    Neutral = 1,
+    Caution = 2,
+    Shield = 3,
 }
 
 fn default_dimension() -> PbmDimension {
@@ -168,9 +166,9 @@ impl Registry {
         sorted.sort_by(|a, b| a.name.cmp(&b.name));
         for atom in sorted {
             hasher.update(atom.name.as_bytes());
-            hasher.update(format!("{:?}", atom.class).as_bytes());
+            hasher.update([atom.class as u8]);
             hasher.update(atom.max_ratio.to_be_bytes());
-            hasher.update(format!("{:?}", atom.sandbox_response).as_bytes());
+            hasher.update([atom.sandbox_response as u8]);
         }
         hex::encode(hasher.finalize())
     }

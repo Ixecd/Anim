@@ -10,10 +10,8 @@ use std::collections::HashMap;
 
 /// 宏展开后源码的最大允许长度（字节）。
 /// 防止递归宏组合产生指数级膨胀的源码。
+/// 展开后源码最大允许大小（1MB）——防止宏组合爆炸。
 pub const MAX_EXPANDED_SIZE: usize = 1_000_000;
-
-/// 最大嵌套宏调用层数。
-pub const MAX_MACRO_NESTING: usize = 32;
 
 /// 验证展开后的源码是否安全——不超出合理界限。
 ///

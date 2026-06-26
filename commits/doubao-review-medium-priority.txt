@@ -1,0 +1,8 @@
+fix: 豆包 review 中优先级——版本号/CARGO/macro常量/registry哈希
+
+3. 统一 CARGO_PKG_VERSION: main.rs println + fsir.rs ANIMI_VERSION const。
+   不再硬编码 0.1.0。
+4. macros.rs 移除未使用 MAX_MACRO_NESTING 常量。
+5. registry.rs 哈希改用 #[repr(u8)] 数值编码替代 Debug format。
+   AtomClass {Core=0, Sandbox=1} / SandboxResponse {Attainment=0,..,Shield=3}。
+   Rust 版本升级不再导致缓存意外失效。

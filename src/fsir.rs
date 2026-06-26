@@ -8,6 +8,8 @@
 /// 缓存校验时——FSIR 记录的版本号与此不一致 → 缓存失效，重新编译。
 pub const SAFETY_RULES_VERSION: u32 = 1;
 
+const ANIMI_VERSION: &str = env!("CARGO_PKG_VERSION");
+
 use crate::ast::*;
 use crate::error::{AnimiError, Severity};
 use serde::{Deserialize, Serialize};
@@ -144,7 +146,7 @@ impl FsirDoc {
 
         FsirDoc {
             meta: FsirMeta {
-                animi_version: "0.1.0".into(),
+                animi_version: ANIMI_VERSION.into(),
                 compiled_at: now,
                 source_hash,
                 pattern_registry_hash: registry_hash,
@@ -272,7 +274,7 @@ mod tests {
     fn make_test_fsir(registry_hash: Option<&str>) -> FsirDoc {
         FsirDoc {
             meta: FsirMeta {
-                animi_version: "0.1.0".into(),
+                animi_version: ANIMI_VERSION.into(),
                 compiled_at: "2026-01-01T00:00:00Z".into(),
                 source_hash: None,
                 pattern_registry_hash: registry_hash.map(|s| s.to_string()),
@@ -461,7 +463,7 @@ feeling calm {
         let json = doc.to_json().unwrap();
         let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
 
-        assert_eq!(parsed["meta"]["animi_version"], "0.1.0");
+        assert_eq!(parsed["meta"]["animi_version"], ANIMI_VERSION);
         assert!(parsed["meta"]["source_hash"].is_null());
         assert!(parsed["meta"]["pattern_registry_hash"].is_null()); // None → null in JSON
         assert!(parsed["meta"]["safety_rules_version"] == 1); // SAFETY_RULES_VERSION
